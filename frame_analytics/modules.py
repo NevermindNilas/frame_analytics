@@ -19,32 +19,62 @@ from typing import Optional, Sequence
 import torch
 import torch.nn as nn
 
-from .functional import _infer_data_range, mse, psnr, ssim
+from .functional import (
+    MS_SSIM_WEIGHTS,
+    _infer_data_range,
+    charbonnier,
+    gms,
+    gmsd,
+    huber,
+    l1,
+    ms_ssim,
+    mse,
+    psnr,
+    ssim,
+)
 
-__all__ = ["MSE", "PSNR", "SSIM", "StreamingMetrics"]
+__all__ = ["MSE", "PSNR", "SSIM", "MSSSIM", "GMSD", "L1", "Charbonnier",
+           "Huber", "StreamingMetrics"]
 
 
 class MSE(nn.Module):
-    def __init__(self, reduction: str = "mean", dtype: Optional[torch.dtype] = None):
+    def __init__(self, reduction: str = "mean", dtype: Optional[torch.dtype] = None,
+                 out_dtype: torch.dtype = torch.float64, luma=None,
+                 crop_border: int = 0):
         super().__init__()
         self.reduction = reduction
         self.dtype_ = dtype
+        self.out_dtype = out_dtype
+        self.luma = luma
+        self.crop_border = crop_border
 
     def forward(self, x, y):
-        return mse(x, y, reduction=self.reduction, dtype=self.dtype_)
+        return mse(x, y, reduction=self.reduction, dtype=self.dtype_,
+                   out_dtype=self.out_dtype, luma=self.luma,
+                   crop_border=self.crop_border)
 
 
 class PSNR(nn.Module):
+    """``PSNR(luma="matlab", crop_border=scale)`` is the Y-PSNR of the
+    super-resolution literature."""
+
     def __init__(self, data_range: Optional[float] = None, reduction: str = "mean",
-                 dtype: Optional[torch.dtype] = None):
+                 dtype: Optional[torch.dtype] = None,
+                 out_dtype: torch.dtype = torch.float64, eps: float = 0.0,
+                 luma=None, crop_border: int = 0):
         super().__init__()
         self.data_range = data_range
         self.reduction = reduction
         self.dtype_ = dtype
+        self.out_dtype = out_dtype
+        self.eps = eps
+        self.luma = luma
+        self.crop_border = crop_border
 
     def forward(self, x, y):
         return psnr(x, y, data_range=self.data_range, reduction=self.reduction,
-                    dtype=self.dtype_)
+                    dtype=self.dtype_, out_dtype=self.out_dtype, eps=self.eps,
+                    luma=self.luma, crop_border=self.crop_border)
 
 
 class SSIM(nn.Module):
@@ -57,7 +87,8 @@ class SSIM(nn.Module):
     def __init__(self, data_range: Optional[float] = None, win_size: int = 11,
                  sigma: float = 1.5, K: Sequence[float] = (0.01, 0.03),
                  reduction: str = "mean", return_map: bool = False,
-                 dtype: Optional[torch.dtype] = None, downsample: bool = False):
+                 dtype: Optional[torch.dtype] = None, downsample: bool = False,
+                 luma=None, crop_border: int = 0):
         super().__init__()
         self.data_range = data_range
         self.win_size = win_size
@@ -67,16 +98,145 @@ class SSIM(nn.Module):
         self.return_map = return_map
         self.dtype_ = dtype
         self.downsample = downsample
+        self.luma = luma
+        self.crop_border = crop_border
 
     def forward(self, x, y):
         return ssim(x, y, data_range=self.data_range, win_size=self.win_size,
                     sigma=self.sigma, K=self.K, reduction=self.reduction,
                     return_map=self.return_map, dtype=self.dtype_,
-                    downsample=self.downsample)
+                    downsample=self.downsample, luma=self.luma,
+                    crop_border=self.crop_border)
 
     def loss(self, x, y):
         """``1 - SSIM``, for use as a training objective."""
         return 1.0 - self.forward(x, y)
+
+
+class MSSSIM(nn.Module):
+    """Multi-scale SSIM. ``.loss()`` gives ``1 - MS-SSIM``.
+
+    The usual restoration objective is a mix, e.g.
+    ``0.84 * MSSSIM().loss(p, t) + 0.16 * L1()(p, t)`` (Zhao et al. 2016).
+    """
+
+    def __init__(self, data_range: Optional[float] = None, win_size: int = 11,
+                 sigma: float = 1.5, K: Sequence[float] = (0.01, 0.03),
+                 weights: Optional[Sequence[float]] = None,
+                 reduction: str = "mean", dtype: Optional[torch.dtype] = None,
+                 luma=None, crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.win_size = win_size
+        self.sigma = sigma
+        self.K = tuple(K)
+        self.weights = tuple(weights) if weights is not None else MS_SSIM_WEIGHTS
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        return ms_ssim(x, y, data_range=self.data_range, win_size=self.win_size,
+                       sigma=self.sigma, K=self.K, weights=self.weights,
+                       reduction=self.reduction, dtype=self.dtype_,
+                       luma=self.luma, crop_border=self.crop_border)
+
+    def loss(self, x, y):
+        return 1.0 - self.forward(x, y)
+
+
+class GMSD(nn.Module):
+    """Gradient magnitude similarity. ``forward`` is the deviation (the metric).
+
+    ``.loss()`` is ``1 - mean(GMS)`` rather than the deviation itself: the
+    deviation's derivative blows up as the two images converge, which is
+    exactly where a training run lives.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 T: Optional[float] = None, eps: Optional[float] = None,
+                 downsample: bool = True, reduction: str = "mean",
+                 dtype: Optional[torch.dtype] = None, luma=None,
+                 crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.T = T
+        self.eps = eps
+        self.downsample = downsample
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def _kwargs(self):
+        return dict(data_range=self.data_range, T=self.T, eps=self.eps,
+                    downsample=self.downsample, reduction=self.reduction,
+                    dtype=self.dtype_, luma=self.luma,
+                    crop_border=self.crop_border)
+
+    def forward(self, x, y):
+        return gmsd(x, y, **self._kwargs())
+
+    def loss(self, x, y):
+        return 1.0 - gms(x, y, **self._kwargs())
+
+
+class _PixelLoss(nn.Module):
+    """Shared plumbing for the three pointwise losses.
+
+    ``forward`` and ``loss`` are the same thing here -- unlike SSIM, these are
+    already penalties -- but both names exist so the modules are drop-in for
+    each other in a training script.
+    """
+
+    _fn = None
+
+    def __init__(self, reduction: str = "mean",
+                 dtype: Optional[torch.dtype] = None,
+                 out_dtype: torch.dtype = torch.float64, luma=None,
+                 crop_border: int = 0):
+        super().__init__()
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.out_dtype = out_dtype
+        self.luma = luma
+        self.crop_border = crop_border
+        self.extra = {}
+
+    def forward(self, x, y):
+        return type(self)._fn(x, y, reduction=self.reduction, dtype=self.dtype_,
+                              out_dtype=self.out_dtype, luma=self.luma,
+                              crop_border=self.crop_border, **self.extra)
+
+    def loss(self, x, y):
+        return self.forward(x, y)
+
+
+class L1(_PixelLoss):
+    """Mean absolute error."""
+
+    _fn = staticmethod(l1)
+
+
+class Charbonnier(_PixelLoss):
+    """Charbonnier penalty; ``eps`` is the width of the quadratic region."""
+
+    _fn = staticmethod(charbonnier)
+
+    def __init__(self, eps: float = 1e-3, **kwargs):
+        super().__init__(**kwargs)
+        self.extra = {"eps": float(eps)}
+
+
+class Huber(_PixelLoss):
+    """Huber loss, matching ``torch.nn.HuberLoss``."""
+
+    _fn = staticmethod(huber)
+
+    def __init__(self, delta: float = 1.0, **kwargs):
+        super().__init__(**kwargs)
+        self.extra = {"delta": float(delta)}
 
 
 class StreamingMetrics:
@@ -88,7 +248,15 @@ class StreamingMetrics:
     >>> sm = StreamingMetrics((1, 3, 1080, 1920), device="cuda", dtype=torch.uint8)
     >>> for ref, dist in frames:            # numpy / cpu tensors
     ...     out = sm.update(ref, dist)      # {"mse":..., "psnr":..., "ssim":...}
+
+    ``metrics`` may name any of ``mse``, ``psnr``, ``ssim``, ``ms_ssim``,
+    ``gmsd``, ``gms``, ``l1``, ``charbonnier``, ``huber``. They all capture
+    into the same graph, so scoring a frame on nine metrics is still one
+    replay.
     """
+
+    _KNOWN = ("mse", "psnr", "ssim", "ms_ssim", "gmsd", "gms", "l1",
+              "charbonnier", "huber")
 
     def __init__(self, shape, device="cuda", dtype=torch.uint8,
                  data_range: Optional[float] = None, metrics=("mse", "psnr", "ssim"),
@@ -97,6 +265,10 @@ class StreamingMetrics:
         self.dtype = dtype
         self.shape = tuple(shape)
         self.metrics = tuple(metrics)
+        unknown = [m for m in self.metrics if m not in self._KNOWN]
+        if unknown:
+            raise ValueError(f"unknown metric(s) {unknown}; "
+                             f"expected any of {list(self._KNOWN)}")
         self.data_range = data_range
 
         self.ref = torch.empty(self.shape, dtype=dtype, device=self.device)
@@ -132,6 +304,16 @@ class StreamingMetrics:
                 out["psnr"] = math.log10(self._L ** 2) * 10.0 - 10.0 * torch.log10(m)
         if "ssim" in self.metrics:
             out["ssim"] = ssim(self.ref, self.dist, data_range=self._L)
+        if "ms_ssim" in self.metrics:
+            out["ms_ssim"] = ms_ssim(self.ref, self.dist, data_range=self._L)
+        if "gmsd" in self.metrics:
+            out["gmsd"] = gmsd(self.ref, self.dist, data_range=self._L)
+        if "gms" in self.metrics:
+            out["gms"] = gms(self.ref, self.dist, data_range=self._L)
+        for name, fn in (("l1", l1), ("charbonnier", charbonnier),
+                         ("huber", huber)):
+            if name in self.metrics:
+                out[name] = fn(self.ref, self.dist)
         return out
 
     def _try_capture(self):

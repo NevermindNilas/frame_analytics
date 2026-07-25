@@ -207,13 +207,22 @@ def _warn_once(exc: BaseException) -> None:
 
 
 def _usable(x: torch.Tensor, y: torch.Tensor) -> bool:
-    """Only the CUDA SSIM path has a native backward; everything else is
-    inference-only and defers to autograd when a gradient is wanted."""
+    """Only the CUDA SSIM paths have a native backward; everything else is
+    inference-only and defers to autograd when a gradient is actually wanted.
+
+    "Actually wanted" is the operative word: ``requires_grad`` alone is not
+    enough. The ordinary evaluation shape is ``pred = model(x)`` outside a
+    ``no_grad`` block and the scoring inside one, which leaves ``requires_grad``
+    set on a tensor that will never be differentiated. Testing the flag on its
+    own turned every such call away from the native kernel -- an 8x slowdown on
+    the single most common way anybody uses this library.
+    """
+    grad_wanted = (torch.is_grad_enabled()
+                   and (x.requires_grad or y.requires_grad))
     return (
         x.dtype in _SUPPORTED
         and x.dtype == y.dtype
-        and not x.requires_grad
-        and not y.requires_grad
+        and not grad_wanted
     )
 
 
@@ -276,6 +285,96 @@ def try_mse(x: torch.Tensor, y: torch.Tensor, *, per_image: bool,
     if want_psnr:
         return psnr_bias - 10.0 * torch.log10(m)
     return m
+
+
+def try_pixel(x: torch.Tensor, y: torch.Tensor, *, op: int, param: float,
+              per_image: bool, dtype: torch.dtype) -> Optional[torch.Tensor]:
+    """L1 / Charbonnier / Huber reduction; ``None`` if no kernel applies."""
+    ext = load()
+    if ext is None or not _usable(x, y) or not hasattr(ext, "pixel_sums_cpu"):
+        return None
+    n = x.shape[0]
+    per = x[0].numel()
+    try:
+        if x.is_cuda:
+            if not getattr(ext, "has_cuda", False):
+                return None
+            res = ext.pixel_partial_cuda(x, y, n, op, float(param), _PSNR_NONE)
+            return res[0 if per_image else 1].to(dtype)
+        sums = ext.pixel_sums_cpu(x, y, n, op, float(param))   # (N,) float64
+    except Exception as exc:
+        _warn_once(exc)
+        return None
+    m = sums / per if per_image else sums.sum() / (per * n)
+    return m.to(dtype)
+
+
+def try_ssim_cs(x: torch.Tensor, y: torch.Tensor, *, win: torch.Tensor,
+                shift: float, C1: float, C2: float):
+    """``(ssim, cs)`` per plane, shaped ``(N, C)``; ``None`` if unavailable."""
+    ext = load()
+    if ext is None or not _usable(x, y) or not hasattr(ext, "ssim_cs_cpu"):
+        return None
+    k = win.numel()
+    if x.dtype == torch.float64 or k not in (3, 5, 7, 9, 11):
+        return None
+    if x.shape[-2] < k or x.shape[-1] < k:
+        return None
+    try:
+        if x.is_cuda:
+            if not getattr(ext, "has_cuda", False):
+                return None
+            res = ext.ssim_cs_cuda(x, y, win.to(x.device), shift, C1, C2)
+        else:
+            res = ext.ssim_cs_cpu(x, y, win.cpu(), shift, C1, C2)
+    except Exception as exc:
+        _warn_once(exc)
+        return None
+    n, c = x.shape[0], x.shape[1]
+    return res[0].view(n, c), res[1].view(n, c)
+
+
+def ssim_cs_autograd_available(x: torch.Tensor, y: torch.Tensor,
+                               win_size: int) -> bool:
+    """Can the differentiable native MS-SSIM primitive handle this call?"""
+    ext = load()
+    return (
+        ext is not None
+        and getattr(ext, "has_cuda", False)
+        and hasattr(ext, "ssim_cs_backward_cuda")
+        and x.is_cuda
+        and x.dtype == torch.float32
+        and y.dtype == torch.float32
+        and x.shape == y.shape
+        and x.dim() == 4
+        and win_size in (3, 5, 7, 9, 11)
+        and not torch.cuda.is_current_stream_capturing()
+    )
+
+
+def ssim_cs_backward(x, y, gs, gcs, win, shift, C1, C2, need_dx, need_dy):
+    ext = load()
+    return ext.ssim_cs_backward_cuda(x, y, gs, gcs, win, shift, C1, C2,
+                                     need_dx, need_dy)
+
+
+def try_gmsd(x: torch.Tensor, y: torch.Tensor, *, T: float, eps: float,
+             downsample: bool):
+    """``(gms_mean, gmsd)`` per image, float64; ``None`` if unavailable."""
+    ext = load()
+    if ext is None or not _usable(x, y) or not hasattr(ext, "gmsd_sums_cpu"):
+        return None
+    try:
+        if x.is_cuda:
+            if not getattr(ext, "has_cuda", False):
+                return None
+            res = ext.gmsd_cuda(x, y, float(T), float(eps), bool(downsample))
+        else:
+            res = ext.gmsd_sums_cpu(x, y, float(T), float(eps), bool(downsample))
+    except Exception as exc:
+        _warn_once(exc)
+        return None
+    return res[0], res[1]
 
 
 def try_ssim(x: torch.Tensor, y: torch.Tensor, *, win_size: int, sigma: float,

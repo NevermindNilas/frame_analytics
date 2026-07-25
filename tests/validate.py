@@ -115,6 +115,62 @@ def main():
             ok &= report(f"[{h}x{w} {kind}] {dev} psnr uint8",
                          float(fa.psnr(au8, bu8)), psnr_ref, TOL_PSNR)
 
+    # -- training metrics ------------------------------------------------- #
+    print("\n  -- MS-SSIM / GMSD / pixel losses --")
+    for h, w, kind, noise in [(200, 232, "natural", 8.0),
+                              (257, 193, "natural", 20.0),
+                              (176, 176, "uniform", 12.0)]:
+        a, b = make_pair(h, w, kind, noise, seed=h + w)
+        eps = (1e-6 * 255.0) ** 2
+        want = {
+            "ms_ssim": ref.ms_ssim_reference(a, b, 255.0),
+            "gmsd": ref.gmsd_reference(a, b, 255.0, eps=eps),
+            "l1": ref.l1_reference(a, b),
+            "charbonnier": ref.charbonnier_reference(a, b),
+            "huber": ref.huber_reference(a, b),
+        }
+        for dev in devices:
+            x = torch.as_tensor(a, dtype=torch.uint8, device=dev)[None, None]
+            y = torch.as_tensor(b, dtype=torch.uint8, device=dev)[None, None]
+            for hint in ("torch", "auto"):
+                tag = f"[{h}x{w} {kind}] {dev}/{hint}"
+                got = {
+                    "ms_ssim": float(fa.ms_ssim(x, y, data_range=255.0,
+                                                backend_hint=hint)),
+                    "gmsd": float(fa.gmsd(x, y, data_range=255.0,
+                                          backend_hint=hint)),
+                    "l1": float(fa.l1(x, y, backend_hint=hint)),
+                    "charbonnier": float(fa.charbonnier(x, y, backend_hint=hint)),
+                    "huber": float(fa.huber(x, y, backend_hint=hint)),
+                }
+                for k, v in got.items():
+                    ok &= report(f"{tag} {k}", v, want[k],
+                                 TOL_SSIM if k in ("ms_ssim", "gmsd") else 1e-6)
+
+    # -- luma / border-crop reporting conventions -------------------------- #
+    print("\n  -- Y-channel + crop_border (the SR reporting convention) --")
+    rng = np.random.default_rng(99)
+    rgb = rng.integers(0, 256, (3, 180, 220)).astype(np.float64)
+    rgb2 = np.clip(rgb + 9 * rng.standard_normal((3, 180, 220)), 0, 255).round()
+    for mode in ("bt601", "bt709", "matlab"):
+        ya = ref.rgb_to_luma_reference(rgb, mode)
+        yb = ref.rgb_to_luma_reference(rgb2, mode)
+        for cb in (0, 4):
+            la = ya[cb:ya.shape[0] - cb or None, cb:ya.shape[1] - cb or None]
+            lb = yb[cb:yb.shape[0] - cb or None, cb:yb.shape[1] - cb or None]
+            ws = ref.ssim_reference(la, lb, 255.0)
+            wp = ref.psnr_reference(la, lb, 255.0)
+            for dev in devices:
+                xa = torch.as_tensor(rgb, dtype=torch.uint8, device=dev)[None]
+                xb = torch.as_tensor(rgb2, dtype=torch.uint8, device=dev)[None]
+                tag = f"[{mode} crop={cb}] {dev}"
+                ok &= report(f"{tag} Y-SSIM",
+                             float(fa.ssim(xa, xb, data_range=255.0, luma=mode,
+                                           crop_border=cb)), ws, TOL_SSIM)
+                ok &= report(f"{tag} Y-PSNR",
+                             float(fa.psnr(xa, xb, data_range=255.0, luma=mode,
+                                           crop_border=cb)), wp, 1e-5)
+
     # batch / multichannel consistency
     print("\n  -- batch & channel handling --")
     a1, b1 = make_pair(200, 300, "natural", 6.0, seed=1)

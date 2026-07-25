@@ -18,27 +18,58 @@ Three layers, all producing the same numbers:
 """
 
 from .functional import (  # noqa: F401
+    MS_SSIM_WEIGHTS,
+    charbonnier,
     gaussian_window_1d,
+    gms,
+    gmsd,
+    huber,
+    l1,
+    ms_ssim,
     mse,
     psnr,
+    rgb_to_luma,
     set_compile_enabled,
     ssim,
 )
-from .modules import MSE, PSNR, SSIM, StreamingMetrics  # noqa: F401
+from .modules import (  # noqa: F401
+    GMSD,
+    MSE,
+    PSNR,
+    SSIM,
+    Charbonnier,
+    Huber,
+    L1,
+    MSSSIM,
+    StreamingMetrics,
+)
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "mse",
     "psnr",
     "ssim",
+    "ms_ssim",
+    "gmsd",
+    "gms",
+    "l1",
+    "charbonnier",
+    "huber",
+    "rgb_to_luma",
     "MSE",
     "PSNR",
     "SSIM",
+    "MSSSIM",
+    "GMSD",
+    "L1",
+    "Charbonnier",
+    "Huber",
     "StreamingMetrics",
     "gaussian_window_1d",
     "set_compile_enabled",
     "backend_status",
+    "MS_SSIM_WEIGHTS",
 ]
 
 
