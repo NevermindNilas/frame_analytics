@@ -207,14 +207,37 @@ def _warn_once(exc: BaseException) -> None:
 
 
 def _usable(x: torch.Tensor, y: torch.Tensor) -> bool:
-    """The native kernels have no backward, so they are only used when nothing
-    downstream could ask for gradients."""
+    """Only the CUDA SSIM path has a native backward; everything else is
+    inference-only and defers to autograd when a gradient is wanted."""
     return (
         x.dtype in _SUPPORTED
         and x.dtype == y.dtype
         and not x.requires_grad
         and not y.requires_grad
     )
+
+
+def ssim_autograd_available(x: torch.Tensor, y: torch.Tensor, win_size: int) -> bool:
+    """Can the differentiable native SSIM path handle this call?"""
+    ext = load()
+    return (
+        ext is not None
+        and getattr(ext, "has_cuda", False)
+        and x.is_cuda
+        and x.dtype == torch.float32
+        and y.dtype == torch.float32
+        and x.shape == y.shape
+        and x.dim() == 4
+        and win_size in (3, 5, 7, 9, 11)
+        and not torch.cuda.is_current_stream_capturing()
+    )
+
+
+def ssim_backward(x, y, dL_dmap, grad_scalar, win, shift, C1, C2,
+                  need_dx, need_dy):
+    ext = load()
+    return ext.ssim_backward_cuda(x, y, dL_dmap, grad_scalar, win,
+                                  shift, C1, C2, need_dx, need_dy)
 
 
 _PSNR_NONE = -1.0e300

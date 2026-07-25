@@ -34,6 +34,12 @@ std::vector<torch::Tensor> mse_partial(torch::Tensor a, torch::Tensor b,
 std::vector<torch::Tensor> ssim_fused(torch::Tensor x, torch::Tensor y,
                                       torch::Tensor win, double shift,
                                       double C1, double C2, bool want_map);
+std::vector<torch::Tensor> ssim_backward(torch::Tensor x, torch::Tensor y,
+                                         torch::Tensor dL_dmap,
+                                         torch::Tensor grad_scalar,
+                                         torch::Tensor win,
+                                         double shift, double C1, double C2,
+                                         bool need_dx, bool need_dy);
 }
 #endif
 
@@ -357,6 +363,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
 #ifdef WITH_CUDA
   m.def("mse_partial_cuda", &fa::mse_partial, "block partial squared-error sums (CUDA)");
   m.def("ssim_fused_cuda", &fa::ssim_fused, "fused SSIM block sums (CUDA)");
+  m.def("ssim_backward_cuda", &fa::ssim_backward, "fused SSIM backward (CUDA)");
   m.attr("has_cuda") = true;
 #else
   m.attr("has_cuda") = false;

@@ -339,6 +339,60 @@ def _sep_filter(packed: torch.Tensor, win: torch.Tensor) -> torch.Tensor:
     return out.reshape(n, c, h - k + 1, w - k + 1)
 
 
+class _FusedSSIM(torch.autograd.Function):
+    """Differentiable native SSIM.
+
+    Forward is the same fused kernel the inference path uses. Backward runs a
+    second fused pair: one tile pass recomputes the local moments and emits the
+    three coefficient maps, one scatter pass convolves them back through the
+    Gaussian and combines with x and y. Nothing full-resolution crosses between
+    forward and backward -- only x and y are saved, and the moments are cheaper
+    to recompute than to store and reload.
+    """
+
+    @staticmethod
+    def forward(ctx, x, y, win, shift, C1, C2, want_map):
+        from . import backend
+
+        ext = backend.load()
+        res = ext.ssim_fused_cuda(x, y, win, shift, C1, C2, want_map)
+        ctx.save_for_backward(x, y, win)
+        ctx.consts = (shift, C1, C2)
+        ctx.want_map = want_map
+        ctx.npix = (x.shape[-2] - win.numel() + 1) * (x.shape[-1] - win.numel() + 1)
+        ctx.nplanes = x.shape[0] * x.shape[1]
+        if want_map:
+            return res[2]
+        return res[1]                      # batch-mean scalar
+
+    @staticmethod
+    def backward(ctx, grad_out):
+        from . import backend
+
+        x, y, win = ctx.saved_tensors
+        shift, C1, C2 = ctx.consts
+        need_dx = ctx.needs_input_grad[0]
+        need_dy = ctx.needs_input_grad[1]
+        if not (need_dx or need_dy):
+            return (None,) * 7
+
+        empty = torch.empty(0, device=x.device, dtype=torch.float32)
+        if ctx.want_map:
+            dmap, gscalar = grad_out.contiguous(), empty
+        else:
+            # Scalar mean: every map position gets the same upstream gradient.
+            # It is passed as a 1-element device tensor rather than a python
+            # float -- reading it on the host would sync the stream once per
+            # training step, and materialising a constant HxW map to read back
+            # would be pure bandwidth.
+            dmap, gscalar = empty, grad_out.reshape(1)
+
+        dx, dy = backend.ssim_backward(x, y, dmap, gscalar, win, shift, C1, C2,
+                                       need_dx, need_dy)
+        return (dx if need_dx else None, dy if need_dy else None,
+                None, None, None, None, None)
+
+
 def _matlab_downsample(x: torch.Tensor, f: int) -> torch.Tensor:
     """The automatic downsample MATLAB's ``ssim.m`` applies to large images."""
     if f <= 1:
@@ -412,6 +466,18 @@ def ssim(
     shift = 0.5 * L
 
     from . import backend
+
+    # Differentiable native path: only worth taking when a gradient is actually
+    # wanted, since it saves x and y and builds an autograd node.
+    if (backend_hint != "torch"
+            and (x4.requires_grad or y4.requires_grad)
+            and torch.is_grad_enabled()
+            and reduction == "mean"
+            and not downsample
+            and backend.ssim_autograd_available(x4, y4, win_size)):
+        win = gaussian_window_1d(win_size, sigma, device=x4.device,
+                                 dtype=torch.float32)
+        return _FusedSSIM.apply(x4, y4, win, shift, C1, C2, return_map)
 
     if backend_hint != "torch":
         fast = backend.try_ssim(

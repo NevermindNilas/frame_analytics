@@ -225,11 +225,23 @@ __global__ void mse_kernel_u8(const uchar4* __restrict__ a, const uchar4* __rest
 // what this kernel is short of -- an LDS instruction retires 32 lanes/cycle/SM
 // against 128 for FMA, so the vertical tap alone was ~2/3 of the cost.
 //
-template <typename T, bool WRITE_MAP, int KW>
+// What the tile kernel does once it has the five local moments.
+constexpr int MODE_REDUCE = 0;   // fold SSIM into a block sum
+constexpr int MODE_MAP = 1;      // ... and also write the SSIM map
+constexpr int MODE_PREP = 2;     // write the backward's three coefficient maps
+
+template <typename T, int OUT_MODE, int KW>
 __global__ __launch_bounds__(TILE_W * BLOCK_Y) void ssim_fused_kernel(
     const T* __restrict__ xp, const T* __restrict__ yp,
     double* __restrict__ partial,      // [planes][blocks_per_plane]
     float* __restrict__ map_out,       // optional [planes][Hout][Wout]
+    const float* __restrict__ dL_dmap, // MODE_PREP: upstream grad, may be null
+    const float* __restrict__ grad_scalar,  // MODE_PREP: used when dL_dmap null
+    float grad_norm,                   // MODE_PREP: 1/(npix*planes)
+    float* __restrict__ out_b,         // MODE_PREP: g * dS/dsigma_xx
+    float* __restrict__ out_c,         // MODE_PREP: g * dS/dsigma_xy
+    float* __restrict__ out_tx,        // MODE_PREP: g*dS/dmu_x - 2b*mu_x' - c*mu_y'
+    float* __restrict__ out_ty,        // MODE_PREP: same with x/y swapped, may be null
     int H, int W, int Hout, int Wout,
     float shift, float C1, float C2,
     const float* __restrict__ win,     // KW taps, sum 1
@@ -357,19 +369,52 @@ __global__ __launch_bounds__(TILE_W * BLOCK_Y) void ssim_fused_kernel(
         for (int k = 0; k < ROW_BLOCK; ++k) {
           const int orow = orow0 + k;
           if (orow >= hi) break;
-          const float mx = b[k][0] + shift;
-          const float my = b[k][1] + shift;
-          const float sxx = b[k][2] - b[k][0] * b[k][0];
-          const float syy = b[k][3] - b[k][1] * b[k][1];
-          const float sxy = b[k][4] - b[k][0] * b[k][1];
-          const float num = (2.0f * mx * my + C1) * (2.0f * sxy + C2);
-          const float den = (mx * mx + my * my + C1) * (sxx + syy + C2);
-          const float v = num / den;
-          if (WRITE_MAP) {
-            map_out[static_cast<long>(plane) * Hout * Wout +
-                    static_cast<long>(tile_y + orow) * Wout + tile_x + tx] = v;
+          const float ux = b[k][0];              // mean of the shifted data
+          const float uy = b[k][1];
+          const float mx = ux + shift;           // true local mean
+          const float my = uy + shift;
+          const float sxx = b[k][2] - ux * ux;
+          const float syy = b[k][3] - uy * uy;
+          const float sxy = b[k][4] - ux * uy;
+
+          const float A1 = 2.0f * mx * my + C1;
+          const float A2 = 2.0f * sxy + C2;
+          const float B1 = mx * mx + my * my + C1;   // >= C1 > 0
+          const float B2 = sxx + syy + C2;           // >= C2 > 0
+          const long idx = static_cast<long>(plane) * Hout * Wout +
+                           static_cast<long>(tile_y + orow) * Wout + tile_x + tx;
+
+          if (OUT_MODE == MODE_PREP) {
+            const float iB1 = 1.0f / B1;
+            const float iB2 = 1.0f / B2;
+            const float S = A1 * A2 * iB1 * iB2;
+            // Partials of S w.r.t. the independent moments (mu_x, sigma_xx,
+            // sigma_xy). dS/dsigma_yy is identical to dS/dsigma_xx, which is
+            // why one 'b' map serves both input gradients.
+            const float d_sxy = 2.0f * A1 * iB1 * iB2;
+            const float d_sxx = -S * iB2;
+            const float d_ux = 2.0f * A2 * iB1 * iB2 * (my - mx * A1 * iB1);
+            // The scalar-reduction case reads the upstream gradient straight
+            // off the device. Pulling it to the host to pass as a launch
+            // parameter would put a full sync in every training step.
+            const float g = dL_dmap ? dL_dmap[idx] : grad_scalar[0] * grad_norm;
+            const float bb = g * d_sxx;
+            const float cc = g * d_sxy;
+            out_b[idx] = bb;
+            out_c[idx] = cc;
+            // shifted means here: x(i)-mu_x is shift-invariant, and keeping the
+            // magnitudes small limits cancellation when the scatter pass forms
+            // 2*x'*P1 + ... + P3
+            out_tx[idx] = g * d_ux - 2.0f * bb * ux - cc * uy;
+            if (out_ty) {
+              const float d_uy = 2.0f * A2 * iB1 * iB2 * (mx - my * A1 * iB1);
+              out_ty[idx] = g * d_uy - 2.0f * bb * uy - cc * ux;
+            }
+          } else {
+            const float v = (A1 * A2) / (B1 * B2);
+            if (OUT_MODE == MODE_MAP) map_out[idx] = v;
+            acc += static_cast<double>(v);
           }
-          acc += static_cast<double>(v);
         }
       }
       produced = hi;
@@ -377,10 +422,159 @@ __global__ __launch_bounds__(TILE_W * BLOCK_Y) void ssim_fused_kernel(
     __syncthreads();
   }
 
-  const double s = block_reduce_sum(acc, s_warp);
-  if (tid == 0) {
-    partial[static_cast<long>(plane) * blocks_per_plane +
-            blockIdx.y * gridDim.x + blockIdx.x] = s;
+  if (OUT_MODE != MODE_PREP) {
+    const double s = block_reduce_sum(acc, s_warp);
+    if (tid == 0) {
+      partial[static_cast<long>(plane) * blocks_per_plane +
+              blockIdx.y * gridDim.x + blockIdx.x] = s;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------
+// Backward scatter
+//
+// dL/dx(i) = 2*x'(i)*(w conv b)(i) + y'(i)*(w conv c)(i) + (w conv t_x)(i)
+//
+// so the second half of the backward is three (or four) more separable
+// Gaussian passes, from the valid HoutxWout grid back onto the full HxW grid
+// with zeros outside.
+//
+// Because the Gaussian window is symmetric, sum_j w_j * m(i-j) is the same
+// operation as the forward's sum_j w_j * m(i+j) once the staged tile origin is
+// moved back by KW-1. So this kernel is the forward's tile machinery with a
+// shifted origin, NP planes instead of 5, and no products -- not a separate
+// algorithm.
+// --------------------------------------------------------------------------
+
+template <int KW, bool NEED_DY>
+__global__ __launch_bounds__(TILE_W * BLOCK_Y) void ssim_bwd_scatter_kernel(
+    const float* __restrict__ xp, const float* __restrict__ yp,
+    const float* __restrict__ mb, const float* __restrict__ mc,
+    const float* __restrict__ mtx, const float* __restrict__ mty,
+    float* __restrict__ dx, float* __restrict__ dy,
+    const float* __restrict__ win,
+    int H, int W, int Hout, int Wout, float shift) {
+
+  constexpr int NP = NEED_DY ? 4 : 3;
+  constexpr int HALO_K = KW - 1;
+  constexpr int STAGE_WK = TILE_W + HALO_K;
+  constexpr int RING_HK = ROWS_PER_STEP + HALO_K;
+
+  __shared__ float s_stage[ROWS_PER_STEP][NP][STAGE_WK];
+  __shared__ float s_ring[RING_HK][NP][TILE_W];
+  __shared__ float s_win[KW];
+
+  const int plane = blockIdx.z;
+  const long map_off = static_cast<long>(plane) * Hout * Wout;
+  const long img_off = static_cast<long>(plane) * H * W;
+  const int tile_x = blockIdx.x * TILE_W;
+  const int tile_y = blockIdx.y * TILE_H;
+
+  const int tx = threadIdx.x;
+  const int ty = threadIdx.y;
+  const int tid = ty * TILE_W + tx;
+  constexpr int NTHREADS = TILE_W * BLOCK_Y;
+
+  if (tid < KW) s_win[tid] = win[tid];
+  __syncthreads();
+
+  const int out_cols = min(TILE_W, W - tile_x);
+  const int out_rows = min(TILE_H, H - tile_y);
+  const int total_in_rows = out_rows + HALO_K;
+
+  const float* __restrict__ src[4] = {mb, mc, mtx, mty};
+  int produced = 0;
+
+  for (int r0 = 0; r0 < total_in_rows; r0 += ROWS_PER_STEP) {
+    const int nrows = min(ROWS_PER_STEP, total_in_rows - r0);
+
+    // ---- stage map rows, origin shifted back by HALO_K, zero outside ---- //
+    const int need = nrows * STAGE_WK;
+    for (int idx = tid; idx < need; idx += NTHREADS) {
+      const int rr = idx / STAGE_WK;
+      const int cc = idx - rr * STAGE_WK;
+      const int my_ = tile_y + r0 + rr - HALO_K;
+      const int mx_ = tile_x + cc - HALO_K;
+      const bool inside = (my_ >= 0 && my_ < Hout && mx_ >= 0 && mx_ < Wout);
+      const long o = map_off + static_cast<long>(my_) * Wout + mx_;
+      #pragma unroll
+      for (int p = 0; p < NP; ++p) {
+        s_stage[rr][p][cc] = inside ? src[p][o] : 0.0f;
+      }
+    }
+    __syncthreads();
+
+    // ---- horizontal tap -> ring ---------------------------------------- //
+    if (tx < out_cols) {
+      #pragma unroll
+      for (int k = 0; k < ROW_BLOCK; ++k) {
+        const int rr = ty * ROW_BLOCK + k;
+        if (rr >= nrows) break;
+        float a[NP];
+        #pragma unroll
+        for (int p = 0; p < NP; ++p) a[p] = 0.f;
+        #pragma unroll
+        for (int j = 0; j < KW; ++j) {
+          const float w = s_win[j];
+          #pragma unroll
+          for (int p = 0; p < NP; ++p) a[p] = fmaf(w, s_stage[rr][p][tx + j], a[p]);
+        }
+        const int slot = (r0 + rr) % RING_HK;
+        #pragma unroll
+        for (int p = 0; p < NP; ++p) s_ring[slot][p][tx] = a[p];
+      }
+    }
+    __syncthreads();
+
+    // ---- vertical tap + combine with x, y ------------------------------- //
+    const int ready = r0 + nrows - HALO_K;
+    const int lo = produced;
+    const int hi = min(ready, out_rows);
+    if (hi > lo) {
+      const int orow0 = lo + ty * ROW_BLOCK;
+      if (tx < out_cols && orow0 < hi) {
+        float acc[ROW_BLOCK][NP];
+        #pragma unroll
+        for (int k = 0; k < ROW_BLOCK; ++k)
+          #pragma unroll
+          for (int p = 0; p < NP; ++p) acc[k][p] = 0.f;
+
+        const int base = orow0 % RING_HK;
+        #pragma unroll
+        for (int t = 0; t < KW + ROW_BLOCK - 1; ++t) {
+          int slot = base + t;
+          if (slot >= RING_HK) slot -= RING_HK;
+          float r[NP];
+          #pragma unroll
+          for (int p = 0; p < NP; ++p) r[p] = s_ring[slot][p][tx];
+          #pragma unroll
+          for (int k = 0; k < ROW_BLOCK; ++k) {
+            const int j = t - k;
+            if (j >= 0 && j < KW) {
+              const float w = s_win[j];
+              #pragma unroll
+              for (int p = 0; p < NP; ++p) acc[k][p] = fmaf(w, r[p], acc[k][p]);
+            }
+          }
+        }
+
+        #pragma unroll
+        for (int k = 0; k < ROW_BLOCK; ++k) {
+          const int orow = orow0 + k;
+          if (orow >= hi) break;
+          const long o = img_off + static_cast<long>(tile_y + orow) * W + tile_x + tx;
+          const float xv = xp[o] - shift;
+          const float yv = yp[o] - shift;
+          const float P1 = acc[k][0];
+          const float P2 = acc[k][1];
+          if (dx) dx[o] = 2.0f * xv * P1 + yv * P2 + acc[k][2];
+          if (NEED_DY && dy) dy[o] = 2.0f * yv * P1 + xv * P2 + acc[k][3];
+        }
+      }
+      produced = hi;
+    }
+    __syncthreads();
   }
 }
 
@@ -480,26 +674,27 @@ std::vector<torch::Tensor> ssim_fused(torch::Tensor x, torch::Tensor y,
   dim3 block(TILE_W, BLOCK_Y);
   dim3 grid(gx, gy, planes);
 
-#define FA_LAUNCH(SC, MAP, KW)                                                 \
-  ssim_fused_kernel<SC, MAP, KW><<<grid, block, 0, stream>>>(                  \
+#define FA_LAUNCH(SC, MODE, KW)                                                \
+  ssim_fused_kernel<SC, MODE, KW><<<grid, block, 0, stream>>>(                 \
       x.data_ptr<SC>(), y.data_ptr<SC>(), partial.data_ptr<double>(),          \
-      map_ptr, H, W, Hout, Wout, (float)shift, (float)C1, (float)C2,           \
+      map_ptr, nullptr, nullptr, 0.f, nullptr, nullptr, nullptr, nullptr,      \
+      H, W, Hout, Wout, (float)shift, (float)C1, (float)C2,                    \
       winf.data_ptr<float>(), bpp)
 
-#define FA_DISPATCH_KW(SC, MAP)                                                \
+#define FA_DISPATCH_KW(SC, MODE)                                               \
   switch (K) {                                                                 \
-    case 11: FA_LAUNCH(SC, MAP, 11); break;                                    \
-    case 9:  FA_LAUNCH(SC, MAP, 9);  break;                                    \
-    case 7:  FA_LAUNCH(SC, MAP, 7);  break;                                    \
-    case 5:  FA_LAUNCH(SC, MAP, 5);  break;                                    \
-    case 3:  FA_LAUNCH(SC, MAP, 3);  break;                                    \
+    case 11: FA_LAUNCH(SC, MODE, 11); break;                                   \
+    case 9:  FA_LAUNCH(SC, MODE, 9);  break;                                   \
+    case 7:  FA_LAUNCH(SC, MODE, 7);  break;                                   \
+    case 5:  FA_LAUNCH(SC, MODE, 5);  break;                                   \
+    case 3:  FA_LAUNCH(SC, MODE, 3);  break;                                   \
     default: TORCH_CHECK(false, "unsupported window size ", K);                \
   }
 
   AT_DISPATCH_ALL_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16,
                              x.scalar_type(), "ssim_fused", [&] {
-    if (want_map) { FA_DISPATCH_KW(scalar_t, true); }
-    else          { FA_DISPATCH_KW(scalar_t, false); }
+    if (want_map) { FA_DISPATCH_KW(scalar_t, MODE_MAP); }
+    else          { FA_DISPATCH_KW(scalar_t, MODE_REDUCE); }
   });
   C10_CUDA_KERNEL_LAUNCH_CHECK();
 
@@ -513,6 +708,124 @@ std::vector<torch::Tensor> ssim_fused(torch::Tensor x, torch::Tensor y,
                       1.0 / (npix * C * static_cast<double>(N)), PSNR_NONE);
   if (want_map) return {red[0], red[1], map};
   return red;
+}
+
+// --------------------------------------------------------------------------
+// Backward
+//
+// Two passes. The first recomputes the local moments (the same tile kernel as
+// the forward, in MODE_PREP) and emits three coefficient maps; the second
+// scatters them back through the Gaussian and combines with x and y.
+//
+// dL_dmap may be undefined, in which case every map position gets
+// `uniform_grad` -- the mean-reduction case, where materialising a constant
+// HoutxWout tensor just to read it back would be pure bandwidth.
+// --------------------------------------------------------------------------
+
+std::vector<torch::Tensor> ssim_backward(torch::Tensor x, torch::Tensor y,
+                                         torch::Tensor dL_dmap,
+                                         torch::Tensor grad_scalar,
+                                         torch::Tensor win,
+                                         double shift, double C1, double C2,
+                                         bool need_dx, bool need_dy) {
+  TORCH_CHECK(x.is_cuda() && y.is_cuda(), "inputs must be CUDA tensors");
+  TORCH_CHECK(x.dim() == 4 && x.sizes() == y.sizes(), "expected matching NCHW");
+  TORCH_CHECK(x.scalar_type() == torch::kFloat32,
+              "backward requires float32 inputs, got ", x.scalar_type());
+  TORCH_CHECK(need_dx || need_dy, "backward called with nothing to compute");
+  x = x.contiguous();
+  y = y.contiguous();
+  auto winf = win.to(torch::kFloat32).contiguous().to(x.device());
+
+  const at::cuda::CUDAGuard guard(x.device());
+  auto stream = at::cuda::getCurrentCUDAStream();
+
+  const int N = (int)x.size(0), C = (int)x.size(1);
+  const int H = (int)x.size(2), W = (int)x.size(3);
+  const int K = (int)winf.numel();
+  const int Hout = H - K + 1, Wout = W - K + 1;
+  TORCH_CHECK(Hout > 0 && Wout > 0, "image smaller than window");
+  const int planes = N * C;
+
+  const bool has_map = dL_dmap.defined() && dL_dmap.numel() > 0;
+  const float* dmap_ptr = nullptr;
+  const float* gscalar_ptr = nullptr;
+  float grad_norm = 0.0f;
+  if (has_map) {
+    dL_dmap = dL_dmap.to(torch::kFloat32).contiguous();
+    TORCH_CHECK(dL_dmap.numel() == (long)planes * Hout * Wout,
+                "dL_dmap has the wrong number of elements");
+    dmap_ptr = dL_dmap.data_ptr<float>();
+  } else {
+    TORCH_CHECK(grad_scalar.defined() && grad_scalar.numel() == 1,
+                "need either dL_dmap or a 1-element grad_scalar");
+    grad_scalar = grad_scalar.to(torch::kFloat32).contiguous();
+    gscalar_ptr = grad_scalar.data_ptr<float>();
+    grad_norm = 1.0f / (float)((double)Hout * Wout * planes);
+  }
+
+  // b, c, t_x [, t_y] laid out as one allocation of contiguous planes
+  const int naux = need_dy ? 4 : 3;
+  auto aux = torch::empty({naux, planes, Hout, Wout}, x.options());
+  const long aux_stride = (long)planes * Hout * Wout;
+  float* ab = aux.data_ptr<float>();
+  float* ac = ab + aux_stride;
+  float* atx = ac + aux_stride;
+  float* aty = need_dy ? atx + aux_stride : nullptr;
+
+  {
+    const int gx = (Wout + TILE_W - 1) / TILE_W;
+    const int gy = (Hout + TILE_H - 1) / TILE_H;
+    dim3 block(TILE_W, BLOCK_Y);
+    dim3 grid(gx, gy, planes);
+#define FA_PREP(KW)                                                            \
+  ssim_fused_kernel<float, MODE_PREP, KW><<<grid, block, 0, stream>>>(         \
+      x.data_ptr<float>(), y.data_ptr<float>(), nullptr, nullptr, dmap_ptr,    \
+      gscalar_ptr, grad_norm, ab, ac, atx, aty, H, W, Hout, Wout,              \
+      (float)shift, (float)C1, (float)C2, winf.data_ptr<float>(), 0)
+    switch (K) {
+      case 11: FA_PREP(11); break;
+      case 9:  FA_PREP(9);  break;
+      case 7:  FA_PREP(7);  break;
+      case 5:  FA_PREP(5);  break;
+      case 3:  FA_PREP(3);  break;
+      default: TORCH_CHECK(false, "unsupported window size ", K);
+    }
+#undef FA_PREP
+    C10_CUDA_KERNEL_LAUNCH_CHECK();
+  }
+
+  torch::Tensor dx, dy;
+  float* dx_ptr = nullptr;
+  float* dy_ptr = nullptr;
+  if (need_dx) { dx = torch::empty_like(x); dx_ptr = dx.data_ptr<float>(); }
+  if (need_dy) { dy = torch::empty_like(y); dy_ptr = dy.data_ptr<float>(); }
+
+  {
+    const int gx = (W + TILE_W - 1) / TILE_W;
+    const int gy = (H + TILE_H - 1) / TILE_H;
+    dim3 block(TILE_W, BLOCK_Y);
+    dim3 grid(gx, gy, planes);
+#define FA_SCAT(KW, DY)                                                        \
+  ssim_bwd_scatter_kernel<KW, DY><<<grid, block, 0, stream>>>(                 \
+      x.data_ptr<float>(), y.data_ptr<float>(), ab, ac, atx, aty, dx_ptr,      \
+      dy_ptr, winf.data_ptr<float>(), H, W, Hout, Wout, (float)shift)
+#define FA_SCAT_KW(DY)                                                         \
+  switch (K) {                                                                 \
+    case 11: FA_SCAT(11, DY); break;                                           \
+    case 9:  FA_SCAT(9, DY);  break;                                           \
+    case 7:  FA_SCAT(7, DY);  break;                                           \
+    case 5:  FA_SCAT(5, DY);  break;                                           \
+    case 3:  FA_SCAT(3, DY);  break;                                           \
+    default: TORCH_CHECK(false, "unsupported window size ", K);                \
+  }
+    if (need_dy) { FA_SCAT_KW(true); } else { FA_SCAT_KW(false); }
+#undef FA_SCAT_KW
+#undef FA_SCAT
+    C10_CUDA_KERNEL_LAUNCH_CHECK();
+  }
+
+  return {dx, dy};
 }
 
 }  // namespace fa

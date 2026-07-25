@@ -1,6 +1,8 @@
 # frame_analytics
 
-Fast MSE, PSNR and SSIM for PyTorch — CPU and CUDA — at float64-reference accuracy.
+Fast MSE, PSNR and SSIM for PyTorch — CPU and CUDA — at float64-reference
+accuracy. Fused CUDA kernels for both the forward pass and the gradient, so it
+works as an evaluation metric and as a training loss.
 
 ```python
 import torch, frame_analytics as fa
@@ -80,13 +82,25 @@ frames. Naive torch on the same input: 2.76 ms (18× slower).
 **Streaming**, 1080p RGB, host uint8 in, python float out, via CUDA graphs:
 **931 fps** (1.07 ms/frame including host→device); 2 941 fps for resident tensors.
 
-### Where it loses
+**Forward + backward** — SSIM as a training loss, `1 - ssim(x, y)` with `.backward()`
 
-**Gradients.** fused-ssim has a hand-written backward kernel; our native kernels
-are forward-only, so `requires_grad` inputs fall back to autograd over the
-portable path. Forward+backward at 1080p: fused-ssim **0.46 ms**, ours **2.94 ms**
-— it is **6.4× faster**. If you want SSIM as a training loss, use fused-ssim.
-This library is built for evaluation, where only the forward pass runs.
+| | 512² | 512² ×8 | 1080p | 1080p ×8 | 4K | 4K ×8 |
+|---|---:|---:|---:|---:|---:|---:|
+| **frame_analytics** | **0.371** | **0.327** | **0.354** | **2.106** | **1.102** | **8.663** |
+| fused-ssim | 0.444 | 0.535 | 0.469 | 2.630 | 1.410 | 10.741 |
+| speedup | 1.20× | 1.64× | 1.32× | 1.25× | 1.28× | 1.24× |
+
+Gradients are verified two independent ways: against autograd over the portable
+path (~1e-6 relative) and against central differences on the float64 reference
+forward (~1e-6 relative). The scalar-reduction backward performs no
+device→host sync, so it does not stall the training pipeline — there is a test
+asserting that.
+
+The native backward is CUDA + float32 only. Anything else (CPU, float64, uint8,
+`downsample=True`) falls back to autograd over the portable path, which is
+correct but slower.
+
+### Where it loses
 
 **Small CPU PSNR.** `cv2.PSNR` on one cache-resident 1080p frame is ~2× faster;
 below ~4 MB our thread-pool wakeup costs more than the arithmetic. From 4 MB up
@@ -121,6 +135,15 @@ full-resolution intermediates; it is bandwidth-bound on its own temporaries.
 - **CPU: same structure, own thread pool.** `at::parallel_for` is a compile-time
   alias for an OpenMP region; a JIT-loaded extension isn't built with `/openmp`,
   so the pragmas vanish and it silently runs single-threaded. That was 19×.
+- **Backward reuses the forward's machinery.** With `a = g·∂S/∂μx`,
+  `b = g·∂S/∂σxx`, `c = g·∂S/∂σxy`, the gradient collapses to three more
+  Gaussian passes:
+  `dL/dx = 2x'·(w⊛b) + y'·(w⊛c) + w⊛[a − 2b·μx' − c·μy']`.
+  Since the window is symmetric, that scatter is the *same* tile kernel with its
+  origin moved back by one halo — not a second algorithm. And `∂S/∂σyy = ∂S/∂σxx`,
+  so `w⊛b` and `w⊛c` are shared between both input gradients. The moments are
+  recomputed rather than saved: cheaper than storing and reloading five
+  full-resolution planes.
 
 ## Install
 
@@ -154,6 +177,14 @@ ssim(x, y, *, data_range=None, win_size=11, sigma=1.5, K=(0.01, 0.03),
 `data_range` defaults to 255 for integer input, 1.0 for float. `downsample=True`
 applies MATLAB `ssim.m`'s automatic box-downsample (off by default, as in
 `ssim_index.m` and every PyTorch library).
+
+As a training loss:
+
+```python
+crit = fa.SSIM(data_range=1.0)
+loss = crit.loss(pred, target)      # 1 - SSIM, fused backward on CUDA float32
+loss.backward()
+```
 
 Module forms `MSE`, `PSNR`, `SSIM` cache window and constants.
 `StreamingMetrics` captures a CUDA graph for a fixed frame shape:

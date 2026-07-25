@@ -123,30 +123,35 @@ def speed():
 
 def gradients():
     print("\n" + "=" * 88)
-    print("BACKWARD  (ms/call, forward+backward, 1080p x1)")
+    print("FORWARD + BACKWARD  (ms/call, SSIM as a training loss)")
     print("=" * 88)
-    h, w = 1080, 1920
-    a, b = make_pair(h, w)
-    y = torch.as_tensor(b / 255.0, dtype=torch.float32, device="cuda")[None, None]
-    # one persistent leaf, grad zeroed per iteration: allocating a fresh
-    # requires_grad tensor inside the timed loop measures the allocator, not
-    # the kernels, and it made this row swing by 40% between runs
-    x = torch.as_tensor(a / 255.0, dtype=torch.float32,
-                        device="cuda")[None, None].requires_grad_(True)
+    print(f"  {'size':<10} {'batch':>5} {'frame_analytics':>17} {'fused-ssim':>12} "
+          f"{'speedup':>9}")
+    print("  " + "-" * 60)
+    for name, h, w in SIZES:
+        for n in (1, 8):
+            a, b = make_pair(h, w)
+            y = torch.as_tensor(b / 255.0, dtype=torch.float32,
+                                device="cuda")[None, None].expand(n, 1, h, w).contiguous()
+            # one persistent leaf with grad zeroed per iteration: allocating a
+            # fresh requires_grad tensor inside the timed loop measures the
+            # caching allocator, not the kernels, and swung this by 40%
+            x = torch.as_tensor(a / 255.0, dtype=torch.float32,
+                                device="cuda")[None, None].expand(n, 1, h, w)
+            x = x.contiguous().requires_grad_(True)
 
-    def run_fs():
-        x.grad = None
-        (1.0 - fused_ssim(x, y, padding="valid", train=True)).backward()
+            def run_fs():
+                x.grad = None
+                (1.0 - fused_ssim(x, y, padding="valid", train=True)).backward()
 
-    def run_ours():
-        x.grad = None
-        (1.0 - fa.ssim(x, y, data_range=1.0)).backward()
+            def run_ours():
+                x.grad = None
+                (1.0 - fa.ssim(x, y, data_range=1.0)).backward()
 
-    print(f"  fused-ssim      {timeit(run_fs, iters=30, repeat=7)*1e3:8.3f} ms")
-    print(f"  frame_analytics {timeit(run_ours, iters=30, repeat=7)*1e3:8.3f} ms")
-    print("  (fused-ssim has a hand-written backward kernel; ours falls back to "
-          "autograd\n   over the portable path, since the native kernels are "
-          "forward-only)")
+            t_ours = timeit(run_ours, iters=20, repeat=5)
+            t_fs = timeit(run_fs, iters=20, repeat=5)
+            print(f"  {name:<10} {n:>5} {t_ours*1e3:>17.3f} {t_fs*1e3:>12.3f} "
+                  f"{t_fs/t_ours:>8.2f}x")
 
 
 if __name__ == "__main__":

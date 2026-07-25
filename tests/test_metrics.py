@@ -120,6 +120,96 @@ def test_gradients_flow(dev):
     assert x.grad.abs().sum() > 0
 
 
+def _grads(x0, y0, hint, wrt):
+    x = x0.clone().requires_grad_("x" in wrt)
+    y = y0.clone().requires_grad_("y" in wrt)
+    (1.0 - fa.ssim(x, y, data_range=1.0, backend_hint=hint)).backward()
+    return x.grad, y.grad
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
+@pytest.mark.parametrize("shape", [(1, 1, 64, 64), (1, 1, 97, 131), (2, 3, 80, 120)])
+@pytest.mark.parametrize("wrt", [("x",), ("y",), ("x", "y")])
+def test_native_backward_matches_autograd(shape, wrt):
+    """The fused backward kernel against autograd over the portable path."""
+    torch.manual_seed(0)
+    x0 = torch.rand(*shape, device="cuda")
+    y0 = (x0 + 0.05 * torch.randn_like(x0)).clamp(0, 1)
+    ref_g = _grads(x0, y0, "torch", wrt)
+    nat_g = _grads(x0, y0, "auto", wrt)
+    for r, n in zip(ref_g, nat_g):
+        assert (r is None) == (n is None)
+        if r is None:
+            continue
+        rel = (r - n).abs().max().item() / max(r.abs().max().item(), 1e-12)
+        assert rel < 2e-4, f"relative gradient error {rel:.2e}"
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
+def test_backward_matches_finite_differences():
+    """Independent check of the analytic gradient against the float64 forward.
+
+    Differencing the float32 kernel would only measure its own rounding: one
+    perturbed pixel moves SSIM by ~1e-8, well under float32 resolution.
+    """
+    rng = np.random.default_rng(1)
+    h = w = 40
+    xa = rng.random((h, w))
+    ya = np.clip(xa + 0.05 * rng.standard_normal((h, w)), 0, 1)
+
+    x = torch.as_tensor(xa, dtype=torch.float32,
+                        device="cuda")[None, None].requires_grad_(True)
+    y = torch.as_tensor(ya, dtype=torch.float32, device="cuda")[None, None]
+    fa.ssim(x, y, data_range=1.0).backward()
+    g = x.grad[0, 0].double().cpu().numpy()
+
+    eps = 1e-5
+    for (i, j) in [(5, 7), (20, 20), (12, 33), (25, 18)]:
+        xp = xa.copy(); xp[i, j] += eps
+        xm = xa.copy(); xm[i, j] -= eps
+        fd = (ref.ssim_reference(xp, ya, 1.0) - ref.ssim_reference(xm, ya, 1.0)) / (2 * eps)
+        assert abs(fd - g[i, j]) / max(abs(fd), 1e-12) < 1e-4
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
+def test_backward_through_map():
+    """return_map=True must differentiate too, with a non-uniform upstream grad."""
+    torch.manual_seed(1)
+    x0 = torch.rand(1, 1, 72, 88, device="cuda")
+    y0 = (x0 + 0.05 * torch.randn_like(x0)).clamp(0, 1)
+    wmap = torch.rand(1, 1, 62, 78, device="cuda")
+
+    def run(hint):
+        x = x0.clone().requires_grad_(True)
+        (fa.ssim(x, y0, data_range=1.0, return_map=True, backend_hint=hint)
+         * wmap).sum().backward()
+        return x.grad
+
+    a, b = run("torch"), run("auto")
+    rel = (a - b).abs().max().item() / a.abs().max().item()
+    assert rel < 2e-4, f"relative gradient error {rel:.2e}"
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
+def test_backward_does_not_sync():
+    """A scalar-reduction backward must not pull anything to the host.
+
+    A single implicit device->host copy per step stalls the whole pipeline, so
+    this is a performance contract, not a cosmetic one.
+    """
+    x = torch.rand(1, 1, 128, 128, device="cuda", requires_grad=True)
+    y = torch.rand(1, 1, 128, 128, device="cuda")
+    (1.0 - fa.ssim(x, y, data_range=1.0)).backward()   # warm up
+    torch.cuda.synchronize()
+    x.grad = None
+    with torch.cuda.stream(torch.cuda.Stream()):
+        torch.cuda._sleep(50_000_000)                  # occupy the device
+        (1.0 - fa.ssim(x, y, data_range=1.0)).backward()
+        # if the backward synced, the sleep above would already have drained
+        assert not torch.cuda.current_stream().query()
+    torch.cuda.synchronize()
+
+
 def test_mismatched_inputs_raise():
     x = torch.zeros(1, 1, 32, 32)
     assert pytest.raises(ValueError, fa.ssim, x, torch.zeros(1, 1, 32, 33))
