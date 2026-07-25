@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "frame-analytics"
+dynamic = ["version"]
+description = "Fast MSE, PSNR and SSIM for PyTorch (CPU + CUDA) at float64-reference accuracy"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Nilas" }]
+keywords = [
+    "ssim", "psnr", "mse", "image-quality", "video-quality", "metrics",
+    "pytorch", "cuda", "perceptual-loss",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: C++",
+    "Environment :: GPU :: NVIDIA CUDA",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Multimedia :: Video",
+]
+dependencies = ["torch>=2.0", "numpy>=1.20"]
+
+[project.urls]
+Homepage = "https://github.com/NevermindNilas/frame_analytics"
+Source = "https://github.com/NevermindNilas/frame_analytics"
+Issues = "https://github.com/NevermindNilas/frame_analytics/issues"
+
+[project.optional-dependencies]
+# what the accuracy gate and the comparison tables need
+bench = ["scikit-image", "opencv-python", "pytorch-msssim", "piq", "torchmetrics", "kornia"]
+test = ["pytest", "scikit-image"]
+
+[tool.setuptools.dynamic]
+version = { attr = "frame_analytics.__version__" }
+
+[tool.setuptools.packages.find]
+# only the library: `bench` has an __init__.py and would otherwise be
+# installed as a top-level package
+include = ["frame_analytics*"]
+
+[tool.setuptools.package-data]
+# the kernels ship as source and are compiled on first use, so they must be
+# inside the wheel
+frame_analytics = ["csrc/*.cu", "csrc/*.cpp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

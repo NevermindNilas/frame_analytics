@@ -163,16 +163,31 @@ full-resolution intermediates. It is bandwidth-bound on its own temporaries.
 ## Install
 
 ```bash
-pip install -e .                      # kernels JIT-compile on first use
-python setup.py build_ext --inplace   # or ahead of time
+pip install frame-analytics
 ```
 
-torch ≥ 2.0, numpy. A C++/nvcc toolchain unlocks the native path; on Windows the
-build environment is located automatically. Without one everything still works —
-the portable PyTorch path returns the same numbers. `fa.backend_status()` reports
-which is live; `backend_hint="torch"` / `"native"` forces either.
+torch ≥ 2.0, numpy. One universal `py3-none-any` wheel, no version matrix: a
+torch C++ extension is ABI-locked to the exact torch build it was compiled
+against, so prebuilt binaries would mean a wheel per {python} × {torch} × {CUDA}
+× {platform} and would still miss whatever you actually have installed. The
+kernel sources ship inside the wheel and compile on first call (~1 min, cached
+in the torch extensions directory thereafter).
+
+No compiler? It still works — every native kernel has a portable PyTorch
+fallback that returns the same numbers. `fa.backend_status()` reports which is
+live; `backend_hint="torch"` / `"native"` forces either. On Windows the MSVC
+build environment is located automatically, no developer prompt needed.
+
+To compile at install time instead, and get a platform wheel:
 
 ```bash
+FA_BUILD_EXT=1 pip install frame-analytics
+```
+
+From a checkout:
+
+```bash
+pip install -e .
 python tests/validate.py           # accuracy gate
 python bench/bench.py              # speed + accuracy tables
 python bench/bench_fused_ssim.py   # head-to-head vs fused-ssim

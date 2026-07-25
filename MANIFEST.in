@@ -1,0 +1,5 @@
+include LICENSE README.md
+recursive-include frame_analytics/csrc *.cu *.cpp
+recursive-include tests *.py
+recursive-include bench *.py
+global-exclude __pycache__/* *.py[cod] *.so *.pyd

@@ -1,16 +1,28 @@
-"""Optional ahead-of-time build of the native extension.
+"""Build hook.
 
-    pip install -e .            # pure python, kernels JIT-compiled on first use
-    python setup.py build_ext --inplace   # compile now instead
+By default this produces a pure-Python (`py3-none-any`) wheel: the CUDA and C++
+sources ship *inside* the wheel and are compiled on first use by
+`frame_analytics.backend`, which caches the result in the torch extensions
+directory.
 
-The package works without this: `frame_analytics.backend` JIT-compiles the same
-sources on first call and falls back to the portable PyTorch path if no
-compiler is available.
+That is a deliberate choice, not a shortcut. A torch C++ extension is ABI-locked
+to the exact torch build it was compiled against -- one prebuilt wheel per
+{python version} x {torch version} x {CUDA version} x {platform} is a
+combinatorial matrix that would still miss whatever the user actually has
+installed. Compiling on demand means one wheel works everywhere, and because
+every native kernel has a portable PyTorch fallback, it also works on machines
+with no compiler at all.
+
+Set FA_BUILD_EXT=1 to compile ahead of time instead and get a platform wheel:
+
+    FA_BUILD_EXT=1 pip install .
 """
 
+import os
+import sys
 from pathlib import Path
 
-from setuptools import find_packages, setup
+from setuptools import setup
 
 ROOT = Path(__file__).parent
 CSRC = ROOT / "frame_analytics" / "csrc"
@@ -18,41 +30,41 @@ CSRC = ROOT / "frame_analytics" / "csrc"
 ext_modules = []
 cmdclass = {}
 
-try:
+if os.environ.get("FA_BUILD_EXT", "").lower() in ("1", "on", "true", "yes"):
+    # torch is only imported on this path, so the default build works in an
+    # isolated environment that has never heard of it
     import torch
     from torch.utils.cpp_extension import BuildExtension, CppExtension, CUDAExtension
 
-    with_cuda = torch.cuda.is_available() or bool(
-        __import__("os").environ.get("FORCE_CUDA"))
+    with_cuda = torch.cuda.is_available() or bool(os.environ.get("FORCE_CUDA"))
+
+    if sys.platform == "win32":
+        # /Zc:preprocessor: CUDA 13's CCCL headers refuse to build against
+        # MSVC's traditional preprocessor
+        cxx_flags = ["/O2", "/fp:fast", "/arch:AVX2", "/Zc:preprocessor"]
+    else:
+        cxx_flags = ["-O3", "-ffast-math", "-march=native"]
+
+    nvcc_flags = ["-O3", "--expt-relaxed-constexpr",
+                  "-prec-div=true", "-prec-sqrt=true", "-ftz=false"]
+    if sys.platform == "win32":
+        nvcc_flags += ["-Xcompiler", "/Zc:preprocessor"]
 
     if with_cuda:
+        cxx_flags.append("/DWITH_CUDA" if sys.platform == "win32" else "-DWITH_CUDA")
+        nvcc_flags.append("-DWITH_CUDA")
         ext_modules = [CUDAExtension(
             "frame_analytics_native",
             [str(CSRC / "fa_cpu.cpp"), str(CSRC / "fa_cuda.cu")],
-            extra_compile_args={
-                "cxx": ["/O2", "/fp:fast", "/arch:AVX2", "/Zc:preprocessor", "/DWITH_CUDA"],
-                "nvcc": ["-O3", "-DWITH_CUDA", "--expt-relaxed-constexpr",
-                         "-prec-div=true", "-prec-sqrt=true", "-ftz=false"],
-            },
+            extra_compile_args={"cxx": cxx_flags, "nvcc": nvcc_flags},
         )]
     else:
         ext_modules = [CppExtension(
             "frame_analytics_native",
             [str(CSRC / "fa_cpu.cpp")],
-            extra_compile_args=["/O2", "/fp:fast", "/arch:AVX2", "/Zc:preprocessor"],
+            extra_compile_args=cxx_flags,
         )]
     cmdclass = {"build_ext": BuildExtension}
-except ImportError:
-    pass
 
-setup(
-    name="frame_analytics",
-    version="0.1.0",
-    description="Fast MSE / PSNR / SSIM for PyTorch on CPU and CUDA",
-    packages=find_packages(include=["frame_analytics", "frame_analytics.*"]),
-    package_data={"frame_analytics": ["csrc/*.cu", "csrc/*.cpp"]},
-    python_requires=">=3.9",
-    install_requires=["torch>=2.0", "numpy"],
-    ext_modules=ext_modules,
-    cmdclass=cmdclass,
-)
+# everything else (name, version, deps, package data) lives in pyproject.toml
+setup(ext_modules=ext_modules, cmdclass=cmdclass)
