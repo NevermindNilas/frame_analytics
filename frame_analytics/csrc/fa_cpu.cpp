@@ -21,6 +21,10 @@
 #include <thread>
 #include <vector>
 
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))
+#include <intrin.h>
+#endif
+
 #if defined(_MSC_VER)
 #define FA_RESTRICT __restrict
 #else
@@ -61,6 +65,26 @@ constexpr int MAX_WIN = 11;
 // std::thread, work-stealing over a task index, calling thread participates.
 // -------------------------------------------------------------------------
 
+// Workers spin briefly on the generation counter before sleeping on the
+// condition variable, and the caller does the same while waiting for them to
+// finish. A pure condvar handoff costs ~45us of wall clock per call, which is
+// more than the entire metric for anything under about a megapixel -- it made
+// small-image PSNR slower than the pure-PyTorch libraries. The spin is bounded,
+// so an idle pool still parks itself.
+constexpr int SPIN_ROUNDS = 8192;
+
+static inline void cpu_relax() {
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))
+  _mm_pause();
+#elif defined(__x86_64__) || defined(__i386__)
+  __builtin_ia32_pause();
+#elif defined(__aarch64__)
+  asm volatile("yield" ::: "memory");
+#else
+  std::this_thread::yield();
+#endif
+}
+
 class TaskPool {
  public:
   explicit TaskPool(int nworkers) {
@@ -81,13 +105,20 @@ class TaskPool {
       fn_ = &fn;
       total_ = ntasks;
       cursor_.store(0, std::memory_order_relaxed);
-      active_ = static_cast<int>(workers_.size());
-      ++generation_;
+      active_.store(static_cast<int>(workers_.size()), std::memory_order_relaxed);
+      // release: publishes fn_/total_/cursor_ to workers spinning without mu_
+      generation_.fetch_add(1, std::memory_order_release);
     }
     cv_work_.notify_all();
-    drain();
+
+    drain();  // the calling thread is a worker too
+
+    for (int i = 0; i < SPIN_ROUNDS; ++i) {
+      if (active_.load(std::memory_order_acquire) == 0) return;
+      cpu_relax();
+    }
     std::unique_lock<std::mutex> lk(mu_);
-    cv_done_.wait(lk, [this] { return active_ == 0; });
+    cv_done_.wait(lk, [this] { return active_.load(std::memory_order_acquire) == 0; });
   }
 
  private:
@@ -102,16 +133,27 @@ class TaskPool {
   void worker() {
     uint64_t seen = 0;
     for (;;) {
-      {
-        std::unique_lock<std::mutex> lk(mu_);
-        cv_work_.wait(lk, [&] { return stop_ || generation_ != seen; });
-        if (stop_) return;
-        seen = generation_;
+      bool woke = false;
+      for (int i = 0; i < SPIN_ROUNDS; ++i) {
+        if (stop_.load(std::memory_order_acquire)) return;
+        if (generation_.load(std::memory_order_acquire) != seen) { woke = true; break; }
+        cpu_relax();
       }
+      if (!woke) {
+        std::unique_lock<std::mutex> lk(mu_);
+        // predicate is re-checked under the lock, so a generation bump that
+        // lands between the spin ending and the lock being taken is not lost
+        cv_work_.wait(lk, [&] {
+          return stop_.load(std::memory_order_acquire) ||
+                 generation_.load(std::memory_order_acquire) != seen;
+        });
+        if (stop_.load(std::memory_order_acquire)) return;
+      }
+      seen = generation_.load(std::memory_order_acquire);
       drain();
       {
         std::lock_guard<std::mutex> lk(mu_);
-        if (--active_ == 0) cv_done_.notify_all();
+        if (active_.fetch_sub(1, std::memory_order_acq_rel) == 1) cv_done_.notify_all();
       }
     }
   }
@@ -122,9 +164,9 @@ class TaskPool {
   const std::function<void(int64_t)>* fn_ = nullptr;
   std::atomic<int64_t> cursor_{0};
   int64_t total_ = 0;
-  int active_ = 0;
-  uint64_t generation_ = 0;
-  bool stop_ = false;
+  std::atomic<int> active_{0};
+  std::atomic<uint64_t> generation_{0};
+  std::atomic<bool> stop_{false};
 };
 
 // Deliberately leaked: joining worker threads during static destruction races
