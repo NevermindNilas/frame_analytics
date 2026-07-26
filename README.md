@@ -53,7 +53,7 @@ paper (`python tests/validate.py`).
 
 | implementation | SSIM abs. error |
 |---|---:|
-| **frame_analytics** (CUDA / CPU / portable) | **3.2e-09 / 3.1e-09 / 6.9e-09** |
+| **frame_analytics** (CUDA / CPU / portable) | **2.4e-09 / 3.1e-09 / 6.9e-09** |
 | pytorch-msssim | 1.0e-07 |
 | fused-ssim (`padding="valid"`) | 3.3e-06 |
 | kornia | 2.1e-05 |
@@ -288,8 +288,18 @@ full-resolution intermediates. It is bandwidth-bound on its own temporaries.
 
 - **Separable window** — 22 MACs/px instead of 121, and exactly equal, since
   normalising in 1-D then taking the outer product *is* the 2-D window.
+- **Four blurred planes, not five.** SSIM never wants σ<sub>xx</sub> and
+  σ<sub>yy</sub> apart, only their sum, so one plane can stand in for two. Which
+  one matters: the algebraically obvious E[(x+y)²] − 2E[xy] carries ~4× the
+  magnitude of the variance it has to produce and *loses* a factor of 2 in map
+  accuracy. Blurring the difference keeps every intermediate the size of the
+  answer — σ<sub>xx</sub>+σ<sub>yy</sub> = E[(x−y)²] + 2σ<sub>xy</sub> −
+  (μ<sub>x</sub>−μ<sub>y</sub>)², and σ<sub>xy</sub> is already in hand. On
+  matched frames x−y is near zero, so it comes out *more* accurate than the
+  five-plane form, not less, while taking 20% off the ring buffer that this
+  kernel is actually short of. Worth 10–14%.
 - **One fused CUDA kernel, zero intermediates.** A block owns a 32×64 output
-  tile and streams input through shared memory: rows staged, turned into five
+  tile and streams input through shared memory: rows staged, turned into four
   horizontal partial sums, pushed into a ring buffer; once 11 rows are resident
   the vertical tap runs and SSIM is folded into a block accumulator. DRAM
   traffic is the two input planes plus ~30% halo. Nothing else is written.
@@ -322,7 +332,7 @@ And for the metrics added on top of it:
 
 - **MS-SSIM reuses one pass per scale.** Every scale needs the contrast-structure
   term and the coarsest also needs the full SSIM, and both fall out of the same
-  five moments — so the tile kernel emits both from registers rather than being
+  four moments — so the tile kernel emits both from registers rather than being
   run twice over the same two planes. The backward generalises the same way: the
   weighted product hands back one gradient per plane for the SSIM mean and one
   for the cs mean, and both fold into the same three coefficient maps. Nothing

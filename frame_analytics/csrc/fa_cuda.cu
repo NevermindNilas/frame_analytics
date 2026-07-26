@@ -10,16 +10,16 @@
 // Here a block owns a 32 x 64 tile of the *output* map and streams the input
 // through shared memory:
 //
-//   * 8 input rows are staged at a time (32 + 10 wide, for the horizontal halo)
-//   * each staged row is immediately turned into its five Gaussian-weighted
-//     horizontal partial sums and pushed into an 18-row ring buffer
+//   * 16 input rows are staged at a time (32 + 10 wide, for the horizontal halo)
+//   * each staged row is immediately turned into its four Gaussian-weighted
+//     horizontal partial sums and pushed into a 26-row ring buffer
 //   * as soon as 11 rows are resident, the vertical tap runs, the SSIM value is
 //     formed in registers and folded straight into a block accumulator
 //
 // Net DRAM traffic: the two input planes, read once each plus ~30% halo
 // overlap. Nothing else is written except one partial sum per block.
 //
-// Shared memory: 8*42*2*4 (staging) + 18*5*32*4 (ring) = 14.2 KiB, so several
+// Shared memory: 16*42*2*4 (staging) + 26*4*32*4 (ring) = 18.2 KiB, so several
 // blocks stay resident per SM.
 
 #include <torch/extension.h>
@@ -40,7 +40,27 @@ constexpr int MAX_WIN = 11;
 constexpr int HALO = MAX_WIN - 1;             // 10
 constexpr int STAGE_W = TILE_W + HALO;        // 42
 constexpr int RING_H = ROWS_PER_STEP + HALO;  // 26
-constexpr int NPLANE = 5;
+// Moment planes carried through the separable blur: x, y, x*y, (x-y)^2.
+//
+// The obvious set is five -- x, y, x^2, y^2, x*y -- but SSIM never wants
+// sigma_xx and sigma_yy apart, only their sum, so one blurred plane can stand
+// in for two.  The ring buffer is what this kernel is short of (see the
+// vertical tap below), and dropping a plane takes 20% off both its footprint
+// and its traffic, worth 10-14% end to end.
+//
+// Which substitute plane matters.  E[(x+y)^2] - 2*E[x*y] is the algebraically
+// obvious one and it is the *worse* one: E[(x+y)^2] runs ~4x the magnitude of
+// the variance it has to produce, so its rounding error arrives pre-amplified
+// and the SSIM map lost a factor of ~2 in accuracy.  Blurring the difference
+// instead keeps every intermediate the size of the answer,
+//
+//     sigma_xx + sigma_yy = E[(x-y)^2] + 2*sigma_xy - (mu_x - mu_y)^2
+//
+// and sigma_xy is already in hand.  On matched frames -- the case that
+// actually gets measured -- x-y is near zero and this is more accurate than
+// the five-plane form it replaces, not less: worst SSIM map error over the
+// validate.py corpus goes 1.3e-05 -> 5.3e-06.
+constexpr int NPLANE = 4;
 
 // --------------------------------------------------------------------------
 // typed loads
@@ -351,7 +371,7 @@ __global__ void pixel_kernel_u8(const uchar4* __restrict__ a, const uchar4* __re
 // what this kernel is short of -- an LDS instruction retires 32 lanes/cycle/SM
 // against 128 for FMA, so the vertical tap alone was ~2/3 of the cost.
 //
-// What the tile kernel does once it has the five local moments.
+// What the tile kernel does once it has the four local moments.
 constexpr int MODE_REDUCE = 0;   // fold SSIM into a block sum
 constexpr int MODE_MAP = 1;      // ... and also write the SSIM map
 constexpr int MODE_PREP = 2;     // write the backward's three coefficient maps
@@ -443,24 +463,23 @@ __global__ __launch_bounds__(TILE_W * BLOCK_Y) void ssim_fused_kernel(
       for (int k = 0; k < ROW_BLOCK; ++k) {
         const int rr = ty * ROW_BLOCK + k;
         if (rr >= nrows) break;
-        float a0 = 0.f, a1 = 0.f, a2 = 0.f, a3 = 0.f, a4 = 0.f;
+        float a0 = 0.f, a1 = 0.f, a2 = 0.f, a3 = 0.f;
         #pragma unroll
         for (int j = 0; j < KW; ++j) {
           const float w = s_win[j];
           const float xv = s_x[rr][tx + j];
           const float yv = s_y[rr][tx + j];
+          const float dv = xv - yv;
           a0 = fmaf(w, xv, a0);
           a1 = fmaf(w, yv, a1);
-          a2 = fmaf(w, xv * xv, a2);
-          a3 = fmaf(w, yv * yv, a3);
-          a4 = fmaf(w, xv * yv, a4);
+          a2 = fmaf(w, xv * yv, a2);
+          a3 = fmaf(w, dv * dv, a3);
         }
         int slot = (r0 + rr) % RING_HK;
         s_ring[slot][0][tx] = a0;
         s_ring[slot][1][tx] = a1;
         s_ring[slot][2][tx] = a2;
         s_ring[slot][3][tx] = a3;
-        s_ring[slot][4][tx] = a4;
       }
     }
     __syncthreads();
@@ -489,7 +508,6 @@ __global__ __launch_bounds__(TILE_W * BLOCK_Y) void ssim_fused_kernel(
           const float r1v = s_ring[slot][1][tx];
           const float r2v = s_ring[slot][2][tx];
           const float r3v = s_ring[slot][3][tx];
-          const float r4v = s_ring[slot][4][tx];
           #pragma unroll
           for (int k = 0; k < ROW_BLOCK; ++k) {
             const int j = t - k;
@@ -499,7 +517,6 @@ __global__ __launch_bounds__(TILE_W * BLOCK_Y) void ssim_fused_kernel(
               b[k][1] = fmaf(w, r1v, b[k][1]);
               b[k][2] = fmaf(w, r2v, b[k][2]);
               b[k][3] = fmaf(w, r3v, b[k][3]);
-              b[k][4] = fmaf(w, r4v, b[k][4]);
             }
           }
         }
@@ -512,14 +529,14 @@ __global__ __launch_bounds__(TILE_W * BLOCK_Y) void ssim_fused_kernel(
           const float uy = b[k][1];
           const float mx = ux + shift;           // true local mean
           const float my = uy + shift;
-          const float sxx = b[k][2] - ux * ux;
-          const float syy = b[k][3] - uy * uy;
-          const float sxy = b[k][4] - ux * uy;
+          const float sxy = b[k][2] - ux * uy;
+          const float du = ux - uy;
+          const float sxx_syy = b[k][3] + 2.0f * sxy - du * du;
 
           const float A1 = 2.0f * mx * my + C1;
           const float A2 = 2.0f * sxy + C2;
           const float B1 = mx * mx + my * my + C1;   // >= C1 > 0
-          const float B2 = sxx + syy + C2;           // >= C2 > 0
+          const float B2 = sxx_syy + C2;             // >= C2 > 0
           const long idx = static_cast<long>(plane) * Hout * Wout +
                            static_cast<long>(tile_y + orow) * Wout + tile_x + tx;
 
@@ -623,7 +640,7 @@ __global__ __launch_bounds__(TILE_W * BLOCK_Y) void ssim_fused_kernel(
 // Because the Gaussian window is symmetric, sum_j w_j * m(i-j) is the same
 // operation as the forward's sum_j w_j * m(i+j) once the staged tile origin is
 // moved back by KW-1. So this kernel is the forward's tile machinery with a
-// shifted origin, NP planes instead of 5, and no products -- not a separate
+// shifted origin, NP planes instead of NPLANE, and no products -- not a separate
 // algorithm.
 // --------------------------------------------------------------------------
 
@@ -934,7 +951,7 @@ std::vector<torch::Tensor> ssim_fused(torch::Tensor x, torch::Tensor y,
 //
 // One pass produces the plane means of *both* the SSIM map and its
 // contrast-structure factor. MS-SSIM wants cs at every scale and the full SSIM
-// only at the coarsest, and both fall out of the same five moments, so running
+// only at the coarsest, and both fall out of the same four moments, so running
 // the tile kernel twice would be pure waste: the second run would re-read both
 // input planes to recompute numbers it already had in registers.
 // --------------------------------------------------------------------------
