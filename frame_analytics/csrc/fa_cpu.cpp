@@ -536,6 +536,55 @@ struct Task {
   int plane, row0, rows, col0, cols;
 };
 
+// The horizontal half of the separable filter.  Deliberately a free function
+// and not the lambda it reads like.
+//
+// Every bound and every pointer arrives by value.  Written as a body inside a
+// `[&]` lambda they arrive as loads through the closure instead, and MSVC will
+// not prove them loop-invariant: `/Qvec-report:2` reports reason 501 --
+// "induction variable is not local; or upper bound is not loop-invariant" -- on
+// all four loops below and vectorises none of them, while the structurally
+// identical loops in the enclosing function body vectorise fine.  That one
+// difference was most of SSIM's runtime: hoisting it out measured 4.8x on the
+// AVX2 build at one thread, 4.2x at eight, and 3.7x end to end through the
+// Python entry point, with bit-identical results.
+//
+// Keep the loops here.  Folding this back into the caller as a lambda is a
+// silent 4x regression that no test would catch.
+template <typename T>
+static void ssim_horiz_row(const T* FA_RESTRICT xrow, const T* FA_RESTRICT yrow,
+                           float* FA_RESTRICT raw, float* FA_RESTRICT dst,
+                           const int span, const int cols,
+                           const float* FA_RESTRICT win, const int K,
+                           const float shift) {
+  float* FA_RESTRICT rx = raw;
+  float* FA_RESTRICT ry = rx + span;
+  float* FA_RESTRICT rxx = ry + span;
+  float* FA_RESTRICT ryy = rxx + span;
+  float* FA_RESTRICT rxy = ryy + span;
+  for (int c = 0; c < span; ++c) {
+    const float xv = static_cast<float>(xrow[c]) - shift;
+    const float yv = static_cast<float>(yrow[c]) - shift;
+    rx[c] = xv;
+    ry[c] = yv;
+    rxx[c] = xv * xv;
+    ryy[c] = yv * yv;
+    rxy[c] = xv * yv;
+  }
+  // j == 0 initialises instead of a separate memset pass
+  for (int p = 0; p < 5; ++p) {
+    const float* FA_RESTRICT src = raw + static_cast<size_t>(p) * span;
+    float* FA_RESTRICT d = dst + static_cast<size_t>(p) * cols;
+    const float w0 = win[0];
+    for (int c = 0; c < cols; ++c) d[c] = w0 * src[c];
+    for (int j = 1; j < K; ++j) {
+      const float w = win[j];
+      const float* FA_RESTRICT s = src + j;
+      for (int c = 0; c < cols; ++c) d[c] += w * s[c];
+    }
+  }
+}
+
 template <typename T, bool WANT_CS>
 static void ssim_tile(const T* xp, const T* yp, int H, int W, int Hout, int Wout,
                       const float* win, int K, float shift, float C1, float C2,
@@ -551,34 +600,9 @@ static void ssim_tile(const T* xp, const T* yp, int H, int W, int Hout, int Wout
   std::vector<float> acc(5 * cols);
 
   auto horiz_row = [&](int in_row, float* FA_RESTRICT dst) {
-    const T* FA_RESTRICT xrow = xp + plane_off + static_cast<int64_t>(in_row) * W + t.col0;
-    const T* FA_RESTRICT yrow = yp + plane_off + static_cast<int64_t>(in_row) * W + t.col0;
-    float* FA_RESTRICT rx = raw.data();
-    float* FA_RESTRICT ry = rx + span;
-    float* FA_RESTRICT rxx = ry + span;
-    float* FA_RESTRICT ryy = rxx + span;
-    float* FA_RESTRICT rxy = ryy + span;
-    for (int c = 0; c < span; ++c) {
-      const float xv = static_cast<float>(xrow[c]) - shift;
-      const float yv = static_cast<float>(yrow[c]) - shift;
-      rx[c] = xv;
-      ry[c] = yv;
-      rxx[c] = xv * xv;
-      ryy[c] = yv * yv;
-      rxy[c] = xv * yv;
-    }
-    // j == 0 initialises instead of a separate memset pass
-    for (int p = 0; p < 5; ++p) {
-      const float* FA_RESTRICT src = rx + static_cast<size_t>(p) * span;
-      float* FA_RESTRICT d = dst + static_cast<size_t>(p) * cols;
-      const float w0 = win[0];
-      for (int c = 0; c < cols; ++c) d[c] = w0 * src[c];
-      for (int j = 1; j < K; ++j) {
-        const float w = win[j];
-        const float* FA_RESTRICT s = src + j;
-        for (int c = 0; c < cols; ++c) d[c] += w * s[c];
-      }
-    }
+    ssim_horiz_row<T>(xp + plane_off + static_cast<int64_t>(in_row) * W + t.col0,
+                      yp + plane_off + static_cast<int64_t>(in_row) * W + t.col0,
+                      raw.data(), dst, span, cols, win, K, shift);
   };
 
   // Prime the ring with the first K-1 input rows of this tile. The slot index
@@ -708,6 +732,30 @@ static int ssim_impl(const void* x, const void* y, int dtype, int N, int C,
 // row, so the whole thing runs out of a 3-row ring in L1.
 // -------------------------------------------------------------------------
 
+// Free functions for the same reason ssim_horiz_row is one: as lambda bodies
+// these two loops read their bounds through the closure and do not vectorise.
+template <typename T>
+static void gmsd_load_row_down(const T* FA_RESTRICT xr, const T* FA_RESTRICT yr,
+                               float* FA_RESTRICT dx, float* FA_RESTRICT dy,
+                               const int span, const int W) {
+  for (int c = 0; c < span; ++c) {
+    dx[c] = 0.25f * (static_cast<float>(xr[2 * c]) + static_cast<float>(xr[2 * c + 1]) +
+                     static_cast<float>(xr[2 * c + W]) + static_cast<float>(xr[2 * c + W + 1]));
+    dy[c] = 0.25f * (static_cast<float>(yr[2 * c]) + static_cast<float>(yr[2 * c + 1]) +
+                     static_cast<float>(yr[2 * c + W]) + static_cast<float>(yr[2 * c + W + 1]));
+  }
+}
+
+template <typename T>
+static void gmsd_load_row_plain(const T* FA_RESTRICT xr, const T* FA_RESTRICT yr,
+                                float* FA_RESTRICT dx, float* FA_RESTRICT dy,
+                                const int span) {
+  for (int c = 0; c < span; ++c) {
+    dx[c] = static_cast<float>(xr[c]);
+    dy[c] = static_cast<float>(yr[c]);
+  }
+}
+
 template <typename T, bool DOWN>
 static void gmsd_tile(const T* xp, const T* yp, int H, int W, int Hout,
                       int Wout, float Tc, float eps, const Task& t,
@@ -722,21 +770,13 @@ static void gmsd_tile(const T* xp, const T* yp, int H, int W, int Hout,
     float* FA_RESTRICT dx = bx.data() + static_cast<size_t>(dr % 3) * span;
     float* FA_RESTRICT dy = by.data() + static_cast<size_t>(dr % 3) * span;
     if (DOWN) {
-      const T* FA_RESTRICT xr = xp + plane_off + static_cast<int64_t>(2 * dr) * W + 2 * t.col0;
-      const T* FA_RESTRICT yr = yp + plane_off + static_cast<int64_t>(2 * dr) * W + 2 * t.col0;
-      for (int c = 0; c < span; ++c) {
-        dx[c] = 0.25f * (static_cast<float>(xr[2 * c]) + static_cast<float>(xr[2 * c + 1]) +
-                         static_cast<float>(xr[2 * c + W]) + static_cast<float>(xr[2 * c + W + 1]));
-        dy[c] = 0.25f * (static_cast<float>(yr[2 * c]) + static_cast<float>(yr[2 * c + 1]) +
-                         static_cast<float>(yr[2 * c + W]) + static_cast<float>(yr[2 * c + W + 1]));
-      }
+      gmsd_load_row_down<T>(xp + plane_off + static_cast<int64_t>(2 * dr) * W + 2 * t.col0,
+                            yp + plane_off + static_cast<int64_t>(2 * dr) * W + 2 * t.col0,
+                            dx, dy, span, W);
     } else {
-      const T* FA_RESTRICT xr = xp + plane_off + static_cast<int64_t>(dr) * W + t.col0;
-      const T* FA_RESTRICT yr = yp + plane_off + static_cast<int64_t>(dr) * W + t.col0;
-      for (int c = 0; c < span; ++c) {
-        dx[c] = static_cast<float>(xr[c]);
-        dy[c] = static_cast<float>(yr[c]);
-      }
+      gmsd_load_row_plain<T>(xp + plane_off + static_cast<int64_t>(dr) * W + t.col0,
+                             yp + plane_off + static_cast<int64_t>(dr) * W + t.col0,
+                             dx, dy, span);
     }
   };
 
