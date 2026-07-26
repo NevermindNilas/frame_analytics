@@ -16,6 +16,13 @@ Assessment", Asilomar 2003. Canonical implementation: ``msssim.m``.
 Xue, Zhang, Mou, Bovik, "Gradient Magnitude Similarity Deviation: A Highly
 Efficient Perceptual Image Quality Index", IEEE TIP 23(2), 2014.
 
+Zhang, Isola, Efros, Shechtman, Wang, "The Unreasonable Effectiveness of Deep
+Features as a Perceptual Metric", CVPR 2018.  Canonical implementation:
+``richzhang/PerceptualSimilarity``.  LPIPS is the one metric here whose
+definition is a set of weights rather than a formula, so this transcription
+pins the *forward*; agreement with the reference package itself is asserted
+separately in ``tests/test_lpips.py``.
+
   window   = fspecial('gaussian', 11, 1.5)   (normalised to sum 1)
   C1       = (K1 * L)^2,  K1 = 0.01
   C2       = (K2 * L)^2,  K2 = 0.03
@@ -44,6 +51,8 @@ __all__ = [
     "charbonnier_reference",
     "huber_reference",
     "rgb_to_luma_reference",
+    "lpips_reference",
+    "load_lpips_weights",
     "LUMA_COEFFS",
     "MS_SSIM_WEIGHTS",
 ]
@@ -316,3 +325,120 @@ def gmsd_reference(
 
     q = (2.0 * g1 * g2 + T) / (g1 * g1 + g2 * g2 + T)
     return float(np.sqrt(((q - q.mean()) ** 2).mean()))
+
+
+# --------------------------------------------------------------------------- #
+# LPIPS (Zhang et al. 2018)
+#
+# Deliberately naive: an explicit tap-by-tap convolution and an explicit
+# max-pool, both in float64. The point is not speed -- the gate runs it on
+# 64x64 patches -- it is that this shares no code with the torch path, so a
+# misplaced pool, a stride, or an epsilon on the wrong side of a square root
+# shows up as a disagreement rather than as two implementations being wrong
+# together.
+# --------------------------------------------------------------------------- #
+
+# The reference implementation's ScalingLayer: ImageNet mean/std expressed in
+# [-1, 1] units.  Its normalize_tensor() adds eps to the *norm*, not to the
+# sum of squares, which is a different function near zero.
+_LPIPS_SHIFT = np.array([-0.030, -0.088, -0.188], dtype=np.float64).reshape(1, 3, 1, 1)
+_LPIPS_SCALE = np.array([0.458, 0.448, 0.450], dtype=np.float64).reshape(1, 3, 1, 1)
+_LPIPS_NORM_EPS = 1e-10
+
+
+def load_lpips_weights(net: str = "alex") -> dict:
+    """The shipped weight blob as float64 numpy arrays.
+
+    Imports torch lazily: this module is otherwise numpy-only, and the blob is
+    a torch archive because that is what both upstream projects publish.
+    """
+    import torch
+
+    from .perceptual import lpips_weights_path
+
+    path = lpips_weights_path(net)
+    try:
+        blob = torch.load(path, map_location="cpu", weights_only=True)
+    except (TypeError, RuntimeError):
+        blob = torch.load(path, map_location="cpu")
+    return {
+        "channels": list(blob["channels"]),
+        "pool_before": list(blob["pool_before"]),
+        "trunk": [
+            {
+                "weight": t["weight"].double().numpy(),
+                "bias": t["bias"].double().numpy(),
+                "stride": int(t["stride"]),
+                "padding": int(t["padding"]),
+            }
+            for t in blob["trunk"]
+        ],
+        "lin": [w.double().numpy() for w in blob["lin"]],
+    }
+
+
+def _conv2d_reference(x: np.ndarray, w: np.ndarray, b: np.ndarray,
+                      stride: int, pad: int) -> np.ndarray:
+    """(N,C,H,W) * (O,C,kh,kw) -> (N,O,oh,ow), summed tap by tap."""
+    if pad:
+        x = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+    kh, kw = w.shape[2], w.shape[3]
+    oh = (x.shape[2] - kh) // stride + 1
+    ow = (x.shape[3] - kw) // stride + 1
+    if oh <= 0 or ow <= 0:
+        raise ValueError(f"input {x.shape} too small for a {kh}x{kw} kernel")
+    out = np.zeros((x.shape[0], w.shape[0], oh, ow), dtype=np.float64)
+    for i in range(kh):
+        for j in range(kw):
+            patch = x[:, :, i:i + stride * oh:stride, j:j + stride * ow:stride]
+            out += np.einsum("nchw,oc->nohw", patch, w[:, :, i, j])
+    return out + b.reshape(1, -1, 1, 1)
+
+
+def _maxpool2d_reference(x: np.ndarray, k: int = 3, stride: int = 2) -> np.ndarray:
+    oh = (x.shape[2] - k) // stride + 1
+    ow = (x.shape[3] - k) // stride + 1
+    out = np.full((x.shape[0], x.shape[1], oh, ow), -np.inf, dtype=np.float64)
+    for i in range(k):
+        for j in range(k):
+            np.maximum(out, x[:, :, i:i + stride * oh:stride,
+                              j:j + stride * ow:stride], out=out)
+    return out
+
+
+def lpips_reference(x: np.ndarray, y: np.ndarray, data_range: float = 255.0,
+                    weights: Optional[dict] = None) -> np.ndarray:
+    """LPIPS per image, ``(N,)``. Lower is better; 0 is identical.
+
+    ``x``/``y`` are ``(N,3,H,W)`` (or ``(3,H,W)``) in ``[0, data_range]``.
+    """
+    x = np.asarray(x, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    if x.shape != y.shape:
+        raise ValueError(f"shape mismatch: {x.shape} vs {y.shape}")
+    if x.ndim == 3:
+        x, y = x[None], y[None]
+    if x.ndim != 4 or x.shape[1] != 3:
+        raise ValueError(f"expected (N,3,H,W), got {x.shape}")
+    if weights is None:
+        weights = load_lpips_weights()
+
+    def taps(img: np.ndarray) -> list:
+        h = (img * (2.0 / float(data_range)) - 1.0 - _LPIPS_SHIFT) / _LPIPS_SCALE
+        out = []
+        for layer, pool in zip(weights["trunk"], weights["pool_before"]):
+            if pool:
+                h = _maxpool2d_reference(h)
+            h = _conv2d_reference(h, layer["weight"], layer["bias"],
+                                  layer["stride"], layer["padding"])
+            h = np.maximum(h, 0.0)
+            out.append(h)
+        return out
+
+    total = np.zeros(x.shape[0], dtype=np.float64)
+    for f0, f1, lin in zip(taps(x), taps(y), weights["lin"]):
+        n0 = f0 / (np.sqrt((f0 ** 2).sum(axis=1, keepdims=True)) + _LPIPS_NORM_EPS)
+        n1 = f1 / (np.sqrt((f1 ** 2).sum(axis=1, keepdims=True)) + _LPIPS_NORM_EPS)
+        d = (n0 - n1) ** 2
+        total += np.einsum("nchw,oc->n", d, lin[:, :, 0, 0]) / (d.shape[2] * d.shape[3])
+    return total

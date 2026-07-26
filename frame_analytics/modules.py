@@ -32,9 +32,10 @@ from .functional import (
     psnr,
     ssim,
 )
+from .perceptual import lpips
 
 __all__ = ["MSE", "PSNR", "SSIM", "MSSSIM", "GMSD", "L1", "Charbonnier",
-           "Huber", "StreamingMetrics"]
+           "Huber", "LPIPS", "StreamingMetrics"]
 
 
 class MSE(nn.Module):
@@ -239,6 +240,50 @@ class Huber(_PixelLoss):
         self.extra = {"delta": float(delta)}
 
 
+class LPIPS(nn.Module):
+    """Learned perceptual similarity (Zhang et al. 2018). Lower is better.
+
+    ``forward`` and ``.loss()`` are the same thing -- LPIPS is already a
+    penalty -- but both names exist so this is drop-in for the other modules.
+
+    The usual reason to reach for it: PSNR, SSIM and MS-SSIM all reward blur,
+    so a model trained on them alone converges to something smooth. A small
+    LPIPS term is what removes that incentive.
+
+    >>> perc = fa.LPIPS(data_range=1.0)
+    >>> loss = fa.L1()(pred, target) + 0.1 * perc.loss(pred, target)
+
+    The 2.5M trunk weights are buffers, not parameters, so ``.parameters()``
+    is empty: this module cannot leak frozen ImageNet weights into the
+    caller's optimiser or checkpoint. They are also shared process-wide per
+    (trunk, device, dtype), so constructing several of these costs nothing
+    beyond the first.
+    """
+
+    def __init__(self, net: str = "alex", data_range: Optional[float] = None,
+                 reduction: str = "mean", return_map: bool = False,
+                 allow_tf32: bool = False, dtype: Optional[torch.dtype] = None,
+                 luma=None, crop_border: int = 0):
+        super().__init__()
+        self.net = net
+        self.data_range = data_range
+        self.reduction = reduction
+        self.return_map = return_map
+        self.allow_tf32 = allow_tf32
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        return lpips(x, y, net=self.net, data_range=self.data_range,
+                     reduction=self.reduction, return_map=self.return_map,
+                     allow_tf32=self.allow_tf32, dtype=self.dtype_,
+                     luma=self.luma, crop_border=self.crop_border)
+
+    def loss(self, x, y):
+        return self.forward(x, y)
+
+
 class StreamingMetrics:
     """Fixed-shape video scorer with CUDA-graph replay and pinned staging.
 
@@ -250,13 +295,17 @@ class StreamingMetrics:
     ...     out = sm.update(ref, dist)      # {"mse":..., "psnr":..., "ssim":...}
 
     ``metrics`` may name any of ``mse``, ``psnr``, ``ssim``, ``ms_ssim``,
-    ``gmsd``, ``gms``, ``l1``, ``charbonnier``, ``huber``. They all capture
-    into the same graph, so scoring a frame on nine metrics is still one
+    ``gmsd``, ``gms``, ``l1``, ``charbonnier``, ``huber``, ``lpips``. They all
+    capture into the same graph, so scoring a frame on ten metrics is still one
     replay.
+
+    ``lpips`` is capturable because the trunk weights are loaded and moved to
+    the device during the pre-capture warm-up, so the captured region contains
+    convolutions and nothing else -- no allocation, no host->device copy.
     """
 
     _KNOWN = ("mse", "psnr", "ssim", "ms_ssim", "gmsd", "gms", "l1",
-              "charbonnier", "huber")
+              "charbonnier", "huber", "lpips")
 
     def __init__(self, shape, device="cuda", dtype=torch.uint8,
                  data_range: Optional[float] = None, metrics=("mse", "psnr", "ssim"),
@@ -310,6 +359,8 @@ class StreamingMetrics:
             out["gmsd"] = gmsd(self.ref, self.dist, data_range=self._L)
         if "gms" in self.metrics:
             out["gms"] = gms(self.ref, self.dist, data_range=self._L)
+        if "lpips" in self.metrics:
+            out["lpips"] = lpips(self.ref, self.dist, data_range=self._L)
         for name, fn in (("l1", l1), ("charbonnier", charbonnier),
                          ("huber", huber)):
             if name in self.metrics:

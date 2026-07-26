@@ -50,9 +50,13 @@ include = ["frame_analytics*"]
 # Sources always ship: they are what a platform with no prebuilt binary
 # compiles on first use. `lib/` holds the prebuilt C-ABI libraries and is
 # populated only by an FA_BUILD_EXT=1 build.
+# `weights/` holds the LPIPS blob (9.4 MiB, architecture-independent, so the
+# same bytes land in every platform wheel). It is checked in rather than built,
+# because building it needs torchvision + lpips and no CI runner has either.
 frame_analytics = [
     "csrc/*.cu", "csrc/*.cpp", "csrc/*.h",
     "lib/*.dll", "lib/*.so", "lib/*.dylib",
+    "weights/*.pt", "weights/*.md", "weights/LICENSE.*",
 ]
 
 [tool.pytest.ini_options]

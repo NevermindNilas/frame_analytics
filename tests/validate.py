@@ -25,6 +25,12 @@ TOL_SSIM = 5e-6
 TOL_MAP = 5e-5
 TOL_PSNR = 1e-6
 
+# LPIPS is a sum of five means over feature maps, so float32 gives up a few ULP
+# more than a single-pass metric does. Anything approaching 1e-05 would mean
+# TF32 convolutions have crept back in -- see perceptual._no_tf32.
+TOL_LPIPS = 5e-7
+TOL_LPIPS64 = 1e-8
+
 RNG = np.random.default_rng(0xC0FFEE)
 
 
@@ -190,6 +196,25 @@ def main():
         cb = torch.as_tensor(np.stack([b1, b2])[None], dtype=torch.uint8, device=dev)
         ok &= report(f"{dev} 2-channel mean", float(fa.ssim(ca, cb, data_range=255.0)),
                      0.5 * (r1 + r2), TOL_SSIM)
+
+    # LPIPS. Small patches on purpose: the reference forward is a tap-by-tap
+    # float64 numpy convolution, and the point of it is independence from the
+    # torch path, not speed.
+    print("\n  -- LPIPS (vs the float64 reference forward) --")
+    lp_rng = np.random.default_rng(0x1B1B5)
+    w64 = ref.load_lpips_weights()
+    for h, w in ((64, 64), (72, 96)):
+        a3 = lp_rng.integers(0, 256, (1, 3, h, w)).astype(np.float64)
+        b3 = np.clip(a3 + 24.0 * lp_rng.standard_normal((1, 3, h, w)), 0, 255).round()
+        want = float(ref.lpips_reference(a3, b3, data_range=255.0, weights=w64)[0])
+        for dev in devices:
+            ta = torch.as_tensor(a3, dtype=torch.uint8, device=dev)
+            tb = torch.as_tensor(b3, dtype=torch.uint8, device=dev)
+            ok &= report(f"{dev} lpips {h}x{w} fp32",
+                         float(fa.lpips(ta, tb, data_range=255.0)), want, TOL_LPIPS)
+            ok &= report(f"{dev} lpips {h}x{w} fp64",
+                         float(fa.lpips(ta.double(), tb.double(), data_range=255.0,
+                                        dtype=torch.float64)), want, TOL_LPIPS64)
 
     # identity
     print("\n  -- degenerate cases --")

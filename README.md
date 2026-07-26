@@ -19,6 +19,7 @@ fa.psnr(a, b, data_range=255.0)
 fa.ssim(a, b, data_range=255.0)      # Wang et al. 2004, exactly
 fa.ms_ssim(a, b, data_range=255.0)   # Wang et al. 2003
 fa.gmsd(a, b, data_range=255.0)      # Xue et al. 2014
+fa.lpips(a, b, data_range=255.0)     # Zhang et al. 2018, weights included
 fa.l1(a, b); fa.charbonnier(a, b); fa.huber(a, b)
 
 fa.ssim(a, b, reduction="none")      # per-image, (8,)
@@ -211,9 +212,19 @@ paper (`python tests/validate.py`).
 The bottom entries aren't bugs — different windows, MATLAB-style downsampling,
 zero padding. Defensible defaults, different metric.
 
-MSE and PSNR match float64 numpy exactly; the accumulator is float64 even when
-the elementwise work is float32 (a 4K frame has 8.3M residuals, and summing
-those in float32 loses ~4 significant digits straight into the dB figure).
+MSE and PSNR sum in float64 whatever the input is typed as — a 4K frame has
+8.3M residuals, and summing those in float32 would lose ~4 significant digits
+straight into the dB figure. Squaring the residual is a separate question from
+summing it, and the two backends answer it differently:
+
+- uint8, and float64 input, are **exact** on both backends — an integer
+  accumulator for the first, a float64 residual for the second.
+- float16/float32 input is exact on CPU, and squared in float32 on CUDA. That
+  costs at most one float32 ulp on the term, ~6e-08 relative worst case and
+  ~1e-10 on real frames, so CPU and CUDA MSE agree to about 1e-08 rather than
+  bit-for-bit. It buys up to 2x: a GA102 retires float64 at 1/64 the float
+  rate, and a float64 residual left the kernel 2-3x over its DRAM floor with
+  fp16 input no faster than fp32.
 
 Worst abs. error vs float64 reference, over CPU and CUDA, native and portable:
 
@@ -222,10 +233,101 @@ Worst abs. error vs float64 reference, over CPU and CUDA, native and portable:
 | MS-SSIM | 3.7e-08 |
 | GMSD | 2.8e-09 |
 | L1, Huber (uint8) | 8.9e-16 — exact, integer accumulator |
+| MSE, PSNR (uint8, float64) | exact |
+| MSE, PSNR (float16/32, CUDA) | 2.4e-08 relative — 1.0e-07 dB |
 | Charbonnier | 1.3e-07 |
+| LPIPS | 2.1e-08 (float32) / 3.1e-10 (float64) |
 
 GMSD's similarity map is float32, so deviations below ~1e-7 measure rounding,
 not the images (`gmsd(x, x)` ≈ 3e-08, not 0). A typical GMSD is ~0.03.
+
+## LPIPS
+
+PSNR, SSIM and MS-SSIM all reward blur, so a model trained on them alone
+converges to something smooth. LPIPS (Zhang et al. 2018) is the term that
+punishes that, and the third number every super-resolution and restoration
+paper reports.
+
+```python
+fa.lpips(a, b, data_range=255.0)          # lower is better, 0 is identical
+crit = fa.LPIPS(data_range=1.0)
+loss = fa.L1()(pred, target) + 0.1 * crit.loss(pred, target)
+```
+
+**The weights ship in the wheel.** 9.4 MiB, float32, no download, no
+`torchvision` dependency, works with no network at all. Every other library
+pulls the trunk from `torchvision.models` at first call, which means a
+**233 MiB** download for AlexNet (528 MiB for VGG) into the torch hub cache.
+That checkpoint is ~94% classifier head; LPIPS taps five post-ReLU activations
+out of the conv trunk and discards the rest, so what actually gets used is
+2.47M parameters. Only those ship. See
+[`frame_analytics/weights/`](frame_analytics/weights/) for provenance and the
+upstream BSD notices, and `tools/build_lpips_weights.py` for the extraction.
+
+The `alex` trunk is the one the literature reports and the only one bundled.
+VGG is deliberately absent — 56 MiB for the training-loss variant. Point
+`FA_LPIPS_WEIGHTS` at a blob of the same layout to supply your own.
+
+### It is also more accurate than the alternatives, which is why it is faster
+
+`torch.backends.cudnn.allow_tf32` defaults to **True**, so on Ampere and later
+every LPIPS implementation that leaves it alone runs its convolutions with a
+10-bit mantissa. Measured against a float64 transcription of the forward:
+
+| | worst abs. error |
+|---|---:|
+| **frame_analytics** | **1.5e-08** |
+| frame_analytics, `allow_tf32=True` | 1.5e-05 |
+| `lpips` (the reference package) | 1.5e-05 |
+| torchmetrics | 1.5e-05 |
+
+1.5e-05 is the fourth decimal — the decimal LPIPS is printed to. We turn TF32
+off by default; `allow_tf32=True` is there if you measure that you need it.
+
+On this card you do not: RTX 3090, ms/call, fp32 in, and the `tf32` column is
+our own with the default flipped.
+
+| forward | 1×256² | 1×512² | 1×1080p | 8×256² | 8×512² |
+|---|---:|---:|---:|---:|---:|
+| **frame_analytics** | **1.31** | **1.50** | **10.4** | **2.40** | **8.34** |
+| frame_analytics (tf32) | 1.39 | 2.82 | 16.2 | 4.54 | 15.0 |
+| `lpips` package | 1.91 | 3.25 | 15.8 | 4.84 | 16.2 |
+| torchmetrics | 2.58 | 4.10 | 17.2 | 5.77 | 17.6 |
+| piq (VGG trunk — a different metric) | 6.32 | 21.6 | 146 | 37.1 | 138 |
+
+**1.5–2.2× faster than the reference package while being 1000× closer to the
+reference forward.** The convolutions are the same cuDNN calls everyone makes;
+the win is the tail — unit-normalise, square the difference, apply the channel
+weights, reduce — fused into one region per layer instead of ~10 separate
+elementwise kernels. That is also where the memory goes:
+
+| peak MiB above the input pair | 1×512² | 1×1080p | 8×256² | 8×512² |
+|---|---:|---:|---:|---:|
+| **frame_analytics** | **35.5** | **249** | **62.4** | **245** |
+| `lpips` package, torchmetrics | 65.1 | 520 | 127 | 514 |
+| piq (VGG trunk) | 430 | 3403 | 860 | 3440 |
+
+As a loss step (forward + backward), 1080p: **17.9 ms / 445 MiB** against the
+reference package's 25.0 ms / 616 MiB.
+
+Full tables: `python bench/bench_lpips.py`.
+
+Caveats:
+
+- LPIPS has no paper formula to be correct against — it *is* its weights. It is
+  gated two independent ways: against `richzhang/PerceptualSimilarity` itself
+  (agreement to 3e-08, i.e. float32 rounding), and against a float64 numpy
+  transcription of the forward in `reference.py` that shares no code with the
+  torch path.
+- `allow_tf32` covers the forward only. The backward's convolutions run under
+  whatever cuDNN setting is live when `.backward()` is called — deliberate, in
+  that the reported number is what has to survive to four decimals and a loss
+  gradient does not.
+- 3-channel RGB is the calibrated case. 1-channel input is replicated to three,
+  which is what the field does with grayscale but is not something the human
+  judgements behind the weights ever covered.
+- Minimum 32×32 after cropping; the stride-4 conv and two max-pools leave
+  nothing behind below that.
 
 ## Training
 
@@ -240,7 +342,19 @@ loss.backward()
 ```
 
 That mix is Zhao et al., *Loss Functions for Image Restoration with Neural
-Networks* (2016) — the reason MS-SSIM is here at all.
+Networks* (2016) — the reason MS-SSIM is here at all. Both terms still reward
+blur; add [LPIPS](#lpips) if that matters for what you are training.
+
+```python
+loss = 0.84 * crit_ms.loss(pred, target) + 0.16 * crit_l1(pred, target) \
+     + 0.10 * fa.LPIPS(data_range=1.0).loss(pred, target)
+```
+
+`fa.LPIPS` holds its 2.47M trunk weights as buffers, not parameters, so
+`.parameters()` and `.state_dict()` are both empty: it cannot leak frozen
+ImageNet weights into your optimiser or your checkpoint. The weights are also
+shared process-wide per (trunk, device, dtype), so constructing several costs
+nothing after the first.
 
 MS-SSIM loss step, 1080p ×8, float32 RGB: **12.7 ms / 942 MiB** against
 pytorch-msssim's 81.3 ms / 3763 MiB — **6.4× faster on 4.0× less memory**. The
@@ -293,9 +407,12 @@ definitions. The crop is a view, so it costs nothing.
 pip install frame-analytics
 ```
 
-torch ≥ 2.0, numpy. The kernels arrive **precompiled**, one wheel per platform
-and no version matrix — the same wheel works on every Python and every torch
-build.
+torch ≥ 2.0, numpy — and nothing else. No `torchvision`, and nothing is fetched
+at first call: the LPIPS weights are inside the wheel. It is 9.7 MiB, of which
+8.8 is those weights and 0.8 is the kernels.
+
+The kernels arrive **precompiled**, one wheel per platform and no version
+matrix — the same wheel works on every Python and every torch build.
 
 That is not the usual arrangement, because the usual arrangement cannot be
 published. A torch C++ extension is ABI-locked to the exact {python} × {torch} ×
@@ -329,6 +446,15 @@ python bench/bench.py              # speed + accuracy tables
 python bench/bench_training.py     # MS-SSIM / GMSD / pixel losses
 python bench/bench_memory.py       # peak memory, forward and loss step
 python bench/bench_fused_ssim.py   # head-to-head vs fused-ssim
+python bench/bench_lpips.py        # LPIPS vs lpips / torchmetrics / piq
+```
+
+The LPIPS weight blob is checked in, not generated at install time — building
+it needs `torchvision` and `lpips`, which no CI runner has. To rebuild it:
+
+```bash
+pip install torchvision lpips
+python tools/build_lpips_weights.py
 ```
 
 ## API
@@ -347,11 +473,17 @@ ms_ssim    (x, y, *, data_range=None, win_size=11, sigma=1.5, K=(0.01, 0.03),
 gmsd       (x, y, *, data_range=None, T=None, eps=None, downsample=True,
             return_map=False, backend_hint="auto", ...)
 gms        (x, y, ...)                      # mean of the same map
+lpips      (x, y, *, net="alex", data_range=None, return_map=False,
+            allow_tf32=False, ...)
 l1         (x, y, ...)
 charbonnier(x, y, *, eps=1e-3, ...)         # mean sqrt(d^2 + eps^2)
 huber      (x, y, *, delta=1.0, ...)        # matches torch.nn.HuberLoss
 rgb_to_luma(t, mode="bt601", *, data_range=None, dtype=None)
 ```
+
+`lpips` has no `backend_hint`: it is cuDNN convolutions plus a `torch.compile`d
+tail, with no C-ABI kernel behind it. `fa.available_nets()` lists the trunks
+present in the install and `fa.lpips_weights_path()` says where they came from.
 
 `data_range` defaults to 255 for integer input, 1.0 for float. `downsample=True`
 on `ssim` applies MATLAB `ssim.m`'s automatic box-downsample (off by default, as
@@ -359,7 +491,7 @@ in `ssim_index.m` and every PyTorch library); on `gmsd` it is the paper's 2×
 prefilter and is *on* by default.
 
 Module forms `MSE`, `PSNR`, `SSIM`, `MSSSIM`, `GMSD`, `L1`, `Charbonnier`,
-`Huber` cache what they can and expose `.loss()`:
+`Huber`, `LPIPS` cache what they can and expose `.loss()`:
 
 ```python
 crit = fa.SSIM(data_range=1.0)
@@ -373,12 +505,19 @@ for ref, dist in frames:
 ```
 
 `StreamingMetrics` accepts any of `mse`, `psnr`, `ssim`, `ms_ssim`, `gmsd`,
-`gms`, `l1`, `charbonnier`, `huber`; they all capture into the same CUDA graph,
-so scoring a frame on nine metrics is still one replay.
+`gms`, `l1`, `charbonnier`, `huber`, `lpips`; they all capture into the same
+CUDA graph, so scoring a frame on ten metrics is still one replay. LPIPS is
+capturable because the trunk is loaded and moved to the device during the
+pre-capture warm-up, leaving convolutions and nothing else inside the captured
+region.
 
 ## License
 
-Apache 2.0.
+Apache 2.0 — except the bundled LPIPS weights, which carry their upstream BSD
+terms; see [`frame_analytics/weights/`](frame_analytics/weights/).
 
 Wang, Bovik, Sheikh, Simoncelli. *Image Quality Assessment: From Error
 Visibility to Structural Similarity.* IEEE TIP 13(4), 2004.
+
+Zhang, Isola, Efros, Shechtman, Wang. *The Unreasonable Effectiveness of Deep
+Features as a Perceptual Metric.* CVPR 2018.

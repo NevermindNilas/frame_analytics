@@ -34,6 +34,7 @@ from .functional import (  # noqa: F401
 )
 from .modules import (  # noqa: F401
     GMSD,
+    LPIPS,
     MSE,
     PSNR,
     SSIM,
@@ -43,6 +44,7 @@ from .modules import (  # noqa: F401
     MSSSIM,
     StreamingMetrics,
 )
+from .perceptual import available_nets, lpips, lpips_weights_path  # noqa: F401
 
 __version__ = "0.2.0"
 
@@ -56,6 +58,7 @@ __all__ = [
     "l1",
     "charbonnier",
     "huber",
+    "lpips",
     "rgb_to_luma",
     "MSE",
     "PSNR",
@@ -65,7 +68,10 @@ __all__ = [
     "L1",
     "Charbonnier",
     "Huber",
+    "LPIPS",
     "StreamingMetrics",
+    "available_nets",
+    "lpips_weights_path",
     "gaussian_window_1d",
     "set_compile_enabled",
     "backend_status",

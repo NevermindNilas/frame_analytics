@@ -1,7 +1,12 @@
 include LICENSE README.md
 recursive-include frame_analytics/csrc *.cu *.cpp *.h
+# The LPIPS weights are data, not a build artefact: unlike lib/ they must ship
+# in the sdist too, or a from-source install on a platform with no wheel loses
+# LPIPS while every other metric keeps working.
+recursive-include frame_analytics/weights *.pt *.md LICENSE.*
 recursive-include tests *.py
 recursive-include bench *.py
+recursive-include tools *.py
 # sdists carry sources only -- the binaries are built per platform in CI and
 # only ever appear in wheels
 prune frame_analytics/lib
