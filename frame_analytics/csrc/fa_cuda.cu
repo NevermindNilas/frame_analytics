@@ -259,22 +259,29 @@ __device__ inline A pix_term(A d, A param) {
   return A(0.5) * lo * lo + param * (a - lo);
 }
 
-// MSE and any float64 input accumulate in double; the rest ride a float
-// accumulator that is widened once per thread at the end.
+// The accumulator's width and the *term*'s width are two separate decisions,
+// and conflating them is what made MSE slow.
 //
-// This is not a precision shortcut, it is the difference between running and
-// crawling: GA102 retires float64 adds at 1/64 the float rate, so a
-// per-element `double +=` turned a kernel that should saturate DRAM into one
-// bound on the FP64 pipe. Each thread sums only a few hundred terms before the
-// widening, so the float accumulator's error stays around 1e-7 relative --
-// three orders under the tolerance these metrics are gated at -- and the
-// cross-thread sum is still exact-ish float64.
+// Accumulator: MSE's sum goes on to be a logarithm, so it stays float64 however
+// the input is typed. The other ops ride a float accumulator that is widened
+// once per thread at the end -- each thread sums only a few hundred terms
+// before the widening, so its error stays around 1e-7 relative, three orders
+// under the tolerance these metrics are gated at, and the cross-thread sum is
+// float64 either way.
+//
+// Term: float64 only when the *input* is float64, where narrowing would throw
+// away the caller's data before anything wide ever saw it. An fp16 or fp32
+// residual squared in double buys no accuracy the inputs carry, and GA102
+// retires float64 at 1/64 the float rate -- MSE was spending three fp64 ops per
+// element (sub, mul, add) on a kernel that should be bound on DRAM, and came
+// out ~3x over its bandwidth floor with fp16 input no faster than fp32.
 template <typename T, int OP>
 __global__ void pixel_kernel(const T* __restrict__ a, const T* __restrict__ b,
                              double* __restrict__ partial, long n_per_image,
                              float param, int blocks_per_image) {
   __shared__ double warp_sums[32];
-  constexpr bool WIDE = (OP == FA_OP_MSE || std::is_same<T, double>::value);
+  constexpr bool WIDE_ACC = (OP == FA_OP_MSE || std::is_same<T, double>::value);
+  constexpr bool WIDE_TERM = std::is_same<T, double>::value;
   const int img = blockIdx.y;
   const long base = static_cast<long>(img) * n_per_image;
 
@@ -283,15 +290,17 @@ __global__ void pixel_kernel(const T* __restrict__ a, const T* __restrict__ b,
   const long stride = static_cast<long>(blockDim.x) * blocks_per_image;
   for (long i = static_cast<long>(blockIdx.x) * blockDim.x + threadIdx.x;
        i < n_per_image; i += stride) {
-    if (WIDE) {
+    if (WIDE_TERM) {
       const double d = Ld<T>::getd(a, base + i) - Ld<T>::getd(b, base + i);
       acc += pix_term<OP, double>(d, static_cast<double>(param));
     } else {
       const float d = Ld<T>::get(a, base + i) - Ld<T>::get(b, base + i);
-      facc += pix_term<OP, float>(d, param);
+      const float t = pix_term<OP, float>(d, param);
+      if (WIDE_ACC) acc += static_cast<double>(t);
+      else facc += t;
     }
   }
-  const double s = block_reduce_sum(WIDE ? acc : static_cast<double>(facc),
+  const double s = block_reduce_sum(WIDE_ACC ? acc : static_cast<double>(facc),
                                     warp_sums);
   if (threadIdx.x == 0) partial[img * blocks_per_image + blockIdx.x] = s;
 }
