@@ -1,6 +1,6 @@
 """Speed + accuracy benchmark against the libraries people actually use.
 
-Every entry is timed the same way: warm up, then take the median of `repeat`
+Every entry is timed the same way: warm up, then take the fastest of `repeat`
 runs of `iters` calls each, synchronising the device around the whole block.
 Accuracy is measured against the float64 reference in one pass so the table
 shows what each implementation costs *and* what it gets wrong.
@@ -13,7 +13,6 @@ shows what each implementation costs *and* what it gets wrong.
 from __future__ import annotations
 
 import argparse
-import statistics
 import sys
 import time
 from pathlib import Path
@@ -40,12 +39,20 @@ SIZES = {
 
 
 def timeit(fn, *, iters: int, repeat: int, cuda: bool) -> float:
-    """Median seconds per call."""
-    for _ in range(max(3, iters // 2)):
+    """Fastest seconds per call over ``repeat`` batches of ``iters``.
+
+    Min, not median: the cheapest entries here are tens of microseconds, where a
+    median is dominated by whatever else the machine did during the sample -- a
+    scheduler preemption, a thread pool that had parked, a frequency step. Those
+    add time and never subtract it, so the minimum is the estimator that
+    converges on the thing being measured. It is also the difference between a
+    reproducible table and one that moves 4x between runs.
+    """
+    for _ in range(max(3, iters)):
         fn()
     if cuda:
         torch.cuda.synchronize()
-    samples = []
+    best = float("inf")
     for _ in range(repeat):
         if cuda:
             torch.cuda.synchronize()
@@ -54,8 +61,8 @@ def timeit(fn, *, iters: int, repeat: int, cuda: bool) -> float:
             fn()
         if cuda:
             torch.cuda.synchronize()
-        samples.append((time.perf_counter() - t0) / iters)
-    return statistics.median(samples)
+        best = min(best, (time.perf_counter() - t0) / iters)
+    return best
 
 
 def make_frames(h, w, n, c, seed=7):

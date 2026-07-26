@@ -12,7 +12,6 @@ it in saved activations.
 from __future__ import annotations
 
 import argparse
-import statistics
 import sys
 import time
 from pathlib import Path
@@ -34,11 +33,12 @@ SIZES = {
 
 
 def timeit(fn, *, iters: int, repeat: int, cuda: bool) -> float:
-    for _ in range(max(3, iters // 2)):
+    """Fastest seconds per call; see the note on ``bench.bench.timeit``."""
+    for _ in range(max(3, iters)):
         fn()
     if cuda:
         torch.cuda.synchronize()
-    samples = []
+    best = float("inf")
     for _ in range(repeat):
         if cuda:
             torch.cuda.synchronize()
@@ -47,8 +47,8 @@ def timeit(fn, *, iters: int, repeat: int, cuda: bool) -> float:
             fn()
         if cuda:
             torch.cuda.synchronize()
-        samples.append((time.perf_counter() - t0) / iters)
-    return statistics.median(samples)
+        best = min(best, (time.perf_counter() - t0) / iters)
+    return best
 
 
 def peak_mem(fn) -> float:

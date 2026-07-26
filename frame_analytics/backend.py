@@ -250,6 +250,7 @@ def ssim_backward(x, y, dL_dmap, grad_scalar, win, shift, C1, C2,
 
 
 _PSNR_NONE = -1.0e300
+_OP_MSE = 0  # mirrors functional._OP_MSE; duplicated to avoid an import cycle
 
 
 def try_mse(x: torch.Tensor, y: torch.Tensor, *, per_image: bool,
@@ -266,25 +267,27 @@ def try_mse(x: torch.Tensor, y: torch.Tensor, *, per_image: bool,
     if ext is None or not _usable(x, y):
         return None
     n = x.shape[0]
-    per = x[0].numel()
     want_psnr = psnr_bias is not None
+    bias = psnr_bias if want_psnr else _PSNR_NONE
     try:
         if x.is_cuda:
             if not getattr(ext, "has_cuda", False):
                 return None
             # comes back already reduced, divided and (optionally) in dB
-            res = ext.mse_partial_cuda(x, y, n,
-                                       psnr_bias if want_psnr else _PSNR_NONE)
+            res = ext.mse_partial_cuda(x, y, n, bias)
             base = 2 if want_psnr else 0
             return res[base + (0 if per_image else 1)]
+        if hasattr(ext, "pixel_reduce_cpu"):
+            # likewise already reduced, divided and in dB -- nothing is left for
+            # torch to dispatch
+            return ext.pixel_reduce_cpu(x, y, n, _OP_MSE, 0.0, bias, per_image)
+        per = x[0].numel()
         sums = ext.mse_sums_cpu(x, y, n)                # (N,) float64
+        m = sums / per if per_image else sums.sum() / (per * n)
+        return psnr_bias - 10.0 * torch.log10(m) if want_psnr else m
     except Exception as exc:
         _warn_once(exc)
         return None
-    m = sums / per if per_image else sums.sum() / (per * n)
-    if want_psnr:
-        return psnr_bias - 10.0 * torch.log10(m)
-    return m
 
 
 def try_pixel(x: torch.Tensor, y: torch.Tensor, *, op: int, param: float,
@@ -294,19 +297,22 @@ def try_pixel(x: torch.Tensor, y: torch.Tensor, *, op: int, param: float,
     if ext is None or not _usable(x, y) or not hasattr(ext, "pixel_sums_cpu"):
         return None
     n = x.shape[0]
-    per = x[0].numel()
     try:
         if x.is_cuda:
             if not getattr(ext, "has_cuda", False):
                 return None
             res = ext.pixel_partial_cuda(x, y, n, op, float(param), _PSNR_NONE)
             return res[0 if per_image else 1].to(dtype)
+        if hasattr(ext, "pixel_reduce_cpu"):
+            return ext.pixel_reduce_cpu(x, y, n, op, float(param), _PSNR_NONE,
+                                        per_image).to(dtype)
+        per = x[0].numel()
         sums = ext.pixel_sums_cpu(x, y, n, op, float(param))   # (N,) float64
+        m = sums / per if per_image else sums.sum() / (per * n)
+        return m.to(dtype)
     except Exception as exc:
         _warn_once(exc)
         return None
-    m = sums / per if per_image else sums.sum() / (per * n)
-    return m.to(dtype)
 
 
 def try_ssim_cs(x: torch.Tensor, y: torch.Tensor, *, win: torch.Tensor,

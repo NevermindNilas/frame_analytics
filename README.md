@@ -41,10 +41,10 @@ Speedup over each library, across 512²→4K and batch 1→8, RTX 3090 / 16-thre
 | kornia | 18–32× | — | — | 2.0–8.5× |
 | torchmetrics | 24–28× | — | — | 4.9–14× |
 | piq | 25–30× | 6.7–20× | 40–50× | 12–37× |
-| scikit-image (CPU) | 21–29× | — | — | 26–113× |
-| OpenCV recipe (CPU) | 6.0–7.6× | — | — | see below |
+| scikit-image (CPU) | 21–29× | — | — | 170–920× |
+| OpenCV recipe (CPU) | 6.0–7.6× | — | — | 0.7–7.3× (`cv2.PSNR`) |
 | [fused-ssim](https://github.com/rahul-goel/fused-ssim) (CUDA) | 1.2–1.9× | — | — | — |
-| torch built-ins (L1 / Huber) | — | — | — | 2.6–22× |
+| torch built-ins (L1 / Huber) | — | — | — | 2.4–100× |
 
 Selected absolute numbers, RTX 3090, ms/call (lower is better):
 
@@ -60,6 +60,17 @@ SSIM sustains 25.6 Gpixel/s (~11 700 fps at 1080p). PSNR at 4K ×8 hits 880 GB/s
 — 94% of the card's theoretical bandwidth, the ceiling for anything that must
 read both frames.
 
+| CPU, uint8 in, ms/call | 512² | 1080p | 1080p ×8 | 4K ×8 |
+|---|---:|---:|---:|---:|
+| **PSNR**, 1 channel | **0.008** | **0.015** | **0.102** | **1.41** |
+| `cv2.PSNR`, per frame | 0.006 | 0.049 | 0.740 | 4.24 |
+| kornia | 0.046 | 0.114 | 3.29 | 14.4 |
+| torchmetrics | 0.081 | 0.195 | 5.52 | 22.7 |
+| scikit-image | 1.43 | 11.7 | 93.5 | 381 |
+| | | | | |
+| **L1**, RGB | **0.011** | **0.039** | **1.03** | — |
+| `F.l1_loss` | 0.193 | 3.05 | 30.1 | — |
+
 Streaming 1080p RGB via CUDA graphs, host uint8 in, python float out: **931 fps**
 (2 941 fps for resident tensors).
 
@@ -67,10 +78,12 @@ Full per-size CPU and CUDA tables: `python bench/bench.py`.
 
 ### Where it doesn't win
 
-- `cv2.PSNR` on CPU: ~2–3× faster on a single small frame, even at 4K, behind
-  only on large batches.
-- `F.l1_loss` on one 512² CPU frame (0.17 ms vs 0.21). Below ~1 megapixel the
-  thread pool's wake-up costs more than the arithmetic; from 512²×8 up we are 34× ahead.
+- `cv2.PSNR` on one sub-megapixel single-channel frame: 0.006 ms against our
+  0.008. Not the kernel — that runs the same 262 144 pixels in 3.8 µs, less than
+  `cv2.PSNR` takes for the whole call — but the ~4 µs of Python in front of it,
+  which is a fixed cost and so only visible when there is nothing else to pay
+  for. One frame bigger, or one channel wider, and it inverts: 3.3× at 1080p,
+  7.3× at 1080p ×8.
 - **Without the compiled extension** the portable PyTorch fallback is only ~1.1×
   faster than `pytorch-msssim` and uses *more* memory. The speed claims are
   claims about the kernels; the fallback exists to be correct, not to win.
@@ -199,14 +212,37 @@ bandwidth-bound on its own temporaries. The main departures:
   before the squaring: GMS values sit within ~1e-3 of 1, so float32 `E[q²]−E[q]²`
   returns exactly zero for near-identical frames.
 - **Pixel losses are one templated kernel** — MSE, L1, Charbonnier and Huber
-  differ only in a compile-time penalty. uint8 MSE/L1 use an exact 64-bit integer
-  accumulator via pairwise widening multiply (`madd_epi16`, `vmull_u8`), flushed
-  every 4096 vectors: 50 Gelem/s on one thread, bit-identical to the scalar loop.
+  differ only in a compile-time penalty, and uint8 MSE/L1 take an exact 64-bit
+  integer accumulator.
+- **The one loop no auto-vectoriser will touch.** `acc += (int64_t)d*(int64_t)d`
+  is uint8 MSE, and neither MSVC nor GCC will vectorise it — there is no
+  lane-preserving widening multiply into 64 bits, so both emit scalar code, and
+  the hottest loop in the library ran at 5 Gelem/s per core while `cv2.PSNR` ran
+  at 40. The *pairwise* widening multiply does exist (`madd_epi16`, or
+  `vmull_u8`+`vpadalq_u16`), and a uint8 difference squares into 16 bits, so only
+  the accumulator has to widen — flushed to 64 bits every 4096 vectors, before
+  2·255² per lane per iteration can overflow an int32. 50 Gelem/s on one thread,
+  and bit-identical: it is exact integer arithmetic either way, and integer
+  addition does not care how it is reassociated. L1 is left to the compiler,
+  which vectorises abs-and-widen perfectly well and beats a hand-written
+  `sad_epu8` chain.
 - **CPU: same structure, own thread pool.** `at::parallel_for` compiles to an
   OpenMP region that silently vanishes in a JIT-loaded extension (that was 19×).
-  The pool keeps one cache line per counter, wakes no more helpers than there are
-  tasks, and has only the last worker out take the lock — 512² PSNR went from
-  34 µs to 6.
+- **Under a megapixel, that pool *was* the metric.** Three things made a launch
+  ~15 µs: the hot atomics shared cache lines, so 16 threads doing `fetch_add` on
+  the task cursor were also invalidating the generation counter and the
+  completion count; *every* worker took the mutex to decrement that count, a
+  15-way convoy at the end of each call; and all 16 woke even for three tasks, to
+  contend for a cursor with nothing behind it. One cache line each, only the last
+  worker out takes the lock, and never wake more helpers than there are tasks:
+  ~4 µs. Together with the loop above, the 512²-RGB squared-error reduction went
+  from 34 µs to 6.
+- **The reduction finishes in C++.** Dividing the sums and taking
+  `10·log10` as torch ops on scalar tensors cost ~10 µs of dispatch, which at
+  512² was half of `psnr()`; and returning the CUDA path's four candidate
+  outputs cost ~1 µs apiece in allocation and pybind wrappers, which was half of
+  what remained. The CPU reduction takes the selector as an argument and
+  allocates the one tensor asked for.
 
 ## Install
 

@@ -26,6 +26,18 @@
 #include <intrin.h>
 #endif
 
+// The reduction loops below are hand-vectorised for the uint8 squared-error
+// case only.  Everything else in this file auto-vectorises; that one does not,
+// because the int64 widening multiply defeats both MSVC's and GCC's
+// vectorisers, and it is the single hottest loop in the library.
+#if defined(__AVX2__)
+#include <immintrin.h>
+#define FA_AVX2 1
+#elif defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
+#include <arm_neon.h>
+#define FA_NEON 1
+#endif
+
 #if defined(_MSC_VER)
 #define FA_RESTRICT __restrict
 #else
@@ -99,31 +111,50 @@ static inline void cpu_relax() {
 #endif
 }
 
+// Every one of these is written by one thread and read by all the others on
+// the launch path, so two of them sharing a line turns a single store into a
+// storm of invalidations across the whole pool.  `cursor_` is the worst
+// offender: with 16 threads racing `fetch_add` on it, anything living on the
+// same line is effectively unreadable for the duration of the call.
+#define FA_PAD alignas(64)
+
 class TaskPool {
  public:
   explicit TaskPool(int nworkers) {
     workers_.reserve(nworkers);
-    for (int i = 0; i < nworkers; ++i) workers_.emplace_back([this] { worker(); });
+    for (int i = 0; i < nworkers; ++i)
+      workers_.emplace_back([this, i] { worker(i); });
   }
 
   int size() const { return static_cast<int>(workers_.size()) + 1; }
 
   void run(int64_t ntasks, const std::function<void(int64_t)>& fn) {
     if (ntasks <= 0) return;
-    if (workers_.empty() || ntasks == 1) {
+    const int W = static_cast<int>(workers_.size());
+    if (W == 0 || ntasks == 1) {
       for (int64_t i = 0; i < ntasks; ++i) fn(i);
       return;
     }
-    {
+    // The calling thread takes a share too, so `ntasks - 1` helpers is the
+    // most that can ever be useful.  Waking all 16 for three tasks cost more
+    // in cursor contention than the tasks did in work.
+    const int want = static_cast<int>(std::min<int64_t>(ntasks - 1, W));
+
+    fn_ = &fn;
+    total_.store(ntasks, std::memory_order_relaxed);
+    cursor_.store(0, std::memory_order_relaxed);
+    target_.store(want, std::memory_order_relaxed);
+    active_.store(want, std::memory_order_relaxed);
+    // seq_cst, not release: this store and the `parked_` load below must not
+    // be reordered against each other.  Under acquire/release alone both this
+    // thread and a worker on its way into the condition variable can read a
+    // stale value of the other's flag, and the wake-up is lost.
+    generation_.fetch_add(1, std::memory_order_seq_cst);
+
+    if (parked_.load(std::memory_order_seq_cst) > 0) {
       std::lock_guard<std::mutex> lk(mu_);
-      fn_ = &fn;
-      total_ = ntasks;
-      cursor_.store(0, std::memory_order_relaxed);
-      active_.store(static_cast<int>(workers_.size()), std::memory_order_relaxed);
-      // release: publishes fn_/total_/cursor_ to workers spinning without mu_
-      generation_.fetch_add(1, std::memory_order_release);
+      cv_work_.notify_all();
     }
-    cv_work_.notify_all();
 
     drain();  // the calling thread is a worker too
 
@@ -137,14 +168,15 @@ class TaskPool {
 
  private:
   void drain() {
+    const int64_t n = total_.load(std::memory_order_relaxed);
     for (;;) {
       const int64_t i = cursor_.fetch_add(1, std::memory_order_relaxed);
-      if (i >= total_) return;
+      if (i >= n) return;
       (*fn_)(i);
     }
   }
 
-  void worker() {
+  void worker(int id) {
     uint64_t seen = 0;
     for (;;) {
       bool woke = false;
@@ -155,19 +187,27 @@ class TaskPool {
       }
       if (!woke) {
         std::unique_lock<std::mutex> lk(mu_);
+        parked_.fetch_add(1, std::memory_order_seq_cst);
         // predicate is re-checked under the lock, so a generation bump that
         // lands between the spin ending and the lock being taken is not lost
         cv_work_.wait(lk, [&] {
           return stop_.load(std::memory_order_acquire) ||
-                 generation_.load(std::memory_order_acquire) != seen;
+                 generation_.load(std::memory_order_seq_cst) != seen;
         });
+        parked_.fetch_sub(1, std::memory_order_seq_cst);
         if (stop_.load(std::memory_order_acquire)) return;
       }
       seen = generation_.load(std::memory_order_acquire);
+      // no share this round -- back to spinning without touching `cursor_` or
+      // `active_`, both of which the participating threads are hammering
+      if (id >= target_.load(std::memory_order_acquire)) continue;
       drain();
-      {
+      // Only the thread that finishes last takes the mutex.  Having every
+      // worker take it to decrement turned each call into a 15-way convoy,
+      // which was most of the pool's launch cost.
+      if (active_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
         std::lock_guard<std::mutex> lk(mu_);
-        if (active_.fetch_sub(1, std::memory_order_acq_rel) == 1) cv_done_.notify_all();
+        cv_done_.notify_all();
       }
     }
   }
@@ -176,11 +216,13 @@ class TaskPool {
   std::mutex mu_;
   std::condition_variable cv_work_, cv_done_;
   const std::function<void(int64_t)>* fn_ = nullptr;
-  std::atomic<int64_t> cursor_{0};
-  int64_t total_ = 0;
-  std::atomic<int> active_{0};
-  std::atomic<uint64_t> generation_{0};
-  std::atomic<bool> stop_{false};
+  FA_PAD std::atomic<int64_t> cursor_{0};
+  FA_PAD std::atomic<int64_t> total_{0};
+  FA_PAD std::atomic<int> active_{0};
+  FA_PAD std::atomic<int> target_{0};
+  FA_PAD std::atomic<int> parked_{0};
+  FA_PAD std::atomic<uint64_t> generation_{0};
+  FA_PAD std::atomic<bool> stop_{false};
 };
 
 // Deliberately leaked: joining worker threads during static destruction races
@@ -203,6 +245,102 @@ constexpr int OP_MSE = 0;
 constexpr int OP_L1 = 1;
 constexpr int OP_CHARB = 2;      // param = eps^2
 constexpr int OP_HUBER = 3;      // param = delta
+
+// -------------------------------------------------------------------------
+// uint8 squared error, vectorised by hand
+//
+// The scalar form of this loop -- `acc += (int64_t)d * (int64_t)d` -- is the
+// one loop in the file that neither MSVC nor GCC will vectorise: the widening
+// multiply into a 64-bit accumulator has no lane-preserving form, so both give
+// up and emit scalar code.  It measured 5.1 Gelem/s per thread, which is how
+// `cv2.PSNR` (39-45 Gelem/s on one core, from exactly this instruction
+// sequence) came to beat a 16-thread version of this function outright.
+//
+// The trick is that the *pairwise* widening multiply does exist: `madd_epi16`
+// on x86, `vmull_u8` + `vpadalq_u16` on NEON.  Squares of a uint8 difference
+// fit in 16 bits, so both inputs stay narrow and only the accumulator has to
+// widen.  A 32-bit accumulator then has to be flushed to 64 bits before it can
+// overflow, which is what the blocking is for.
+//
+// The result is bit-identical to the scalar loop: every operation is exact
+// integer arithmetic, and integer addition is associative, so the
+// reassociation the vector form performs changes nothing.
+// -------------------------------------------------------------------------
+
+#if defined(FA_AVX2)
+// Each `madd_epi16` lane holds the sum of two squares, at most 2*255^2 =
+// 130050, and there are two of them per iteration.  2^31 / (2*130050) = 8256
+// iterations of headroom; 4096 keeps a comfortable margin and costs one flush
+// per 128 KiB.
+constexpr int64_t FA_U8_BLOCK = 4096 * 32;
+
+static int64_t sq_diff_u8_simd(const uint8_t* a, const uint8_t* b, int64_t n) {
+  const __m256i zero = _mm256_setzero_si256();
+  int64_t total = 0;
+  for (int64_t i = 0; i < n; i += FA_U8_BLOCK) {
+    const int64_t stop = std::min(i + FA_U8_BLOCK, n);
+    __m256i acc = zero;
+    int64_t j = i;
+    for (; j + 32 <= stop; j += 32) {
+      const __m256i va = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(a + j));
+      const __m256i vb = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(b + j));
+      // |a - b| on unsigned bytes, without ever forming a signed difference:
+      // saturating subtract each way, then or.  One of the two is always zero.
+      const __m256i d = _mm256_or_si256(_mm256_subs_epu8(va, vb),
+                                        _mm256_subs_epu8(vb, va));
+      const __m256i lo = _mm256_unpacklo_epi8(d, zero);
+      const __m256i hi = _mm256_unpackhi_epi8(d, zero);
+      acc = _mm256_add_epi32(acc, _mm256_madd_epi16(lo, lo));
+      acc = _mm256_add_epi32(acc, _mm256_madd_epi16(hi, hi));
+    }
+    // widen all eight i32 lanes to i64 and fold; the lanes are sums of squares,
+    // so a zero-extend is the right widening
+    const __m256i wide = _mm256_add_epi64(_mm256_unpacklo_epi32(acc, zero),
+                                          _mm256_unpackhi_epi32(acc, zero));
+    alignas(32) int64_t buf[4];
+    _mm256_store_si256(reinterpret_cast<__m256i*>(buf), wide);
+    total += buf[0] + buf[1] + buf[2] + buf[3];
+    for (; j < stop; ++j) {
+      const int d = static_cast<int>(a[j]) - static_cast<int>(b[j]);
+      total += static_cast<int64_t>(d) * static_cast<int64_t>(d);
+    }
+  }
+  return total;
+}
+#define FA_HAVE_U8_SIMD 1
+
+#elif defined(FA_NEON)
+// `vpadalq_u16` folds two u16 squares into each u32 lane per source register,
+// so a lane grows by at most 4*255^2 = 260100 per iteration.  2^32 / 260100 =
+// 16513; 4096 iterations again leaves a wide margin.
+constexpr int64_t FA_U8_BLOCK = 4096 * 16;
+
+static int64_t sq_diff_u8_simd(const uint8_t* a, const uint8_t* b, int64_t n) {
+  int64_t total = 0;
+  for (int64_t i = 0; i < n; i += FA_U8_BLOCK) {
+    const int64_t stop = std::min(i + FA_U8_BLOCK, n);
+    uint32x4_t acc = vdupq_n_u32(0);
+    int64_t j = i;
+    for (; j + 16 <= stop; j += 16) {
+      const uint8x16_t d = vabdq_u8(vld1q_u8(a + j), vld1q_u8(b + j));
+      const uint8x8_t dl = vget_low_u8(d);
+      const uint8x8_t dh = vget_high_u8(d);
+      acc = vpadalq_u16(acc, vmull_u8(dl, dl));
+      acc = vpadalq_u16(acc, vmull_u8(dh, dh));
+    }
+    total += static_cast<int64_t>(vgetq_lane_u32(acc, 0)) +
+             static_cast<int64_t>(vgetq_lane_u32(acc, 1)) +
+             static_cast<int64_t>(vgetq_lane_u32(acc, 2)) +
+             static_cast<int64_t>(vgetq_lane_u32(acc, 3));
+    for (; j < stop; ++j) {
+      const int d = static_cast<int>(a[j]) - static_cast<int>(b[j]);
+      total += static_cast<int64_t>(d) * static_cast<int64_t>(d);
+    }
+  }
+  return total;
+}
+#define FA_HAVE_U8_SIMD 1
+#endif
 
 // The penalty is evaluated in float and only the *sum* is double. That is not
 // a shortcut: a float square root is an 8-wide AVX2 instruction against 4-wide
@@ -248,6 +386,14 @@ static double pix_sum_range(const T* a, const T* b, int64_t begin, int64_t end,
 template <int OP>
 static double pix_sum_u8(const uint8_t* a, const uint8_t* b, int64_t begin,
                          int64_t end, double p) {
+#if defined(FA_HAVE_U8_SIMD)
+  // L1 is deliberately left to the compiler: the abs-and-widen form does
+  // vectorise, and the auto-vectorised loop measures faster than a
+  // hand-written `sad_epu8` chain.
+  if (OP == OP_MSE) {
+    return static_cast<double>(sq_diff_u8_simd(a + begin, b + begin, end - begin));
+  }
+#endif
   if (OP == OP_MSE || OP == OP_L1) {
     int64_t acc = 0;
     for (int64_t i = begin; i < end; ++i) {
@@ -266,6 +412,13 @@ static double pix_sum_u8(const uint8_t* a, const uint8_t* b, int64_t begin,
   return acc;
 }
 
+// Smallest slice worth handing to a second thread.  64 Ki elements is only
+// about a microsecond of vectorised integer work, so this floor is only
+// defensible while the pool's launch cost stays in the same range; raising it
+// to 1 Mi -- on the theory that the faster kernel wanted coarser slices --
+// measured 2.5x *worse* at 512x512 and no better anywhere else.
+constexpr int64_t MIN_PARALLEL_CHUNK = 1 << 16;
+
 torch::Tensor pixel_sums(torch::Tensor a, torch::Tensor b, int64_t n_images,
                          int64_t op, double param) {
   TORCH_CHECK(a.sizes() == b.sizes(), "shape mismatch");
@@ -276,15 +429,24 @@ torch::Tensor pixel_sums(torch::Tensor a, torch::Tensor b, int64_t n_images,
   TORCH_CHECK(n_images > 0 && total % n_images == 0, "numel not divisible by batch");
   const int64_t per = total / n_images;
 
-  auto out = torch::zeros({n_images}, torch::dtype(torch::kFloat64));
+  auto out = torch::empty({n_images}, torch::dtype(torch::kFloat64));
   double* op_out = out.data_ptr<double>();
 
   // one chunk per image per thread-sized slice, so the whole batch is one
   // parallel region rather than N of them
-  const int64_t chunk = std::max<int64_t>(1 << 16, (per + pool().size() - 1) / pool().size());
+  const int64_t chunk = std::max<int64_t>(MIN_PARALLEL_CHUNK,
+                                          (per + pool().size() - 1) / pool().size());
   const int64_t per_img_chunks = (per + chunk - 1) / chunk;
   const int64_t ntasks = per_img_chunks * n_images;
-  std::vector<double> partial(static_cast<size_t>(ntasks), 0.0);
+  // the common shapes are a handful of tasks, and a heap allocation per call
+  // is measurable against a reduction that now takes tens of microseconds
+  double stack_partial[64];
+  std::vector<double> heap_partial;
+  double* partial = stack_partial;
+  if (ntasks > static_cast<int64_t>(sizeof(stack_partial) / sizeof(double))) {
+    heap_partial.resize(static_cast<size_t>(ntasks));
+    partial = heap_partial.data();
+  }
 
 // Defined outside the AT_DISPATCH call below, not inside it: a preprocessor
 // directive may not appear within a macro's argument list, and AT_DISPATCH is a
@@ -314,18 +476,70 @@ torch::Tensor pixel_sums(torch::Tensor a, torch::Tensor b, int64_t n_images,
         FA_CASE(OP_CHARB)
         default: FA_CASE(OP_HUBER)
       }
-      partial[static_cast<size_t>(t)] = v;
+      partial[t] = v;
     });
   });
 
 #undef FA_CASE
 
-  for (int64_t t = 0; t < ntasks; ++t) op_out[t / per_img_chunks] += partial[static_cast<size_t>(t)];
+  for (int64_t i = 0; i < n_images; ++i) {
+    double acc = 0.0;
+    const int64_t base = i * per_img_chunks;
+    for (int64_t k = 0; k < per_img_chunks; ++k) acc += partial[base + k];
+    op_out[i] = acc;
+  }
   return out;
 }
 
 torch::Tensor mse_sums(torch::Tensor a, torch::Tensor b, int64_t n_images) {
   return pixel_sums(a, b, n_images, OP_MSE, 0.0);
+}
+
+// psnr_bias == PSNR_NONE means "skip the dB conversion", matching the CUDA
+// side's sentinel.
+constexpr double PSNR_NONE = -1.0e300;
+
+// Sums, divided, and optionally converted to dB -- the whole reduction, before
+// returning to Python.  Doing those last three steps as torch ops on scalar
+// tensors cost ~10us of dispatch per call, which at 512x512 was half the total
+// runtime of `psnr()`.  The CUDA path has always folded them into its finalize
+// kernel; this is the CPU counterpart.
+//
+// One tensor out, not the CUDA path's four.  There the four are free -- a
+// single kernel writes all of them and the caller picks -- but here each one is
+// an allocation plus a pybind wrapper, ~1us apiece, and at this size that was
+// again half the runtime.  So the CPU side takes the selector as an argument
+// and allocates only what was asked for.
+torch::Tensor pixel_reduce(torch::Tensor a, torch::Tensor b, int64_t n_images,
+                           int64_t op, double param, double psnr_bias,
+                           bool per_image) {
+  const int64_t total = a.numel();
+  auto sums = pixel_sums(a, b, n_images, op, param);
+  const double* s = sums.data_ptr<double>();
+  const bool want_psnr = (psnr_bias != PSNR_NONE);
+
+  // divide, do not multiply by a precomputed reciprocal: the last ulp is the
+  // difference between an exact integer uint8 sum and one that is off by one
+  const double n_each = static_cast<double>(total / n_images);
+
+  auto opts = torch::dtype(torch::kFloat64);
+  if (!per_image) {
+    double acc = 0.0;
+    for (int64_t i = 0; i < n_images; ++i) acc += s[i];
+    const double mean = acc / static_cast<double>(total);
+    auto out = torch::empty({}, opts);
+    // mean == 0 gives log10(0) == -inf, hence +inf dB, which is correct
+    *out.data_ptr<double>() = want_psnr ? psnr_bias - 10.0 * std::log10(mean) : mean;
+    return out;
+  }
+
+  auto out = torch::empty({n_images}, opts);
+  double* o = out.data_ptr<double>();
+  for (int64_t i = 0; i < n_images; ++i) {
+    const double m = s[i] / n_each;
+    o[i] = want_psnr ? psnr_bias - 10.0 * std::log10(m) : m;
+  }
+  return out;
 }
 
 // -------------------------------------------------------------------------
@@ -669,6 +883,8 @@ std::vector<torch::Tensor> gmsd_sums(torch::Tensor x, torch::Tensor y,
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("mse_sums_cpu", &fa::cpu::mse_sums, "per-image squared-error sums (CPU)");
   m.def("pixel_sums_cpu", &fa::cpu::pixel_sums, "per-image pixel-loss sums (CPU)");
+  m.def("pixel_reduce_cpu", &fa::cpu::pixel_reduce,
+        "per-image and batch pixel-loss means, optionally in dB (CPU)");
   m.def("ssim_sums_cpu", &fa::cpu::ssim_sums, "per-plane SSIM sums (CPU)");
   m.def("ssim_cs_cpu", &fa::cpu::ssim_cs, "per-plane SSIM and cs means (CPU)");
   m.def("gmsd_sums_cpu", &fa::cpu::gmsd_sums, "per-image GMS mean and deviation (CPU)");
