@@ -1,0 +1,160 @@
+name: wheels
+
+# Builds the prebuilt kernel wheels and publishes them on a tag.
+#
+# One wheel per platform, tagged `py3-none-<platform>`. That is only possible
+# because the binaries talk the C ABI in `frame_analytics/csrc/fa_abi.h` --
+# raw pointers, an int dtype code, a stream handle, int return codes -- and so
+# contain no Python ABI and no libtorch symbols. A torch C++ extension would
+# need one wheel per {python} x {torch} x {CUDA} combination, and a wheel
+# filename has no field in which to encode "torch 2.6".
+#
+# No runner here has an NVIDIA GPU, and none is needed: nvcc cross-compiles
+# fatbins for the listed architectures plus PTX for anything newer. Nothing in
+# this workflow *runs* a CUDA kernel -- do that on a machine with a GPU before
+# tagging.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "frame_analytics/csrc/**"
+      - "frame_analytics/_cabi.py"
+      - "setup.py"
+      - "pyproject.toml"
+      - ".github/workflows/wheels.yml"
+
+env:
+  # sm_75 (Turing) through sm_90 (Hopper), plus PTX so the binary keeps working
+  # on GPUs newer than the toolkit that built it. CUDA 12.x is used because
+  # CUDA 13 dropped Volta and would narrow the floor further.
+  FA_CUDA_ARCHS: "7.5 8.0 8.6 8.9 9.0 9.0+PTX"
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: Jimver/cuda-toolkit@v0.2.19
+        with:
+          cuda: "12.6.0"
+          method: network
+          sub-packages: '["nvcc", "cudart", "visual_studio_integration"]'
+      - name: Build wheel
+        shell: pwsh
+        env:
+          FA_BUILD_EXT: "1"
+          FA_VERBOSE: "1"
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip wheel . --no-deps --no-build-isolation -w dist
+      - name: Show what shipped
+        shell: pwsh
+        run: |
+          python -c "import zipfile,glob;w=glob.glob('dist/*.whl')[0];print(w);[print(' ',n) for n in zipfile.ZipFile(w).namelist() if n.endswith(('.dll','.so','.dylib'))]"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-windows
+          path: dist/*.whl
+
+  linux:
+    runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux_2_28_x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CUDA toolkit
+        run: |
+          dnf config-manager --add-repo \
+            https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+          dnf -y install cuda-nvcc-12-6 cuda-cudart-devel-12-6
+          echo "/usr/local/cuda-12.6/bin" >> $GITHUB_PATH
+          echo "CUDA_HOME=/usr/local/cuda-12.6" >> $GITHUB_ENV
+      - name: Build wheel
+        env:
+          FA_BUILD_EXT: "1"
+          FA_VERBOSE: "1"
+          # manylinux_2_28 is AlmaLinux 8 (glibc 2.28); the libraries link
+          # libstdc++ statically, so glibc is the only floor that matters
+          FA_PLAT_TAG: manylinux_2_28_x86_64
+        run: |
+          /opt/python/cp312-cp312/bin/python -m pip install --upgrade pip setuptools wheel
+          /opt/python/cp312-cp312/bin/python -m pip wheel . --no-deps --no-build-isolation -w dist
+      - name: Show what shipped
+        run: |
+          /opt/python/cp312-cp312/bin/python -c "import zipfile,glob;w=glob.glob('dist/*.whl')[0];print(w);[print(' ',n) for n in zipfile.ZipFile(w).namelist() if n.endswith(('.dll','.so','.dylib'))]"
+          for so in $(find . -name 'libfa_*.so'); do echo "== $so"; ldd $so; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-linux
+          path: dist/*.whl
+
+  macos:
+    # CPU only, and not by omission: there is no CUDA on macOS, so fa_cuda is
+    # never built, never shipped and never referenced by the loader there.
+    strategy:
+      matrix:
+        include:
+          - runner: macos-13      # x86_64
+            plat: macosx_13_0_x86_64
+          - runner: macos-14      # arm64
+            plat: macosx_14_0_arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build wheel
+        env:
+          FA_BUILD_EXT: "1"
+          FA_SKIP_CUDA: "1"
+          FA_VERBOSE: "1"
+          FA_PLAT_TAG: ${{ matrix.plat }}
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.runner == 'macos-13' && '13.0' || '14.0' }}
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip wheel . --no-deps --no-build-isolation -w dist
+      - name: Show what shipped
+        run: |
+          python -c "import zipfile,glob;w=glob.glob('dist/*.whl')[0];print(w);[print(' ',n) for n in zipfile.ZipFile(w).namelist() if n.endswith(('.dll','.so','.dylib'))]"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.plat }}
+          path: dist/*.whl
+
+  sdist:
+    # Sources only. Installed on a platform no wheel was built for, it compiles
+    # on first use; with no compiler at all it still works, on the portable
+    # PyTorch path.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --upgrade pip build
+          python -m build --sdist --outdir dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux, macos, sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write        # trusted publishing; no API token in this repo
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1

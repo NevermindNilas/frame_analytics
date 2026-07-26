@@ -47,9 +47,13 @@ version = { attr = "frame_analytics.__version__" }
 include = ["frame_analytics*"]
 
 [tool.setuptools.package-data]
-# the kernels ship as source and are compiled on first use, so they must be
-# inside the wheel
-frame_analytics = ["csrc/*.cu", "csrc/*.cpp"]
+# Sources always ship: they are what a platform with no prebuilt binary
+# compiles on first use. `lib/` holds the prebuilt C-ABI libraries and is
+# populated only by an FA_BUILD_EXT=1 build.
+frame_analytics = [
+    "csrc/*.cu", "csrc/*.cpp", "csrc/*.h",
+    "lib/*.dll", "lib/*.so", "lib/*.dylib",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -293,21 +293,31 @@ definitions. The crop is a view, so it costs nothing.
 pip install frame-analytics
 ```
 
-torch ≥ 2.0, numpy. One universal `py3-none-any` wheel, no version matrix: a
-torch C++ extension is ABI-locked to the exact torch build it was compiled
-against, so prebuilt binaries would mean a wheel per {python} × {torch} × {CUDA}
-× {platform} and would still miss whatever you have installed. The kernel sources
-ship inside the wheel and compile on first call (~1 min, cached thereafter).
+torch ≥ 2.0, numpy. The kernels arrive **precompiled**, one wheel per platform
+and no version matrix — the same wheel works on every Python and every torch
+build.
 
-No compiler? Every native kernel has a portable PyTorch fallback returning the
-same numbers. `fa.backend_status()` reports which is live; `backend_hint="torch"`
-/ `"native"` forces either. On Windows the MSVC build environment is located
-automatically.
+That is not the usual arrangement, because the usual arrangement cannot be
+published. A torch C++ extension is ABI-locked to the exact {python} × {torch} ×
+{CUDA} it was compiled against, and a wheel filename has nowhere to record
+"torch 2.6": pip would match on Python and platform alone and hand you an
+`undefined symbol` ImportError. So the kernels sit behind a plain C ABI instead
+— raw pointers, an int dtype code, a stream handle, int return codes — and the
+binaries link neither libtorch nor libpython. On Windows they import exactly one
+library, `KERNEL32.dll`; on Linux, glibc. An NVIDIA driver at runtime is the
+only external requirement, and only for the CUDA half.
 
-To compile at install time instead, and get a platform wheel:
+Install on a platform with no wheel and the sources — which ship too — compile
+on first call (~1 min, cached thereafter). No compiler at all and every native
+kernel still has a portable PyTorch fallback returning the same numbers.
+`fa.backend_status()` reports which tier is live and where its binary came from;
+`backend_hint="torch"` / `"native"` forces either. On Windows the MSVC build
+environment is located automatically.
+
+To compile from source at install time instead:
 
 ```bash
-FA_BUILD_EXT=1 pip install frame-analytics
+FA_BUILD_EXT=1 FA_CUDA_ARCHS="8.6 9.0+PTX" pip install frame-analytics
 ```
 
 From a checkout:

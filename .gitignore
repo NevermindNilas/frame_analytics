@@ -13,3 +13,12 @@ dist/
 .pytest_cache/
 .venv/
 venv/
+
+# prebuilt kernels: built per platform by FA_BUILD_EXT=1 / the release
+# workflow, never committed
+frame_analytics/lib/*.dll
+frame_analytics/lib/*.so
+frame_analytics/lib/*.dylib
+*.dll
+*.dylib
+*.pdb

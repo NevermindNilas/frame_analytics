@@ -511,8 +511,7 @@ class _FusedSSIM(torch.autograd.Function):
     def forward(ctx, x, y, win, shift, C1, C2, want_map):
         from . import backend
 
-        ext = backend.load()
-        res = ext.ssim_fused_cuda(x, y, win, shift, C1, C2, want_map)
+        res = backend.ssim_fused(x, y, win, shift, C1, C2, want_map)
         ctx.save_for_backward(x, y, win)
         ctx.consts = (shift, C1, C2)
         ctx.want_map = want_map
@@ -740,8 +739,7 @@ class _FusedSSIMCS(torch.autograd.Function):
     def forward(ctx, x, y, win, shift, C1, C2):
         from . import backend
 
-        ext = backend.load()
-        s, cs = ext.ssim_cs_cuda(x, y, win, shift, C1, C2)
+        s, cs = backend.ssim_cs_forward(x, y, win, shift, C1, C2)
         ctx.save_for_backward(x, y, win)
         ctx.consts = (shift, C1, C2)
         return s, cs

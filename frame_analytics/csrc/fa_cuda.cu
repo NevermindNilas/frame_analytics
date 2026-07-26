@@ -1,4 +1,19 @@
-// Fused CUDA kernels for MSE and SSIM.
+// Fused CUDA kernels for frame_analytics, behind the C ABI in fa_abi.h.
+//
+// The kernels are unchanged from the torch-extension version; what changed is
+// the boundary. Nothing here includes torch, so the resulting binary links
+// only against a statically linked CUDA runtime (which dlopens the driver) and
+// the C runtime -- one .dll/.so per platform, valid for every Python and every
+// torch build. Consequently:
+//
+//   * shapes and dtypes arrive as ints, not as torch::Tensor
+//   * every output buffer, including scratch, is allocated by the caller.
+//     That is not just tidiness: StreamingMetrics captures a CUDA graph, and
+//     cudaMalloc is illegal during capture while torch's caching allocator is
+//     capture-aware, so the allocation has to happen on the Python side
+//   * the stream is a parameter, and the device ordinal replaces CUDAGuard
+//   * TORCH_CHECK becomes a status code; a CUDA runtime error comes back
+//     negated
 //
 // SSIM strategy -- one kernel, no intermediate tensors.
 //
@@ -22,11 +37,11 @@
 // Shared memory: 16*42*2*4 (staging) + 26*4*32*4 (ring) = 18.2 KiB, so several
 // blocks stay resident per SM.
 
-#include <torch/extension.h>
-#include <ATen/cuda/CUDAContext.h>
-#include <c10/cuda/CUDAGuard.h>
+#include "fa_abi.h"
+
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
+#include <algorithm>
 #include <type_traits>
 
 namespace fa {
@@ -36,10 +51,7 @@ constexpr int TILE_H = 64;          // output rows per block
 constexpr int BLOCK_Y = 8;          // threads in y
 constexpr int ROW_BLOCK = 2;        // output rows each thread owns (see below)
 constexpr int ROWS_PER_STEP = BLOCK_Y * ROW_BLOCK;   // input rows staged per step
-constexpr int MAX_WIN = 11;
-constexpr int HALO = MAX_WIN - 1;             // 10
-constexpr int STAGE_W = TILE_W + HALO;        // 42
-constexpr int RING_H = ROWS_PER_STEP + HALO;  // 26
+constexpr int MAX_WIN = FA_MAX_WIN;
 // Moment planes carried through the separable blur: x, y, x*y, (x-y)^2.
 //
 // The obvious set is five -- x, y, x^2, y^2, x*y -- but SSIM never wants
@@ -63,6 +75,18 @@ constexpr int RING_H = ROWS_PER_STEP + HALO;  // 26
 constexpr int NPLANE = 4;
 
 // --------------------------------------------------------------------------
+// narrow float types
+//
+// at::Half and at::BFloat16 came from headers this file no longer includes.
+// half rides cuda_fp16's conversion; bfloat16 is just the top half of a
+// float32, so it needs no header at all -- which also keeps this file
+// compiling on toolkits whose cuda_bf16.h gates its conversions on sm_80.
+// --------------------------------------------------------------------------
+
+struct half_t { unsigned short bits; };
+struct bf16_t { unsigned short bits; };
+
+// --------------------------------------------------------------------------
 // typed loads
 // --------------------------------------------------------------------------
 
@@ -74,13 +98,17 @@ template <typename T> struct Ld {
   __device__ static inline float get(const T* p, long i) { return static_cast<float>(p[i]); }
   __device__ static inline double getd(const T* p, long i) { return static_cast<double>(p[i]); }
 };
-template <> struct Ld<at::Half> {
-  __device__ static inline float get(const at::Half* p, long i) { return __half2float(*reinterpret_cast<const __half*>(p + i)); }
-  __device__ static inline double getd(const at::Half* p, long i) { return static_cast<double>(get(p, i)); }
+template <> struct Ld<half_t> {
+  __device__ static inline float get(const half_t* p, long i) {
+    return __half2float(*reinterpret_cast<const __half*>(p + i));
+  }
+  __device__ static inline double getd(const half_t* p, long i) { return static_cast<double>(get(p, i)); }
 };
-template <> struct Ld<at::BFloat16> {
-  __device__ static inline float get(const at::BFloat16* p, long i) { return static_cast<float>(p[i]); }
-  __device__ static inline double getd(const at::BFloat16* p, long i) { return static_cast<double>(get(p, i)); }
+template <> struct Ld<bf16_t> {
+  __device__ static inline float get(const bf16_t* p, long i) {
+    return __int_as_float(static_cast<int>(static_cast<unsigned int>(p[i].bits) << 16));
+  }
+  __device__ static inline double getd(const bf16_t* p, long i) { return static_cast<double>(get(p, i)); }
 };
 
 // --------------------------------------------------------------------------
@@ -144,7 +172,7 @@ __device__ inline void block_reduce_sum2(double a, double b, double* smem,
 // psnr_bias == PSNR_NONE means "this is not an MSE reduction, skip the dB
 // conversion". Otherwise it is 10*log10(L^2) and the kernel emits PSNR
 // alongside MSE, which saves the caller two more launches for the log.
-constexpr double PSNR_NONE = -1.0e300;
+constexpr double PSNR_NONE = FA_PSNR_NONE;
 
 // Counts are passed as counts, and the mean is a division. `sum * (1.0/n)` is
 // a rounding of a rounding: it costs the last ulp, which is enough to make
@@ -170,13 +198,13 @@ __global__ void finalize_kernel(const double* __restrict__ partial,
   const double s = block_reduce_sum(acc, warp_sums);
   if (threadIdx.x == 0) {
     const double v = s / (is_total ? n_total : n_per_image);
-    if (is_total) *out_total = v;
-    else out_per_image[row] = v;
+    if (is_total) { if (out_total) *out_total = v; }
+    else if (out_per_image) out_per_image[row] = v;
     if (psnr_bias != PSNR_NONE) {
       // v == 0 gives log10(0) == -inf, hence +inf dB, which is correct
       const double db = psnr_bias - 10.0 * log10(v);
-      if (is_total) *out_psnr_total = db;
-      else out_psnr_per_image[row] = db;
+      if (is_total) { if (out_psnr_total) *out_psnr_total = db; }
+      else if (out_psnr_per_image) out_psnr_per_image[row] = db;
     }
   }
 }
@@ -205,30 +233,6 @@ __global__ void finalize_planes2_kernel(const double* __restrict__ pa,
   }
 }
 
-static inline std::vector<torch::Tensor> finalize(torch::Tensor partial,
-                                                  int nrows, int ncols,
-                                                  double n_per_image,
-                                                  double n_total,
-                                                  double psnr_bias) {
-  auto stream = at::cuda::getCurrentCUDAStream();
-  auto opts = partial.options();
-  auto per_image = torch::empty({nrows}, opts);
-  auto total = torch::empty({}, opts);
-  const bool want_psnr = (psnr_bias != PSNR_NONE);
-  auto psnr_pi = torch::empty({want_psnr ? nrows : 0}, opts);
-  auto psnr_tot = torch::empty({want_psnr ? 1 : 0}, opts);
-
-  finalize_kernel<<<nrows + 1, 256, 0, stream>>>(
-      partial.data_ptr<double>(), nrows, ncols, n_per_image, n_total,
-      psnr_bias, per_image.data_ptr<double>(), total.data_ptr<double>(),
-      want_psnr ? psnr_pi.data_ptr<double>() : nullptr,
-      want_psnr ? psnr_tot.data_ptr<double>() : nullptr);
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
-
-  if (want_psnr) return {per_image, total, psnr_pi, psnr_tot.squeeze()};
-  return {per_image, total};
-}
-
 // --------------------------------------------------------------------------
 // Pixel losses: MSE, L1, Charbonnier, Huber
 //
@@ -242,19 +246,14 @@ static inline std::vector<torch::Tensor> finalize(torch::Tensor partial,
 // four digits of the sum that PSNR then takes a logarithm of.
 // --------------------------------------------------------------------------
 
-constexpr int OP_MSE = 0;
-constexpr int OP_L1 = 1;
-constexpr int OP_CHARB = 2;      // param = eps^2
-constexpr int OP_HUBER = 3;      // param = delta
-
 // Huber written branchlessly. `0.5*min(a,d)^2 + d*max(a-d,0)` is the same
 // function as the piecewise definition, but it is a couple of min/max ops
 // instead of a select, which both nvcc and the CPU vectoriser prefer.
 template <int OP, typename A>
 __device__ inline A pix_term(A d, A param) {
-  if (OP == OP_MSE) return d * d;
-  if (OP == OP_L1) return fabs(d);
-  if (OP == OP_CHARB) return sqrt(d * d + param);
+  if (OP == FA_OP_MSE) return d * d;
+  if (OP == FA_OP_L1) return fabs(d);
+  if (OP == FA_OP_CHARB) return sqrt(d * d + param);
   const A a = fabs(d);
   const A lo = a < param ? a : param;
   return A(0.5) * lo * lo + param * (a - lo);
@@ -275,7 +274,7 @@ __global__ void pixel_kernel(const T* __restrict__ a, const T* __restrict__ b,
                              double* __restrict__ partial, long n_per_image,
                              float param, int blocks_per_image) {
   __shared__ double warp_sums[32];
-  constexpr bool WIDE = (OP == OP_MSE || std::is_same<T, double>::value);
+  constexpr bool WIDE = (OP == FA_OP_MSE || std::is_same<T, double>::value);
   const int img = blockIdx.y;
   const long base = static_cast<long>(img) * n_per_image;
 
@@ -306,7 +305,7 @@ __global__ void pixel_kernel_u8(const uchar4* __restrict__ a, const uchar4* __re
                                 const unsigned char* __restrict__ b_raw,
                                 long n_per_image, float param, int blocks_per_image) {
   __shared__ double warp_sums[32];
-  constexpr bool EXACT = (OP == OP_MSE || OP == OP_L1);
+  constexpr bool EXACT = (OP == FA_OP_MSE || OP == FA_OP_L1);
   const int img = blockIdx.y;
   const long vec_base = static_cast<long>(img) * n_vec;
 
@@ -321,7 +320,7 @@ __global__ void pixel_kernel_u8(const uchar4* __restrict__ a, const uchar4* __re
     const int d2 = (int)va.z - (int)vb.z;
     const int d3 = (int)va.w - (int)vb.w;
     if (EXACT) {
-      if (OP == OP_MSE) {
+      if (OP == FA_OP_MSE) {
         iacc += (long long)(d0 * d0) + (long long)(d1 * d1) +
                 (long long)(d2 * d2) + (long long)(d3 * d3);
       } else {
@@ -340,7 +339,7 @@ __global__ void pixel_kernel_u8(const uchar4* __restrict__ a, const uchar4* __re
        i < n_per_image; i += stride) {
     const int d = (int)a_raw[img_base + i] - (int)b_raw[img_base + i];
     if (EXACT) {
-      iacc += (OP == OP_MSE) ? (long long)(d * d) : (long long)abs(d);
+      iacc += (OP == FA_OP_MSE) ? (long long)(d * d) : (long long)abs(d);
     } else {
       facc += pix_term<OP, float>((float)d, param);
     }
@@ -776,285 +775,108 @@ __global__ __launch_bounds__(TILE_W * BLOCK_Y) void ssim_bwd_scatter_kernel(
 }
 
 // --------------------------------------------------------------------------
-// launchers
+// host-side plumbing
 // --------------------------------------------------------------------------
 
-static inline int sm_count() {
-  return at::cuda::getCurrentDeviceProperties()->multiProcessorCount;
-}
+// Every CUDA runtime error comes back to Python negated, so a positive return
+// is always one of this library's own status codes.
+#define FA_CUDA_TRY(EXPR)                                                      \
+  do {                                                                         \
+    const cudaError_t e_ = (EXPR);                                             \
+    if (e_ != cudaSuccess) return -static_cast<int>(e_);                       \
+  } while (0)
 
-std::vector<torch::Tensor> pixel_partial(torch::Tensor a, torch::Tensor b,
-                                         int64_t n_images, int64_t op,
-                                         double param, double psnr_bias) {
-  TORCH_CHECK(a.is_cuda() && b.is_cuda(), "inputs must be CUDA tensors");
-  TORCH_CHECK(a.sizes() == b.sizes(), "shape mismatch");
-  TORCH_CHECK(op >= 0 && op <= 3, "unknown pixel op ", op);
-  a = a.contiguous();
-  b = b.contiguous();
-  const at::cuda::CUDAGuard guard(a.device());
-  auto stream = at::cuda::getCurrentCUDAStream();
+#define FA_LAUNCH_CHECK()                                                      \
+  do {                                                                         \
+    const cudaError_t e_ = cudaGetLastError();                                 \
+    if (e_ != cudaSuccess) return -static_cast<int>(e_);                       \
+  } while (0)
 
-  const long total = a.numel();
-  TORCH_CHECK(n_images > 0 && total % n_images == 0, "numel not divisible by batch");
-  const long n_per_image = total / n_images;
-
-  const int threads = 256;
-  int bpi = (int)std::min<long>((n_per_image + threads - 1) / threads,
-                                std::max(1, sm_count() * 8 / (int)n_images + 1));
-  bpi = std::max(1, bpi);
-
-  auto partial = torch::empty({n_images, bpi},
-                              a.options().dtype(torch::kFloat64));
-  dim3 grid(bpi, (unsigned)n_images);
-  const float p = (float)param;
-
-#define FA_PIX_U8(OP)                                                          \
-  pixel_kernel_u8<OP><<<grid, threads, 0, stream>>>(                           \
-      reinterpret_cast<const uchar4*>(a.data_ptr<uint8_t>()),                  \
-      reinterpret_cast<const uchar4*>(b.data_ptr<uint8_t>()),                  \
-      partial.data_ptr<double>(), n_vec, tail,                                 \
-      a.data_ptr<uint8_t>(), b.data_ptr<uint8_t>(), n_per_image, p, bpi)
-#define FA_PIX(SC, OP)                                                         \
-  pixel_kernel<SC, OP><<<grid, threads, 0, stream>>>(                          \
-      a.data_ptr<SC>(), b.data_ptr<SC>(), partial.data_ptr<double>(),          \
-      n_per_image, p, bpi)
-#define FA_PIX_DISPATCH(LAUNCH)                                                \
-  switch ((int)op) {                                                           \
-    case OP_MSE:   LAUNCH(OP_MSE);   break;                                    \
-    case OP_L1:    LAUNCH(OP_L1);    break;                                    \
-    case OP_CHARB: LAUNCH(OP_CHARB); break;                                    \
-    default:       LAUNCH(OP_HUBER); break;                                    \
-  }
-
-  bool done = false;
-  // The vectorised path needs each image's base to be 4-aligned, which means
-  // both the stride between images *and* the pointer itself.
-  //
-  // `contiguous()` does not give you the second one: a slice of a bigger
-  // tensor is contiguous with a non-zero storage offset, so `x[:, :, 1:, :]`
-  // on an odd-width uint8 frame hands us a pointer at offset 1. A `uchar4`
-  // load from it faults, and a misaligned-address fault poisons the CUDA
-  // context -- the try/except fallback in backend.py cannot rescue the
-  // process, every later CUDA call in the interpreter dies too.
-  if (a.scalar_type() == torch::kUInt8 && (n_per_image % 4 == 0 || n_images == 1)) {
-    const auto pa = reinterpret_cast<uintptr_t>(a.data_ptr<uint8_t>());
-    const auto pb = reinterpret_cast<uintptr_t>(b.data_ptr<uint8_t>());
-    if (pa % 4 == 0 && pb % 4 == 0) {
-      const long n_vec = n_per_image / 4;
-      const long tail = n_vec * 4;
-      FA_PIX_DISPATCH(FA_PIX_U8);
-      C10_CUDA_KERNEL_LAUNCH_CHECK();
-      done = true;
+// Replaces at::cuda::CUDAGuard. Launching on a stream that belongs to a device
+// other than the current one is an error, and the caller's notion of "current"
+// is torch's, not ours.
+struct DeviceScope {
+  int prev = -1;
+  bool changed = false;
+  cudaError_t status = cudaSuccess;
+  explicit DeviceScope(int dev) {
+    status = cudaGetDevice(&prev);
+    if (status == cudaSuccess && dev >= 0 && dev != prev) {
+      status = cudaSetDevice(dev);
+      changed = (status == cudaSuccess);
     }
   }
-
-// Hoisted out of the AT_DISPATCH call below: a preprocessor directive may not
-// appear inside a macro's argument list, and AT_DISPATCH is a macro.
-#define FA_PIX_SC(OP) FA_PIX(scalar_t, OP)
-
-  if (!done) {
-    AT_DISPATCH_ALL_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16,
-                               a.scalar_type(), "pixel_partial", [&] {
-      FA_PIX_DISPATCH(FA_PIX_SC);
-    });
-    C10_CUDA_KERNEL_LAUNCH_CHECK();
+  ~DeviceScope() {
+    if (changed) cudaSetDevice(prev);
   }
+};
 
-#undef FA_PIX_SC
-#undef FA_PIX_DISPATCH
-#undef FA_PIX
-#undef FA_PIX_U8
+#define FA_DEVICE_SCOPE(DEV)                                                   \
+  DeviceScope guard_(DEV);                                                     \
+  if (guard_.status != cudaSuccess) return -static_cast<int>(guard_.status)
 
-  return finalize(partial, (int)n_images, bpi,
-                  static_cast<double>(n_per_image),
-                  static_cast<double>(total), psnr_bias);
-}
-
-std::vector<torch::Tensor> mse_partial(torch::Tensor a, torch::Tensor b,
-                                       int64_t n_images, double psnr_bias) {
-  return pixel_partial(a, b, n_images, OP_MSE, 0.0, psnr_bias);
-}
-
-std::vector<torch::Tensor> ssim_fused(torch::Tensor x, torch::Tensor y,
-                                      torch::Tensor win, double shift,
-                                      double C1, double C2, bool want_map) {
-  TORCH_CHECK(x.is_cuda() && y.is_cuda(), "inputs must be CUDA tensors");
-  TORCH_CHECK(x.dim() == 4 && x.sizes() == y.sizes(), "expected matching NCHW");
-  TORCH_CHECK(win.dim() == 1 && win.numel() <= MAX_WIN, "window too large");
-  x = x.contiguous();
-  y = y.contiguous();
-  auto winf = win.to(torch::kFloat32).contiguous().to(x.device());
-
-  const at::cuda::CUDAGuard guard(x.device());
-  auto stream = at::cuda::getCurrentCUDAStream();
-
-  const int N = (int)x.size(0), C = (int)x.size(1);
-  const int H = (int)x.size(2), W = (int)x.size(3);
-  const int K = (int)winf.numel();
-  const int Hout = H - K + 1, Wout = W - K + 1;
-  TORCH_CHECK(Hout > 0 && Wout > 0, "image smaller than window");
-
-  const int planes = N * C;
-  const int gx = (Wout + TILE_W - 1) / TILE_W;
-  const int gy = (Hout + TILE_H - 1) / TILE_H;
-  const int bpp = gx * gy;
-
-  auto partial = torch::empty({planes, bpp}, x.options().dtype(torch::kFloat64));
-  torch::Tensor map;
-  float* map_ptr = nullptr;
-  if (want_map) {
-    map = torch::empty({N, C, Hout, Wout}, x.options().dtype(torch::kFloat32));
-    map_ptr = map.data_ptr<float>();
+// cudaGetDeviceProperties costs tens of microseconds -- the same order as the
+// kernel it is sizing -- so the one field that is actually needed is cached.
+static int sm_count(int device) {
+  constexpr int MAX_DEV = 64;
+  static int cache[MAX_DEV] = {0};
+  if (device < 0 || device >= MAX_DEV) {
+    int v = 0;
+    cudaDeviceGetAttribute(&v, cudaDevAttrMultiProcessorCount,
+                           device < 0 ? 0 : device);
+    return v > 0 ? v : 1;
   }
-
-  dim3 block(TILE_W, BLOCK_Y);
-  dim3 grid(gx, gy, planes);
-
-#define FA_LAUNCH(SC, MODE, KW)                                                \
-  ssim_fused_kernel<SC, MODE, KW><<<grid, block, 0, stream>>>(                 \
-      x.data_ptr<SC>(), y.data_ptr<SC>(), partial.data_ptr<double>(),          \
-      map_ptr, nullptr, nullptr, 0.f, nullptr, nullptr, nullptr, nullptr,      \
-      H, W, Hout, Wout, (float)shift, (float)C1, (float)C2,                    \
-      winf.data_ptr<float>(), bpp, nullptr, nullptr, nullptr)
-
-#define FA_DISPATCH_KW(SC, MODE)                                               \
-  switch (K) {                                                                 \
-    case 11: FA_LAUNCH(SC, MODE, 11); break;                                   \
-    case 9:  FA_LAUNCH(SC, MODE, 9);  break;                                   \
-    case 7:  FA_LAUNCH(SC, MODE, 7);  break;                                   \
-    case 5:  FA_LAUNCH(SC, MODE, 5);  break;                                   \
-    case 3:  FA_LAUNCH(SC, MODE, 3);  break;                                   \
-    default: TORCH_CHECK(false, "unsupported window size ", K);                \
-  }
-
-  AT_DISPATCH_ALL_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16,
-                             x.scalar_type(), "ssim_fused", [&] {
-    if (want_map) { FA_DISPATCH_KW(scalar_t, MODE_MAP); }
-    else          { FA_DISPATCH_KW(scalar_t, MODE_REDUCE); }
-  });
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
-
-#undef FA_DISPATCH_KW
-#undef FA_LAUNCH
-
-  // Each image owns C consecutive plane-rows of `partial`, so one image's
-  // contribution is a contiguous C*bpp span -- exactly what finalize() reduces.
-  const double npix = static_cast<double>(Hout) * Wout;
-  auto red = finalize(partial, N, C * bpp, npix * C,
-                      npix * C * static_cast<double>(N), PSNR_NONE);
-  if (want_map) return {red[0], red[1], map};
-  return red;
-}
-
-// --------------------------------------------------------------------------
-// MS-SSIM's per-scale primitive
-//
-// One pass produces the plane means of *both* the SSIM map and its
-// contrast-structure factor. MS-SSIM wants cs at every scale and the full SSIM
-// only at the coarsest, and both fall out of the same four moments, so running
-// the tile kernel twice would be pure waste: the second run would re-read both
-// input planes to recompute numbers it already had in registers.
-// --------------------------------------------------------------------------
-
-std::vector<torch::Tensor> ssim_cs(torch::Tensor x, torch::Tensor y,
-                                   torch::Tensor win, double shift,
-                                   double C1, double C2) {
-  TORCH_CHECK(x.is_cuda() && y.is_cuda(), "inputs must be CUDA tensors");
-  TORCH_CHECK(x.dim() == 4 && x.sizes() == y.sizes(), "expected matching NCHW");
-  TORCH_CHECK(win.dim() == 1 && win.numel() <= MAX_WIN, "window too large");
-  x = x.contiguous();
-  y = y.contiguous();
-  auto winf = win.to(torch::kFloat32).contiguous().to(x.device());
-
-  const at::cuda::CUDAGuard guard(x.device());
-  auto stream = at::cuda::getCurrentCUDAStream();
-
-  const int N = (int)x.size(0), C = (int)x.size(1);
-  const int H = (int)x.size(2), W = (int)x.size(3);
-  const int K = (int)winf.numel();
-  const int Hout = H - K + 1, Wout = W - K + 1;
-  TORCH_CHECK(Hout > 0 && Wout > 0, "image smaller than window");
-
-  const int planes = N * C;
-  const int gx = (Wout + TILE_W - 1) / TILE_W;
-  const int gy = (Hout + TILE_H - 1) / TILE_H;
-  const int bpp = gx * gy;
-
-  auto opts64 = x.options().dtype(torch::kFloat64);
-  auto partial = torch::empty({planes, bpp}, opts64);
-  auto partial_cs = torch::empty({planes, bpp}, opts64);
-
-  dim3 block(TILE_W, BLOCK_Y);
-  dim3 grid(gx, gy, planes);
-
-#define FA_CS(SC, KW)                                                          \
-  ssim_fused_kernel<SC, MODE_CS, KW><<<grid, block, 0, stream>>>(              \
-      x.data_ptr<SC>(), y.data_ptr<SC>(), partial.data_ptr<double>(),          \
-      nullptr, nullptr, nullptr, 0.f, nullptr, nullptr, nullptr, nullptr,      \
-      H, W, Hout, Wout, (float)shift, (float)C1, (float)C2,                    \
-      winf.data_ptr<float>(), bpp, partial_cs.data_ptr<double>(),              \
-      nullptr, nullptr)
-
-  AT_DISPATCH_ALL_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16,
-                             x.scalar_type(), "ssim_cs", [&] {
-    switch (K) {
-      case 11: FA_CS(scalar_t, 11); break;
-      case 9:  FA_CS(scalar_t, 9);  break;
-      case 7:  FA_CS(scalar_t, 7);  break;
-      case 5:  FA_CS(scalar_t, 5);  break;
-      case 3:  FA_CS(scalar_t, 3);  break;
-      default: TORCH_CHECK(false, "unsupported window size ", K);
+  if (cache[device] == 0) {
+    int v = 0;
+    if (cudaDeviceGetAttribute(&v, cudaDevAttrMultiProcessorCount, device) !=
+            cudaSuccess || v <= 0) {
+      v = 1;
     }
-  });
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
-#undef FA_CS
-
-  auto s_out = torch::empty({planes}, opts64);
-  auto cs_out = torch::empty({planes}, opts64);
-  finalize_planes2_kernel<<<planes, 256, 0, stream>>>(
-      partial.data_ptr<double>(), partial_cs.data_ptr<double>(), bpp,
-      static_cast<double>(Hout) * Wout,
-      s_out.data_ptr<double>(), cs_out.data_ptr<double>());
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
-  return {s_out, cs_out};
+    cache[device] = v;
+  }
+  return cache[device];
 }
 
-// --------------------------------------------------------------------------
-// Backward
-//
-// Two passes. The first recomputes the local moments (the same tile kernel as
-// the forward, in MODE_PREP) and emits three coefficient maps; the second
-// scatters them back through the Gaussian and combines with x and y.
-//
-// dL_dmap may be undefined, in which case every map position gets
-// `uniform_grad` -- the mean-reduction case, where materialising a constant
-// HoutxWout tensor just to read it back would be pure bandwidth.
-// --------------------------------------------------------------------------
+// Stands in for AT_DISPATCH_ALL_TYPES_AND2; variadic because the bodies below
+// contain template argument lists, and only `...` keeps their commas intact.
+#define FA_DISPATCH(CODE, ...)                                                 \
+  switch (CODE) {                                                              \
+    case FA_U8:   { using scalar_t = unsigned char; __VA_ARGS__ } break;       \
+    case FA_F16:  { using scalar_t = half_t;        __VA_ARGS__ } break;       \
+    case FA_BF16: { using scalar_t = bf16_t;        __VA_ARGS__ } break;       \
+    case FA_F32:  { using scalar_t = float;         __VA_ARGS__ } break;       \
+    case FA_F64:  { using scalar_t = double;        __VA_ARGS__ } break;       \
+    default: return FA_E_DTYPE;                                                \
+  }
+
+static inline int finalize(const double* partial, int nrows, int ncols,
+                           double n_per_image, double n_total,
+                           double psnr_bias, double* out_per_image,
+                           double* out_total, double* out_psnr_pi,
+                           double* out_psnr_tot, cudaStream_t stream) {
+  finalize_kernel<<<nrows + 1, 256, 0, stream>>>(
+      partial, nrows, ncols, n_per_image, n_total, psnr_bias, out_per_image,
+      out_total, out_psnr_pi, out_psnr_tot);
+  FA_LAUNCH_CHECK();
+  return FA_OK;
+}
 
 // The second half of every SSIM-family backward: three (or four) coefficient
 // maps convolved back through the Gaussian and combined with x and y. Shared
 // verbatim between the single-scale and the multi-scale entry points -- only
 // how the maps were *produced* differs.
-static std::vector<torch::Tensor> ssim_bwd_scatter(
-    const torch::Tensor& x, const torch::Tensor& y, const float* ab,
-    const float* ac, const float* atx, const float* aty,
-    const torch::Tensor& winf, int H, int W, int Hout, int Wout, int K,
-    int planes, double shift, bool need_dx, bool need_dy,
-    cudaStream_t stream) {
-  torch::Tensor dx, dy;
-  float* dx_ptr = nullptr;
-  float* dy_ptr = nullptr;
-  if (need_dx) { dx = torch::empty_like(x); dx_ptr = dx.data_ptr<float>(); }
-  if (need_dy) { dy = torch::empty_like(y); dy_ptr = dy.data_ptr<float>(); }
-
+static int ssim_bwd_scatter(const float* x, const float* y, const float* ab,
+                            const float* ac, const float* atx, const float* aty,
+                            const float* win, int H, int W, int Hout, int Wout,
+                            int K, int planes, double shift, float* dx,
+                            float* dy, cudaStream_t stream) {
   const int gx = (W + TILE_W - 1) / TILE_W;
   const int gy = (H + TILE_H - 1) / TILE_H;
   dim3 block(TILE_W, BLOCK_Y);
   dim3 grid(gx, gy, planes);
 #define FA_SCAT(KW, DY)                                                        \
   ssim_bwd_scatter_kernel<KW, DY><<<grid, block, 0, stream>>>(                 \
-      x.data_ptr<float>(), y.data_ptr<float>(), ab, ac, atx, aty, dx_ptr,      \
-      dy_ptr, winf.data_ptr<float>(), H, W, Hout, Wout, (float)shift)
+      x, y, ab, ac, atx, aty, dx, dy, win, H, W, Hout, Wout, (float)shift)
 #define FA_SCAT_KW(DY)                                                         \
   switch (K) {                                                                 \
     case 11: FA_SCAT(11, DY); break;                                           \
@@ -1062,166 +884,13 @@ static std::vector<torch::Tensor> ssim_bwd_scatter(
     case 7:  FA_SCAT(7, DY);  break;                                           \
     case 5:  FA_SCAT(5, DY);  break;                                           \
     case 3:  FA_SCAT(3, DY);  break;                                           \
-    default: TORCH_CHECK(false, "unsupported window size ", K);                \
+    default: return FA_E_WINDOW;                                               \
   }
-  if (need_dy) { FA_SCAT_KW(true); } else { FA_SCAT_KW(false); }
+  if (dy) { FA_SCAT_KW(true); } else { FA_SCAT_KW(false); }
 #undef FA_SCAT_KW
 #undef FA_SCAT
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
-  return {dx, dy};
-}
-
-std::vector<torch::Tensor> ssim_backward(torch::Tensor x, torch::Tensor y,
-                                         torch::Tensor dL_dmap,
-                                         torch::Tensor grad_scalar,
-                                         torch::Tensor win,
-                                         double shift, double C1, double C2,
-                                         bool need_dx, bool need_dy) {
-  TORCH_CHECK(x.is_cuda() && y.is_cuda(), "inputs must be CUDA tensors");
-  TORCH_CHECK(x.dim() == 4 && x.sizes() == y.sizes(), "expected matching NCHW");
-  TORCH_CHECK(x.scalar_type() == torch::kFloat32,
-              "backward requires float32 inputs, got ", x.scalar_type());
-  TORCH_CHECK(need_dx || need_dy, "backward called with nothing to compute");
-  x = x.contiguous();
-  y = y.contiguous();
-  auto winf = win.to(torch::kFloat32).contiguous().to(x.device());
-
-  const at::cuda::CUDAGuard guard(x.device());
-  auto stream = at::cuda::getCurrentCUDAStream();
-
-  const int N = (int)x.size(0), C = (int)x.size(1);
-  const int H = (int)x.size(2), W = (int)x.size(3);
-  const int K = (int)winf.numel();
-  const int Hout = H - K + 1, Wout = W - K + 1;
-  TORCH_CHECK(Hout > 0 && Wout > 0, "image smaller than window");
-  const int planes = N * C;
-
-  const bool has_map = dL_dmap.defined() && dL_dmap.numel() > 0;
-  const float* dmap_ptr = nullptr;
-  const float* gscalar_ptr = nullptr;
-  float grad_norm = 0.0f;
-  if (has_map) {
-    dL_dmap = dL_dmap.to(torch::kFloat32).contiguous();
-    TORCH_CHECK(dL_dmap.numel() == (long)planes * Hout * Wout,
-                "dL_dmap has the wrong number of elements");
-    dmap_ptr = dL_dmap.data_ptr<float>();
-  } else {
-    TORCH_CHECK(grad_scalar.defined() && grad_scalar.numel() == 1,
-                "need either dL_dmap or a 1-element grad_scalar");
-    grad_scalar = grad_scalar.to(torch::kFloat32).contiguous();
-    gscalar_ptr = grad_scalar.data_ptr<float>();
-    grad_norm = 1.0f / (float)((double)Hout * Wout * planes);
-  }
-
-  // b, c, t_x [, t_y] laid out as one allocation of contiguous planes
-  const int naux = need_dy ? 4 : 3;
-  auto aux = torch::empty({naux, planes, Hout, Wout}, x.options());
-  const long aux_stride = (long)planes * Hout * Wout;
-  float* ab = aux.data_ptr<float>();
-  float* ac = ab + aux_stride;
-  float* atx = ac + aux_stride;
-  float* aty = need_dy ? atx + aux_stride : nullptr;
-
-  {
-    const int gx = (Wout + TILE_W - 1) / TILE_W;
-    const int gy = (Hout + TILE_H - 1) / TILE_H;
-    dim3 block(TILE_W, BLOCK_Y);
-    dim3 grid(gx, gy, planes);
-#define FA_PREP(KW)                                                            \
-  ssim_fused_kernel<float, MODE_PREP, KW><<<grid, block, 0, stream>>>(         \
-      x.data_ptr<float>(), y.data_ptr<float>(), nullptr, nullptr, dmap_ptr,    \
-      gscalar_ptr, grad_norm, ab, ac, atx, aty, H, W, Hout, Wout,              \
-      (float)shift, (float)C1, (float)C2, winf.data_ptr<float>(), 0,           \
-      nullptr, nullptr, nullptr)
-    switch (K) {
-      case 11: FA_PREP(11); break;
-      case 9:  FA_PREP(9);  break;
-      case 7:  FA_PREP(7);  break;
-      case 5:  FA_PREP(5);  break;
-      case 3:  FA_PREP(3);  break;
-      default: TORCH_CHECK(false, "unsupported window size ", K);
-    }
-#undef FA_PREP
-    C10_CUDA_KERNEL_LAUNCH_CHECK();
-  }
-
-  return ssim_bwd_scatter(x, y, ab, ac, atx, aty, winf, H, W, Hout, Wout, K,
-                          planes, shift, need_dx, need_dy, stream);
-}
-
-// --------------------------------------------------------------------------
-// MS-SSIM backward
-//
-// Identical machinery, different upstream: the weighted product over scales
-// differentiates to one gradient for each plane's mean SSIM and one for its
-// mean cs, both scalars living on the device. Passing them as pointers rather
-// than as launch parameters is what keeps a training step free of
-// device->host syncs.
-// --------------------------------------------------------------------------
-
-std::vector<torch::Tensor> ssim_cs_backward(torch::Tensor x, torch::Tensor y,
-                                            torch::Tensor gs, torch::Tensor gcs,
-                                            torch::Tensor win,
-                                            double shift, double C1, double C2,
-                                            bool need_dx, bool need_dy) {
-  TORCH_CHECK(x.is_cuda() && y.is_cuda(), "inputs must be CUDA tensors");
-  TORCH_CHECK(x.dim() == 4 && x.sizes() == y.sizes(), "expected matching NCHW");
-  TORCH_CHECK(x.scalar_type() == torch::kFloat32,
-              "backward requires float32 inputs, got ", x.scalar_type());
-  TORCH_CHECK(need_dx || need_dy, "backward called with nothing to compute");
-  x = x.contiguous();
-  y = y.contiguous();
-  auto winf = win.to(torch::kFloat32).contiguous().to(x.device());
-
-  const at::cuda::CUDAGuard guard(x.device());
-  auto stream = at::cuda::getCurrentCUDAStream();
-
-  const int N = (int)x.size(0), C = (int)x.size(1);
-  const int H = (int)x.size(2), W = (int)x.size(3);
-  const int K = (int)winf.numel();
-  const int Hout = H - K + 1, Wout = W - K + 1;
-  TORCH_CHECK(Hout > 0 && Wout > 0, "image smaller than window");
-  const int planes = N * C;
-
-  gs = gs.to(torch::kFloat32).contiguous();
-  gcs = gcs.to(torch::kFloat32).contiguous();
-  TORCH_CHECK(gs.numel() == planes && gcs.numel() == planes,
-              "expected one SSIM and one cs gradient per plane");
-
-  const int naux = need_dy ? 4 : 3;
-  auto aux = torch::empty({naux, planes, Hout, Wout}, x.options());
-  const long aux_stride = (long)planes * Hout * Wout;
-  float* ab = aux.data_ptr<float>();
-  float* ac = ab + aux_stride;
-  float* atx = ac + aux_stride;
-  float* aty = need_dy ? atx + aux_stride : nullptr;
-  const float grad_norm = 1.0f / (float)((double)Hout * Wout);
-
-  {
-    const int gx = (Wout + TILE_W - 1) / TILE_W;
-    const int gy = (Hout + TILE_H - 1) / TILE_H;
-    dim3 block(TILE_W, BLOCK_Y);
-    dim3 grid(gx, gy, planes);
-#define FA_PREP_CS(KW)                                                         \
-  ssim_fused_kernel<float, MODE_PREP_CS, KW><<<grid, block, 0, stream>>>(      \
-      x.data_ptr<float>(), y.data_ptr<float>(), nullptr, nullptr, nullptr,     \
-      nullptr, grad_norm, ab, ac, atx, aty, H, W, Hout, Wout,                  \
-      (float)shift, (float)C1, (float)C2, winf.data_ptr<float>(), 0,           \
-      nullptr, gs.data_ptr<float>(), gcs.data_ptr<float>())
-    switch (K) {
-      case 11: FA_PREP_CS(11); break;
-      case 9:  FA_PREP_CS(9);  break;
-      case 7:  FA_PREP_CS(7);  break;
-      case 5:  FA_PREP_CS(5);  break;
-      case 3:  FA_PREP_CS(3);  break;
-      default: TORCH_CHECK(false, "unsupported window size ", K);
-    }
-#undef FA_PREP_CS
-    C10_CUDA_KERNEL_LAUNCH_CHECK();
-  }
-
-  return ssim_bwd_scatter(x, y, ab, ac, atx, aty, winf, H, W, Hout, Wout, K,
-                          planes, shift, need_dx, need_dy, stream);
+  FA_LAUNCH_CHECK();
+  return FA_OK;
 }
 
 // --------------------------------------------------------------------------
@@ -1347,57 +1016,444 @@ __global__ void gmsd_finalize_kernel(const double* __restrict__ psum,
   }
 }
 
-std::vector<torch::Tensor> gmsd_fused(torch::Tensor x, torch::Tensor y,
-                                      double Tc, double eps, bool downsample) {
-  TORCH_CHECK(x.is_cuda() && y.is_cuda(), "inputs must be CUDA tensors");
-  TORCH_CHECK(x.dim() == 4 && x.sizes() == y.sizes(), "expected matching NCHW");
-  x = x.contiguous();
-  y = y.contiguous();
-  const at::cuda::CUDAGuard guard(x.device());
-  auto stream = at::cuda::getCurrentCUDAStream();
+}  // namespace fa
 
-  const int N = (int)x.size(0), C = (int)x.size(1);
-  const int H = (int)x.size(2), W = (int)x.size(3);
+// --------------------------------------------------------------------------
+// C ABI
+// --------------------------------------------------------------------------
+
+using namespace fa;
+
+extern "C" {
+
+FA_API int fa_cuda_abi_version(void) { return FA_ABI_VERSION; }
+
+FA_API const char* fa_cuda_error_string(int code) {
+  if (code < 0) return cudaGetErrorString(static_cast<cudaError_t>(-code));
+  switch (code) {
+    case FA_OK: return "ok";
+    case FA_E_DTYPE: return "unsupported dtype";
+    case FA_E_SHAPE: return "unsupported shape";
+    case FA_E_WINDOW: return "unsupported window size";
+    case FA_E_OP: return "unknown pixel op";
+    case FA_E_ARG: return "invalid argument";
+    case FA_E_NOCUDA: return "no CUDA device";
+    default: return "internal error";
+  }
+}
+
+FA_API int fa_cuda_device_count(int* out_count) {
+  int n = 0;
+  const cudaError_t e = cudaGetDeviceCount(&n);
+  if (e != cudaSuccess) {
+    if (out_count) *out_count = 0;
+    return -static_cast<int>(e);
+  }
+  if (out_count) *out_count = n;
+  return FA_OK;
+}
+
+FA_API int fa_cuda_pixel_workspace(int64_t n_images, int64_t n_per_image,
+                                   int device, int* out_bpi) {
+  if (!out_bpi) return FA_E_ARG;
+  if (n_images <= 0 || n_per_image <= 0) return FA_E_SHAPE;
+  const int threads = 256;
+  int bpi = static_cast<int>(std::min<int64_t>(
+      (n_per_image + threads - 1) / threads,
+      std::max<int64_t>(1, sm_count(device) * 8 / n_images + 1)));
+  if (bpi < 1) bpi = 1;
+  *out_bpi = bpi;
+  return FA_OK;
+}
+
+FA_API int fa_cuda_pixel_reduce(const void* a, const void* b, int dtype,
+                                int64_t n_images, int64_t n_per_image,
+                                int op, double param, double psnr_bias,
+                                double* partial, int bpi,
+                                double* out_per_image, double* out_total,
+                                double* out_psnr_per_image,
+                                double* out_psnr_total,
+                                int device, void* stream) {
+  if (!a || !b || !partial) return FA_E_ARG;
+  if (op < 0 || op > 3) return FA_E_OP;
+  if (n_images <= 0 || n_per_image <= 0 || bpi <= 0) return FA_E_SHAPE;
+  FA_DEVICE_SCOPE(device);
+  cudaStream_t st = static_cast<cudaStream_t>(stream);
+
+  const int threads = 256;
+  dim3 grid(bpi, static_cast<unsigned>(n_images));
+  const float p = static_cast<float>(param);
+
+#define FA_PIX_U8(OP)                                                          \
+  pixel_kernel_u8<OP><<<grid, threads, 0, st>>>(                               \
+      reinterpret_cast<const uchar4*>(a), reinterpret_cast<const uchar4*>(b),  \
+      partial, n_vec, tail, static_cast<const unsigned char*>(a),              \
+      static_cast<const unsigned char*>(b), n_per_image, p, bpi)
+#define FA_PIX(SC, OP)                                                         \
+  pixel_kernel<SC, OP><<<grid, threads, 0, st>>>(                              \
+      static_cast<const SC*>(a), static_cast<const SC*>(b), partial,           \
+      n_per_image, p, bpi)
+#define FA_PIX_DISPATCH(LAUNCH)                                                \
+  switch (op) {                                                                \
+    case FA_OP_MSE:   LAUNCH(FA_OP_MSE);   break;                              \
+    case FA_OP_L1:    LAUNCH(FA_OP_L1);    break;                              \
+    case FA_OP_CHARB: LAUNCH(FA_OP_CHARB); break;                              \
+    default:          LAUNCH(FA_OP_HUBER); break;                              \
+  }
+
+  bool done = false;
+  // The vectorised path needs each image's base to be 4-aligned, which means
+  // both the stride between images *and* the pointer itself.
+  //
+  // A contiguous tensor does not give you the second one: a slice of a bigger
+  // tensor is contiguous with a non-zero storage offset, so `x[:, :, 1:, :]`
+  // on an odd-width uint8 frame hands us a pointer at offset 1. A `uchar4`
+  // load from it faults, and a misaligned-address fault poisons the CUDA
+  // context -- the try/except fallback in backend.py cannot rescue the
+  // process, every later CUDA call in the interpreter dies too.
+  if (dtype == FA_U8 && (n_per_image % 4 == 0 || n_images == 1)) {
+    const uintptr_t pa = reinterpret_cast<uintptr_t>(a);
+    const uintptr_t pb = reinterpret_cast<uintptr_t>(b);
+    if (pa % 4 == 0 && pb % 4 == 0) {
+      const long n_vec = static_cast<long>(n_per_image / 4);
+      const long tail = n_vec * 4;
+      FA_PIX_DISPATCH(FA_PIX_U8);
+      FA_LAUNCH_CHECK();
+      done = true;
+    }
+  }
+
+// Hoisted out of the dispatch macro below: a preprocessor directive may not
+// appear inside a macro's argument list.
+#define FA_PIX_SC(OP) FA_PIX(scalar_t, OP)
+
+  if (!done) {
+    FA_DISPATCH(dtype, {
+      FA_PIX_DISPATCH(FA_PIX_SC);
+    })
+    FA_LAUNCH_CHECK();
+  }
+
+#undef FA_PIX_SC
+#undef FA_PIX_DISPATCH
+#undef FA_PIX
+#undef FA_PIX_U8
+
+  return finalize(partial, static_cast<int>(n_images), bpi,
+                  static_cast<double>(n_per_image),
+                  static_cast<double>(n_images) * static_cast<double>(n_per_image),
+                  psnr_bias, out_per_image, out_total, out_psnr_per_image,
+                  out_psnr_total, st);
+}
+
+FA_API int fa_cuda_ssim_workspace(int H, int W, int K, int* out_bpp) {
+  if (!out_bpp) return FA_E_ARG;
+  if (K < 3 || K > MAX_WIN) return FA_E_WINDOW;
+  const int Hout = H - K + 1, Wout = W - K + 1;
+  if (Hout <= 0 || Wout <= 0) return FA_E_SHAPE;
+  *out_bpp = ((Wout + TILE_W - 1) / TILE_W) * ((Hout + TILE_H - 1) / TILE_H);
+  return FA_OK;
+}
+
+FA_API int fa_cuda_ssim(const void* x, const void* y, int dtype,
+                        int N, int C, int H, int W,
+                        const float* win, int K,
+                        double shift, double C1, double C2,
+                        float* map_out,
+                        double* partial, int bpp,
+                        double* out_per_image, double* out_total,
+                        int device, void* stream) {
+  if (!x || !y || !win || !partial) return FA_E_ARG;
+  if (N <= 0 || C <= 0 || H <= 0 || W <= 0) return FA_E_SHAPE;
+  if (K < 3 || K > MAX_WIN) return FA_E_WINDOW;
+  const int Hout = H - K + 1, Wout = W - K + 1;
+  if (Hout <= 0 || Wout <= 0) return FA_E_SHAPE;
+  FA_DEVICE_SCOPE(device);
+  cudaStream_t st = static_cast<cudaStream_t>(stream);
+
+  const int planes = N * C;
+  const int gx = (Wout + TILE_W - 1) / TILE_W;
+  const int gy = (Hout + TILE_H - 1) / TILE_H;
+  if (bpp != gx * gy) return FA_E_ARG;
+
+  dim3 block(TILE_W, BLOCK_Y);
+  dim3 grid(gx, gy, planes);
+
+#define FA_LAUNCH(SC, MODE, KW)                                                \
+  ssim_fused_kernel<SC, MODE, KW><<<grid, block, 0, st>>>(                     \
+      static_cast<const SC*>(x), static_cast<const SC*>(y), partial,           \
+      map_out, nullptr, nullptr, 0.f, nullptr, nullptr, nullptr, nullptr,      \
+      H, W, Hout, Wout, (float)shift, (float)C1, (float)C2,                    \
+      win, bpp, nullptr, nullptr, nullptr)
+
+#define FA_DISPATCH_KW(SC, MODE)                                               \
+  switch (K) {                                                                 \
+    case 11: FA_LAUNCH(SC, MODE, 11); break;                                   \
+    case 9:  FA_LAUNCH(SC, MODE, 9);  break;                                   \
+    case 7:  FA_LAUNCH(SC, MODE, 7);  break;                                   \
+    case 5:  FA_LAUNCH(SC, MODE, 5);  break;                                   \
+    case 3:  FA_LAUNCH(SC, MODE, 3);  break;                                   \
+    default: return FA_E_WINDOW;                                               \
+  }
+
+  FA_DISPATCH(dtype, {
+    if (map_out) { FA_DISPATCH_KW(scalar_t, MODE_MAP); }
+    else         { FA_DISPATCH_KW(scalar_t, MODE_REDUCE); }
+  })
+  FA_LAUNCH_CHECK();
+
+#undef FA_DISPATCH_KW
+#undef FA_LAUNCH
+
+  // Each image owns C consecutive plane-rows of `partial`, so one image's
+  // contribution is a contiguous C*bpp span -- exactly what finalize() reduces.
+  const double npix = static_cast<double>(Hout) * Wout;
+  return finalize(partial, N, C * bpp, npix * C,
+                  npix * C * static_cast<double>(N), PSNR_NONE, out_per_image,
+                  out_total, nullptr, nullptr, st);
+}
+
+// --------------------------------------------------------------------------
+// MS-SSIM's per-scale primitive
+//
+// One pass produces the plane means of *both* the SSIM map and its
+// contrast-structure factor. MS-SSIM wants cs at every scale and the full SSIM
+// only at the coarsest, and both fall out of the same four moments, so running
+// the tile kernel twice would be pure waste: the second run would re-read both
+// input planes to recompute numbers it already had in registers.
+// --------------------------------------------------------------------------
+
+FA_API int fa_cuda_ssim_cs(const void* x, const void* y, int dtype,
+                           int N, int C, int H, int W,
+                           const float* win, int K,
+                           double shift, double C1, double C2,
+                           double* partial, double* partial_cs, int bpp,
+                           double* out_s, double* out_cs,
+                           int device, void* stream) {
+  if (!x || !y || !win || !partial || !partial_cs || !out_s || !out_cs)
+    return FA_E_ARG;
+  if (N <= 0 || C <= 0 || H <= 0 || W <= 0) return FA_E_SHAPE;
+  if (K < 3 || K > MAX_WIN) return FA_E_WINDOW;
+  const int Hout = H - K + 1, Wout = W - K + 1;
+  if (Hout <= 0 || Wout <= 0) return FA_E_SHAPE;
+  FA_DEVICE_SCOPE(device);
+  cudaStream_t st = static_cast<cudaStream_t>(stream);
+
+  const int planes = N * C;
+  const int gx = (Wout + TILE_W - 1) / TILE_W;
+  const int gy = (Hout + TILE_H - 1) / TILE_H;
+  if (bpp != gx * gy) return FA_E_ARG;
+
+  dim3 block(TILE_W, BLOCK_Y);
+  dim3 grid(gx, gy, planes);
+
+#define FA_CS(SC, KW)                                                          \
+  ssim_fused_kernel<SC, MODE_CS, KW><<<grid, block, 0, st>>>(                  \
+      static_cast<const SC*>(x), static_cast<const SC*>(y), partial,           \
+      nullptr, nullptr, nullptr, 0.f, nullptr, nullptr, nullptr, nullptr,      \
+      H, W, Hout, Wout, (float)shift, (float)C1, (float)C2,                    \
+      win, bpp, partial_cs, nullptr, nullptr)
+
+  FA_DISPATCH(dtype, {
+    switch (K) {
+      case 11: FA_CS(scalar_t, 11); break;
+      case 9:  FA_CS(scalar_t, 9);  break;
+      case 7:  FA_CS(scalar_t, 7);  break;
+      case 5:  FA_CS(scalar_t, 5);  break;
+      case 3:  FA_CS(scalar_t, 3);  break;
+      default: return FA_E_WINDOW;
+    }
+  })
+  FA_LAUNCH_CHECK();
+#undef FA_CS
+
+  finalize_planes2_kernel<<<planes, 256, 0, st>>>(
+      partial, partial_cs, bpp, static_cast<double>(Hout) * Wout, out_s, out_cs);
+  FA_LAUNCH_CHECK();
+  return FA_OK;
+}
+
+// --------------------------------------------------------------------------
+// Backward
+//
+// Two passes. The first recomputes the local moments (the same tile kernel as
+// the forward, in MODE_PREP) and emits three coefficient maps; the second
+// scatters them back through the Gaussian and combines with x and y.
+//
+// dL_dmap may be null, in which case every map position gets the same upstream
+// gradient read off `grad_scalar` -- the mean-reduction case, where
+// materialising a constant HoutxWout tensor just to read it back would be pure
+// bandwidth, and where pulling the scalar to the host would sync the stream
+// once per training step.
+// --------------------------------------------------------------------------
+
+FA_API int fa_cuda_ssim_backward(const float* x, const float* y,
+                                 const float* dL_dmap,
+                                 const float* grad_scalar,
+                                 const float* win, int K,
+                                 int N, int C, int H, int W,
+                                 double shift, double C1, double C2,
+                                 float* aux, float* dx, float* dy,
+                                 int device, void* stream) {
+  if (!x || !y || !win || !aux) return FA_E_ARG;
+  if (!dx && !dy) return FA_E_ARG;
+  if (!dL_dmap && !grad_scalar) return FA_E_ARG;
+  if (N <= 0 || C <= 0 || H <= 0 || W <= 0) return FA_E_SHAPE;
+  if (K < 3 || K > MAX_WIN) return FA_E_WINDOW;
+  const int Hout = H - K + 1, Wout = W - K + 1;
+  if (Hout <= 0 || Wout <= 0) return FA_E_SHAPE;
+  FA_DEVICE_SCOPE(device);
+  cudaStream_t st = static_cast<cudaStream_t>(stream);
+
+  const int planes = N * C;
+  const float grad_norm =
+      dL_dmap ? 0.0f
+              : 1.0f / static_cast<float>(static_cast<double>(Hout) * Wout * planes);
+
+  // b, c, t_x [, t_y] laid out as one allocation of contiguous planes
+  const long aux_stride = static_cast<long>(planes) * Hout * Wout;
+  float* ab = aux;
+  float* ac = ab + aux_stride;
+  float* atx = ac + aux_stride;
+  float* aty = dy ? atx + aux_stride : nullptr;
+
+  {
+    const int gx = (Wout + TILE_W - 1) / TILE_W;
+    const int gy = (Hout + TILE_H - 1) / TILE_H;
+    dim3 block(TILE_W, BLOCK_Y);
+    dim3 grid(gx, gy, planes);
+#define FA_PREP(KW)                                                            \
+  ssim_fused_kernel<float, MODE_PREP, KW><<<grid, block, 0, st>>>(             \
+      x, y, nullptr, nullptr, dL_dmap, grad_scalar, grad_norm, ab, ac, atx,    \
+      aty, H, W, Hout, Wout, (float)shift, (float)C1, (float)C2, win, 0,       \
+      nullptr, nullptr, nullptr)
+    switch (K) {
+      case 11: FA_PREP(11); break;
+      case 9:  FA_PREP(9);  break;
+      case 7:  FA_PREP(7);  break;
+      case 5:  FA_PREP(5);  break;
+      case 3:  FA_PREP(3);  break;
+      default: return FA_E_WINDOW;
+    }
+#undef FA_PREP
+    FA_LAUNCH_CHECK();
+  }
+
+  return ssim_bwd_scatter(x, y, ab, ac, atx, aty, win, H, W, Hout, Wout, K,
+                          planes, shift, dx, dy, st);
+}
+
+// --------------------------------------------------------------------------
+// MS-SSIM backward
+//
+// Identical machinery, different upstream: the weighted product over scales
+// differentiates to one gradient for each plane's mean SSIM and one for its
+// mean cs, both scalars living on the device. Passing them as pointers rather
+// than as launch parameters is what keeps a training step free of
+// device->host syncs.
+// --------------------------------------------------------------------------
+
+FA_API int fa_cuda_ssim_cs_backward(const float* x, const float* y,
+                                    const float* gs, const float* gcs,
+                                    const float* win, int K,
+                                    int N, int C, int H, int W,
+                                    double shift, double C1, double C2,
+                                    float* aux, float* dx, float* dy,
+                                    int device, void* stream) {
+  if (!x || !y || !gs || !gcs || !win || !aux) return FA_E_ARG;
+  if (!dx && !dy) return FA_E_ARG;
+  if (N <= 0 || C <= 0 || H <= 0 || W <= 0) return FA_E_SHAPE;
+  if (K < 3 || K > MAX_WIN) return FA_E_WINDOW;
+  const int Hout = H - K + 1, Wout = W - K + 1;
+  if (Hout <= 0 || Wout <= 0) return FA_E_SHAPE;
+  FA_DEVICE_SCOPE(device);
+  cudaStream_t st = static_cast<cudaStream_t>(stream);
+
+  const int planes = N * C;
+  const long aux_stride = static_cast<long>(planes) * Hout * Wout;
+  float* ab = aux;
+  float* ac = ab + aux_stride;
+  float* atx = ac + aux_stride;
+  float* aty = dy ? atx + aux_stride : nullptr;
+  const float grad_norm =
+      1.0f / static_cast<float>(static_cast<double>(Hout) * Wout);
+
+  {
+    const int gx = (Wout + TILE_W - 1) / TILE_W;
+    const int gy = (Hout + TILE_H - 1) / TILE_H;
+    dim3 block(TILE_W, BLOCK_Y);
+    dim3 grid(gx, gy, planes);
+#define FA_PREP_CS(KW)                                                         \
+  ssim_fused_kernel<float, MODE_PREP_CS, KW><<<grid, block, 0, st>>>(          \
+      x, y, nullptr, nullptr, nullptr, nullptr, grad_norm, ab, ac, atx, aty,   \
+      H, W, Hout, Wout, (float)shift, (float)C1, (float)C2, win, 0, nullptr,   \
+      gs, gcs)
+    switch (K) {
+      case 11: FA_PREP_CS(11); break;
+      case 9:  FA_PREP_CS(9);  break;
+      case 7:  FA_PREP_CS(7);  break;
+      case 5:  FA_PREP_CS(5);  break;
+      case 3:  FA_PREP_CS(3);  break;
+      default: return FA_E_WINDOW;
+    }
+#undef FA_PREP_CS
+    FA_LAUNCH_CHECK();
+  }
+
+  return ssim_bwd_scatter(x, y, ab, ac, atx, aty, win, H, W, Hout, Wout, K,
+                          planes, shift, dx, dy, st);
+}
+
+FA_API int fa_cuda_gmsd_workspace(int H, int W, int downsample, int* out_bpp) {
+  if (!out_bpp) return FA_E_ARG;
   const int Hd = downsample ? H / 2 : H;
   const int Wd = downsample ? W / 2 : W;
   const int Hout = Hd - 2, Wout = Wd - 2;
-  TORCH_CHECK(Hout > 0 && Wout > 0, "image too small for a 3x3 gradient");
+  if (Hout <= 0 || Wout <= 0) return FA_E_SHAPE;
+  *out_bpp = ((Wout + GTILE - 1) / GTILE) * ((Hout + GTILE - 1) / GTILE);
+  return FA_OK;
+}
+
+FA_API int fa_cuda_gmsd(const void* x, const void* y, int dtype,
+                        int N, int C, int H, int W,
+                        double Tc, double eps, int downsample,
+                        double* psum, double* psumsq, int bpp,
+                        double* out_mean, double* out_std,
+                        int device, void* stream) {
+  if (!x || !y || !psum || !psumsq || !out_mean || !out_std) return FA_E_ARG;
+  if (N <= 0 || C <= 0 || H <= 0 || W <= 0) return FA_E_SHAPE;
+  const int Hd = downsample ? H / 2 : H;
+  const int Wd = downsample ? W / 2 : W;
+  const int Hout = Hd - 2, Wout = Wd - 2;
+  if (Hout <= 0 || Wout <= 0) return FA_E_SHAPE;
+  FA_DEVICE_SCOPE(device);
+  cudaStream_t st = static_cast<cudaStream_t>(stream);
 
   const int planes = N * C;
   const int gx = (Wout + GTILE - 1) / GTILE;
   const int gy = (Hout + GTILE - 1) / GTILE;
-  const int bpp = gx * gy;
-
-  auto opts64 = x.options().dtype(torch::kFloat64);
-  auto psum = torch::empty({planes, bpp}, opts64);
-  auto psumsq = torch::empty({planes, bpp}, opts64);
+  if (bpp != gx * gy) return FA_E_ARG;
 
   dim3 block(GTILE, GBLOCK_Y);
   dim3 grid(gx, gy, planes);
-  AT_DISPATCH_ALL_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16,
-                             x.scalar_type(), "gmsd_fused", [&] {
+  FA_DISPATCH(dtype, {
     if (downsample) {
-      gmsd_kernel<scalar_t, true><<<grid, block, 0, stream>>>(
-          x.data_ptr<scalar_t>(), y.data_ptr<scalar_t>(),
-          psum.data_ptr<double>(), psumsq.data_ptr<double>(),
-          H, W, Hd, Wd, Hout, Wout, (float)Tc, (float)eps, bpp);
+      gmsd_kernel<scalar_t, true><<<grid, block, 0, st>>>(
+          static_cast<const scalar_t*>(x), static_cast<const scalar_t*>(y),
+          psum, psumsq, H, W, Hd, Wd, Hout, Wout, (float)Tc, (float)eps, bpp);
     } else {
-      gmsd_kernel<scalar_t, false><<<grid, block, 0, stream>>>(
-          x.data_ptr<scalar_t>(), y.data_ptr<scalar_t>(),
-          psum.data_ptr<double>(), psumsq.data_ptr<double>(),
-          H, W, Hd, Wd, Hout, Wout, (float)Tc, (float)eps, bpp);
+      gmsd_kernel<scalar_t, false><<<grid, block, 0, st>>>(
+          static_cast<const scalar_t*>(x), static_cast<const scalar_t*>(y),
+          psum, psumsq, H, W, Hd, Wd, Hout, Wout, (float)Tc, (float)eps, bpp);
     }
-  });
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
+  })
+  FA_LAUNCH_CHECK();
 
-  auto mean = torch::empty({N}, opts64);
-  auto dev = torch::empty({N}, opts64);
-  gmsd_finalize_kernel<<<N, 256, 0, stream>>>(
-      psum.data_ptr<double>(), psumsq.data_ptr<double>(), C * bpp,
-      static_cast<double>(Hout) * Wout * C,
-      mean.data_ptr<double>(), dev.data_ptr<double>());
-  C10_CUDA_KERNEL_LAUNCH_CHECK();
-  return {mean, dev};
+  gmsd_finalize_kernel<<<N, 256, 0, st>>>(
+      psum, psumsq, C * bpp, static_cast<double>(Hout) * Wout * C, out_mean,
+      out_std);
+  FA_LAUNCH_CHECK();
+  return FA_OK;
 }
 
-}  // namespace fa
+}  // extern "C"

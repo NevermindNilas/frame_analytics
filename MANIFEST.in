@@ -1,5 +1,8 @@
 include LICENSE README.md
-recursive-include frame_analytics/csrc *.cu *.cpp
+recursive-include frame_analytics/csrc *.cu *.cpp *.h
 recursive-include tests *.py
 recursive-include bench *.py
-global-exclude __pycache__/* *.py[cod] *.so *.pyd
+# sdists carry sources only -- the binaries are built per platform in CI and
+# only ever appear in wheels
+prune frame_analytics/lib
+global-exclude __pycache__/* *.py[cod] *.so *.pyd *.dll *.dylib

@@ -1,4 +1,4 @@
-// CPU kernels + Python bindings for frame_analytics.
+// CPU kernels for frame_analytics, behind the C ABI in fa_abi.h.
 //
 // Same structural trick as the CUDA path: the 11x11 Gaussian is separable and
 // all five expectation planes (x, y, x^2, y^2, xy) are produced in one sweep,
@@ -7,10 +7,17 @@
 // x 256 columns = 56 KiB -- stays resident in L2.
 //
 // Inner loops are written j-outer / c-inner over contiguous float arrays so
-// MSVC and GCC both auto-vectorise them to AVX2/AVX-512 FMA chains.
+// MSVC and GCC both auto-vectorise them to AVX2 FMA chains.
+//
+// This file is compiled *twice* into two separate shared libraries: once at the
+// platform baseline and once with AVX2 enabled.  The loader asks the baseline
+// build (which is safe to load anywhere) whether the host has AVX2 and, if so,
+// uses the sibling instead.  Compiling one binary with /arch:AVX2 and shipping
+// it to everybody would fault on pre-Haswell hardware; compiling only a
+// baseline one would give up the vector width these loops exist for.
 
-#include <torch/extension.h>
-#include <ATen/Parallel.h>
+#include "fa_abi.h"
+
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -44,41 +51,70 @@
 #define FA_RESTRICT __restrict__
 #endif
 
-#ifdef WITH_CUDA
-namespace fa {
-std::vector<torch::Tensor> mse_partial(torch::Tensor a, torch::Tensor b,
-                                       int64_t n_images, double psnr_bias);
-std::vector<torch::Tensor> ssim_fused(torch::Tensor x, torch::Tensor y,
-                                      torch::Tensor win, double shift,
-                                      double C1, double C2, bool want_map);
-std::vector<torch::Tensor> ssim_backward(torch::Tensor x, torch::Tensor y,
-                                         torch::Tensor dL_dmap,
-                                         torch::Tensor grad_scalar,
-                                         torch::Tensor win,
-                                         double shift, double C1, double C2,
-                                         bool need_dx, bool need_dy);
-std::vector<torch::Tensor> pixel_partial(torch::Tensor a, torch::Tensor b,
-                                         int64_t n_images, int64_t op,
-                                         double param, double psnr_bias);
-std::vector<torch::Tensor> ssim_cs(torch::Tensor x, torch::Tensor y,
-                                   torch::Tensor win, double shift,
-                                   double C1, double C2);
-std::vector<torch::Tensor> ssim_cs_backward(torch::Tensor x, torch::Tensor y,
-                                            torch::Tensor gs, torch::Tensor gcs,
-                                            torch::Tensor win, double shift,
-                                            double C1, double C2,
-                                            bool need_dx, bool need_dy);
-std::vector<torch::Tensor> gmsd_fused(torch::Tensor x, torch::Tensor y,
-                                      double Tc, double eps, bool downsample);
-}
-#endif
-
 namespace fa {
 namespace cpu {
 
+// -------------------------------------------------------------------------
+// Narrow float types
+//
+// at::Half and at::BFloat16 came from the torch headers this file no longer
+// includes, so the two conversions are open-coded.  Both are exact: bfloat16
+// is the top half of a float32 and half's mantissa fits, so neither rounds.
+// -------------------------------------------------------------------------
+
+struct half_t {
+  uint16_t bits;
+  operator float() const {
+    const uint32_t sign = static_cast<uint32_t>(bits & 0x8000u) << 16;
+    const uint32_t exp = (bits >> 10) & 0x1Fu;
+    const uint32_t man = bits & 0x3FFu;
+    uint32_t u;
+    if (exp == 0) {
+      // subnormal (or zero): value is man * 2^-24, which float32 holds exactly
+      float f = static_cast<float>(man) * (1.0f / 16777216.0f);
+      std::memcpy(&u, &f, 4);
+      u |= sign;
+    } else if (exp == 31) {
+      u = sign | 0x7F800000u | (man << 13);
+    } else {
+      u = sign | ((exp + (127u - 15u)) << 23) | (man << 13);
+    }
+    float out;
+    std::memcpy(&out, &u, 4);
+    return out;
+  }
+};
+
+struct bf16_t {
+  uint16_t bits;
+  operator float() const {
+    const uint32_t u = static_cast<uint32_t>(bits) << 16;
+    float out;
+    std::memcpy(&out, &u, 4);
+    return out;
+  }
+};
+
+// Stands in for AT_DISPATCH_ALL_TYPES_AND2. The five codes are exactly the
+// dtypes backend.py lets through.
+//
+// Variadic on purpose: the body contains template argument lists such as
+// `ssim_tile<scalar_t, true>`, and braces do not shield a comma from the
+// preprocessor the way parentheses do. Only `...`/`__VA_ARGS__` puts the
+// pieces back together.
+#define FA_DISPATCH(CODE, ...)                                                 \
+  switch (CODE) {                                                              \
+    case FA_U8:   { using scalar_t = uint8_t; __VA_ARGS__ } break;             \
+    case FA_F16:  { using scalar_t = half_t;  __VA_ARGS__ } break;             \
+    case FA_BF16: { using scalar_t = bf16_t;  __VA_ARGS__ } break;             \
+    case FA_F32:  { using scalar_t = float;   __VA_ARGS__ } break;             \
+    case FA_F64:  { using scalar_t = double;  __VA_ARGS__ } break;             \
+    default: return FA_E_DTYPE;                                                \
+  }
+
 constexpr int COL_TILE = 256;
 constexpr int ROW_TILE = 64;
-constexpr int MAX_WIN = 11;
+constexpr int MAX_WIN = FA_MAX_WIN;
 
 // -------------------------------------------------------------------------
 // Task pool
@@ -225,11 +261,23 @@ class TaskPool {
   FA_PAD std::atomic<bool> stop_{false};
 };
 
+// The thread count used to arrive as at::get_num_threads(); across a C boundary
+// there is no ATen to ask, so the loader sets it from torch.get_num_threads()
+// before the first call.  Only the first reader wins -- the pool is built once.
+static std::atomic<int> g_nthreads{0};
+static std::once_flag g_pool_once;
+static TaskPool* g_pool = nullptr;
+
 // Deliberately leaked: joining worker threads during static destruction races
 // with the interpreter tearing down around us.
 static TaskPool& pool() {
-  static TaskPool* p = new TaskPool(std::max(0, static_cast<int>(at::get_num_threads()) - 1));
-  return *p;
+  std::call_once(g_pool_once, [] {
+    int n = g_nthreads.load(std::memory_order_relaxed);
+    if (n <= 0) n = static_cast<int>(std::thread::hardware_concurrency());
+    if (n <= 0) n = 1;
+    g_pool = new TaskPool(std::max(0, n - 1));
+  });
+  return *g_pool;
 }
 
 // -------------------------------------------------------------------------
@@ -240,11 +288,6 @@ static TaskPool& pool() {
 // double sum, which is still far wider than the float32 that every other
 // library reduces in.
 // -------------------------------------------------------------------------
-
-constexpr int OP_MSE = 0;
-constexpr int OP_L1 = 1;
-constexpr int OP_CHARB = 2;      // param = eps^2
-constexpr int OP_HUBER = 3;      // param = delta
 
 // -------------------------------------------------------------------------
 // uint8 squared error, vectorised by hand
@@ -352,9 +395,9 @@ static int64_t sq_diff_u8_simd(const uint8_t* a, const uint8_t* b, int64_t n) {
 // float64 input tensor, where the caller has asked for the precision.
 template <int OP, typename A>
 static inline A pix_term_cpu(A d, A p) {
-  if (OP == OP_MSE) return d * d;
-  if (OP == OP_L1) return std::fabs(d);
-  if (OP == OP_CHARB) return std::sqrt(d * d + p);
+  if (OP == FA_OP_MSE) return d * d;
+  if (OP == FA_OP_L1) return std::fabs(d);
+  if (OP == FA_OP_CHARB) return std::sqrt(d * d + p);
   // Huber as `0.5*min(a,delta)^2 + delta*(a - min(a,delta))`. Identical to the
   // piecewise definition, but it is one min and one subtract rather than a
   // select over two different expressions, so it survives auto-vectorisation.
@@ -366,7 +409,7 @@ static inline A pix_term_cpu(A d, A p) {
 template <typename T, int OP>
 static double pix_sum_range(const T* a, const T* b, int64_t begin, int64_t end,
                             double p) {
-  constexpr bool WIDE = (OP == OP_MSE || std::is_same<T, double>::value);
+  constexpr bool WIDE = (OP == FA_OP_MSE || std::is_same<T, double>::value);
   double acc = 0.0;
   if (WIDE) {
     for (int64_t i = begin; i < end; ++i) {
@@ -390,16 +433,16 @@ static double pix_sum_u8(const uint8_t* a, const uint8_t* b, int64_t begin,
   // L1 is deliberately left to the compiler: the abs-and-widen form does
   // vectorise, and the auto-vectorised loop measures faster than a
   // hand-written `sad_epu8` chain.
-  if (OP == OP_MSE) {
+  if (OP == FA_OP_MSE) {
     return static_cast<double>(sq_diff_u8_simd(a + begin, b + begin, end - begin));
   }
 #endif
-  if (OP == OP_MSE || OP == OP_L1) {
+  if (OP == FA_OP_MSE || OP == FA_OP_L1) {
     int64_t acc = 0;
     for (int64_t i = begin; i < end; ++i) {
       const int d = static_cast<int>(a[i]) - static_cast<int>(b[i]);
-      acc += (OP == OP_MSE) ? static_cast<int64_t>(d) * static_cast<int64_t>(d)
-                            : static_cast<int64_t>(d < 0 ? -d : d);
+      acc += (OP == FA_OP_MSE) ? static_cast<int64_t>(d) * static_cast<int64_t>(d)
+                               : static_cast<int64_t>(d < 0 ? -d : d);
     }
     return static_cast<double>(acc);
   }
@@ -419,18 +462,12 @@ static double pix_sum_u8(const uint8_t* a, const uint8_t* b, int64_t begin,
 // measured 2.5x *worse* at 512x512 and no better anywhere else.
 constexpr int64_t MIN_PARALLEL_CHUNK = 1 << 16;
 
-torch::Tensor pixel_sums(torch::Tensor a, torch::Tensor b, int64_t n_images,
-                         int64_t op, double param) {
-  TORCH_CHECK(a.sizes() == b.sizes(), "shape mismatch");
-  TORCH_CHECK(op >= 0 && op <= 3, "unknown pixel op ", op);
-  a = a.contiguous();
-  b = b.contiguous();
-  const int64_t total = a.numel();
-  TORCH_CHECK(n_images > 0 && total % n_images == 0, "numel not divisible by batch");
-  const int64_t per = total / n_images;
-
-  auto out = torch::empty({n_images}, torch::dtype(torch::kFloat64));
-  double* op_out = out.data_ptr<double>();
+// Per-image sums into `sums` (n_images doubles).
+static int pixel_sums(const void* a, const void* b, int dtype,
+                      int64_t n_images, int64_t per, int op, double param,
+                      double* sums) {
+  if (op < 0 || op > 3) return FA_E_OP;
+  if (n_images <= 0 || per <= 0) return FA_E_SHAPE;
 
   // one chunk per image per thread-sized slice, so the whole batch is one
   // parallel region rather than N of them
@@ -448,37 +485,37 @@ torch::Tensor pixel_sums(torch::Tensor a, torch::Tensor b, int64_t n_images,
     partial = heap_partial.data();
   }
 
-// Defined outside the AT_DISPATCH call below, not inside it: a preprocessor
-// directive may not appear within a macro's argument list, and AT_DISPATCH is a
-// macro, so a #define nested in its lambda argument is ill-formed.
+// Defined outside the dispatch switch below rather than inside it: a
+// preprocessor directive may not appear within a macro's argument list, and
+// FA_DISPATCH is a macro, so a #define nested in its body argument is
+// ill-formed.  (This bit both MSVC and nvcc under AT_DISPATCH before.)
 #define FA_CASE(OP)                                                            \
   case OP:                                                                     \
     v = is_u8 ? pix_sum_u8<OP>(au, bu, s, e, param)                            \
               : pix_sum_range<scalar_t, OP>(ap, bp, s, e, param);              \
     break;
 
-  AT_DISPATCH_ALL_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16,
-                             a.scalar_type(), "pixel_sums", [&] {
-    const scalar_t* ap = a.data_ptr<scalar_t>();
-    const scalar_t* bp = b.data_ptr<scalar_t>();
-    const bool is_u8 = (a.scalar_type() == torch::kUInt8);
-    const uint8_t* au = reinterpret_cast<const uint8_t*>(ap);
-    const uint8_t* bu = reinterpret_cast<const uint8_t*>(bp);
+  FA_DISPATCH(dtype, {
+    const scalar_t* ap = static_cast<const scalar_t*>(a);
+    const scalar_t* bp = static_cast<const scalar_t*>(b);
+    const bool is_u8 = (dtype == FA_U8);
+    const uint8_t* au = reinterpret_cast<const uint8_t*>(a);
+    const uint8_t* bu = reinterpret_cast<const uint8_t*>(b);
     pool().run(ntasks, [&](int64_t t) {
       const int64_t img = t / per_img_chunks;
       const int64_t k = t - img * per_img_chunks;
       const int64_t s = img * per + k * chunk;
       const int64_t e = std::min(s + chunk, img * per + per);
       double v = 0.0;
-      switch ((int)op) {
-        FA_CASE(OP_MSE)
-        FA_CASE(OP_L1)
-        FA_CASE(OP_CHARB)
-        default: FA_CASE(OP_HUBER)
+      switch (op) {
+        FA_CASE(FA_OP_MSE)
+        FA_CASE(FA_OP_L1)
+        FA_CASE(FA_OP_CHARB)
+        default: FA_CASE(FA_OP_HUBER)
       }
       partial[t] = v;
     });
-  });
+  })
 
 #undef FA_CASE
 
@@ -486,60 +523,9 @@ torch::Tensor pixel_sums(torch::Tensor a, torch::Tensor b, int64_t n_images,
     double acc = 0.0;
     const int64_t base = i * per_img_chunks;
     for (int64_t k = 0; k < per_img_chunks; ++k) acc += partial[base + k];
-    op_out[i] = acc;
+    sums[i] = acc;
   }
-  return out;
-}
-
-torch::Tensor mse_sums(torch::Tensor a, torch::Tensor b, int64_t n_images) {
-  return pixel_sums(a, b, n_images, OP_MSE, 0.0);
-}
-
-// psnr_bias == PSNR_NONE means "skip the dB conversion", matching the CUDA
-// side's sentinel.
-constexpr double PSNR_NONE = -1.0e300;
-
-// Sums, divided, and optionally converted to dB -- the whole reduction, before
-// returning to Python.  Doing those last three steps as torch ops on scalar
-// tensors cost ~10us of dispatch per call, which at 512x512 was half the total
-// runtime of `psnr()`.  The CUDA path has always folded them into its finalize
-// kernel; this is the CPU counterpart.
-//
-// One tensor out, not the CUDA path's four.  There the four are free -- a
-// single kernel writes all of them and the caller picks -- but here each one is
-// an allocation plus a pybind wrapper, ~1us apiece, and at this size that was
-// again half the runtime.  So the CPU side takes the selector as an argument
-// and allocates only what was asked for.
-torch::Tensor pixel_reduce(torch::Tensor a, torch::Tensor b, int64_t n_images,
-                           int64_t op, double param, double psnr_bias,
-                           bool per_image) {
-  const int64_t total = a.numel();
-  auto sums = pixel_sums(a, b, n_images, op, param);
-  const double* s = sums.data_ptr<double>();
-  const bool want_psnr = (psnr_bias != PSNR_NONE);
-
-  // divide, do not multiply by a precomputed reciprocal: the last ulp is the
-  // difference between an exact integer uint8 sum and one that is off by one
-  const double n_each = static_cast<double>(total / n_images);
-
-  auto opts = torch::dtype(torch::kFloat64);
-  if (!per_image) {
-    double acc = 0.0;
-    for (int64_t i = 0; i < n_images; ++i) acc += s[i];
-    const double mean = acc / static_cast<double>(total);
-    auto out = torch::empty({}, opts);
-    // mean == 0 gives log10(0) == -inf, hence +inf dB, which is correct
-    *out.data_ptr<double>() = want_psnr ? psnr_bias - 10.0 * std::log10(mean) : mean;
-    return out;
-  }
-
-  auto out = torch::empty({n_images}, opts);
-  double* o = out.data_ptr<double>();
-  for (int64_t i = 0; i < n_images; ++i) {
-    const double m = s[i] / n_each;
-    o[i] = want_psnr ? psnr_bias - 10.0 * std::log10(m) : m;
-  }
-  return out;
+  return FA_OK;
 }
 
 // -------------------------------------------------------------------------
@@ -659,21 +645,14 @@ static void ssim_tile(const T* xp, const T* yp, int H, int W, int Hout, int Wout
   if (WANT_CS) *out_cs_sum = sum_cs;
 }
 
-std::vector<torch::Tensor> ssim_sums_impl(torch::Tensor x, torch::Tensor y,
-                                          torch::Tensor win, double shift,
-                                          double C1, double C2, bool want_map,
-                                          bool want_cs) {
-  TORCH_CHECK(x.dim() == 4 && x.sizes() == y.sizes(), "expected matching NCHW");
-  x = x.contiguous();
-  y = y.contiguous();
-  auto winf = win.to(torch::kFloat32).contiguous();
-  const int K = static_cast<int>(winf.numel());
-  TORCH_CHECK(K <= MAX_WIN && K >= 1, "unsupported window size");
-
-  const int N = (int)x.size(0), C = (int)x.size(1);
-  const int H = (int)x.size(2), W = (int)x.size(3);
+static int ssim_impl(const void* x, const void* y, int dtype, int N, int C,
+                     int H, int W, const float* win, int K, double shift,
+                     double C1, double C2, float* map_out, bool want_cs,
+                     double* out_a, double* out_b) {
+  if (N <= 0 || C <= 0 || H <= 0 || W <= 0) return FA_E_SHAPE;
+  if (K < 1 || K > MAX_WIN) return FA_E_WINDOW;
   const int Hout = H - K + 1, Wout = W - K + 1;
-  TORCH_CHECK(Hout > 0 && Wout > 0, "image smaller than window");
+  if (Hout <= 0 || Wout <= 0) return FA_E_SHAPE;
   const int planes = N * C;
 
   std::vector<Task> tasks;
@@ -685,60 +664,39 @@ std::vector<torch::Tensor> ssim_sums_impl(torch::Tensor x, torch::Tensor y,
 
   std::vector<double> sums(tasks.size(), 0.0);
   std::vector<double> sums_cs(want_cs ? tasks.size() : 0, 0.0);
-  torch::Tensor map;
-  float* map_ptr = nullptr;
-  if (want_map) {
-    map = torch::empty({N, C, Hout, Wout}, torch::dtype(torch::kFloat32));
-    map_ptr = map.data_ptr<float>();
-  }
 
-  AT_DISPATCH_ALL_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16,
-                             x.scalar_type(), "ssim_sums", [&] {
-    const scalar_t* xp = x.data_ptr<scalar_t>();
-    const scalar_t* yp = y.data_ptr<scalar_t>();
-    const float* wp = winf.data_ptr<float>();
+  FA_DISPATCH(dtype, {
+    const scalar_t* xp = static_cast<const scalar_t*>(x);
+    const scalar_t* yp = static_cast<const scalar_t*>(y);
     double* csp = want_cs ? sums_cs.data() : nullptr;
-    pool().run((int64_t)tasks.size(), [&](int64_t i) {
+    pool().run(static_cast<int64_t>(tasks.size()), [&](int64_t i) {
       if (csp) {
-        ssim_tile<scalar_t, true>(xp, yp, H, W, Hout, Wout, wp, K, (float)shift,
+        ssim_tile<scalar_t, true>(xp, yp, H, W, Hout, Wout, win, K, (float)shift,
                                   (float)C1, (float)C2, tasks[i], nullptr,
                                   &sums[i], &csp[i]);
       } else {
-        ssim_tile<scalar_t, false>(xp, yp, H, W, Hout, Wout, wp, K, (float)shift,
-                                   (float)C1, (float)C2, tasks[i], map_ptr,
+        ssim_tile<scalar_t, false>(xp, yp, H, W, Hout, Wout, win, K, (float)shift,
+                                   (float)C1, (float)C2, tasks[i], map_out,
                                    &sums[i], nullptr);
       }
     });
-  });
+  })
 
   // fold task sums back to one value per plane, in a fixed order
-  auto per_plane = torch::zeros({planes}, torch::dtype(torch::kFloat64));
-  double* pp = per_plane.data_ptr<double>();
-  for (size_t i = 0; i < tasks.size(); ++i) pp[tasks[i].plane] += sums[i];
+  for (int p = 0; p < planes; ++p) out_a[p] = 0.0;
+  for (size_t i = 0; i < tasks.size(); ++i) out_a[tasks[i].plane] += sums[i];
 
   if (want_cs) {
-    auto per_plane_cs = torch::zeros({planes}, torch::dtype(torch::kFloat64));
-    double* pc = per_plane_cs.data_ptr<double>();
-    for (size_t i = 0; i < tasks.size(); ++i) pc[tasks[i].plane] += sums_cs[i];
+    for (int p = 0; p < planes; ++p) out_b[p] = 0.0;
+    for (size_t i = 0; i < tasks.size(); ++i) out_b[tasks[i].plane] += sums_cs[i];
+    // divide, do not multiply by a precomputed reciprocal
     const double npix = static_cast<double>(Hout) * Wout;
-    return {per_plane.div_(npix), per_plane_cs.div_(npix)};
+    for (int p = 0; p < planes; ++p) {
+      out_a[p] /= npix;
+      out_b[p] /= npix;
+    }
   }
-  if (want_map) return {per_plane, map};
-  return {per_plane};
-}
-
-std::vector<torch::Tensor> ssim_sums(torch::Tensor x, torch::Tensor y,
-                                     torch::Tensor win, double shift,
-                                     double C1, double C2, bool want_map) {
-  return ssim_sums_impl(x, y, win, shift, C1, C2, want_map, false);
-}
-
-// Plane means of the SSIM map and of its contrast-structure factor -- the
-// per-scale primitive MS-SSIM is built out of.
-std::vector<torch::Tensor> ssim_cs(torch::Tensor x, torch::Tensor y,
-                                   torch::Tensor win, double shift,
-                                   double C1, double C2) {
-  return ssim_sums_impl(x, y, win, shift, C1, C2, false, true);
+  return FA_OK;
 }
 
 // -------------------------------------------------------------------------
@@ -751,8 +709,8 @@ std::vector<torch::Tensor> ssim_cs(torch::Tensor x, torch::Tensor y,
 // -------------------------------------------------------------------------
 
 template <typename T, bool DOWN>
-static void gmsd_tile(const T* xp, const T* yp, int H, int W, int Hd, int Wd,
-                      int Hout, int Wout, float Tc, float eps, const Task& t,
+static void gmsd_tile(const T* xp, const T* yp, int H, int W, int Hout,
+                      int Wout, float Tc, float eps, const Task& t,
                       double* out_sum, double* out_sumsq) {
   const int cols = t.cols;
   const int span = cols + 2;
@@ -810,24 +768,135 @@ static void gmsd_tile(const T* xp, const T* yp, int H, int W, int Hd, int Wd,
   }
   *out_sum = sum;
   *out_sumsq = sumsq;
-  (void)Hd;
-  (void)Wd;
   (void)Hout;
   (void)Wout;
 }
 
-std::vector<torch::Tensor> gmsd_sums(torch::Tensor x, torch::Tensor y,
-                                     double Tc, double eps, bool downsample) {
-  TORCH_CHECK(x.dim() == 4 && x.sizes() == y.sizes(), "expected matching NCHW");
-  x = x.contiguous();
-  y = y.contiguous();
+}  // namespace cpu
+}  // namespace fa
 
-  const int N = (int)x.size(0), C = (int)x.size(1);
-  const int H = (int)x.size(2), W = (int)x.size(3);
+// --------------------------------------------------------------------------
+// C ABI
+// --------------------------------------------------------------------------
+
+using namespace fa::cpu;
+
+extern "C" {
+
+FA_API int fa_cpu_abi_version(void) { return FA_ABI_VERSION; }
+
+FA_API int fa_cpu_has_avx2(void) {
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+#if defined(_MSC_VER)
+  int regs[4];
+  __cpuid(regs, 0);
+  if (regs[0] < 7) return 0;
+  __cpuid(regs, 1);
+  const bool osxsave = (regs[2] & (1 << 27)) != 0;
+  const bool avx = (regs[2] & (1 << 28)) != 0;
+  if (!osxsave || !avx) return 0;
+  // XMM and YMM state must actually be saved by the OS, or a VEX-encoded
+  // instruction faults even though CPUID advertises the feature.
+  const unsigned long long xcr0 = _xgetbv(0);
+  if ((xcr0 & 0x6) != 0x6) return 0;
+  __cpuidex(regs, 7, 0);
+  return (regs[1] & (1 << 5)) != 0 ? 1 : 0;
+#else
+  __builtin_cpu_init();
+  return __builtin_cpu_supports("avx2") ? 1 : 0;
+#endif
+#else
+  return 0;
+#endif
+}
+
+FA_API int fa_cpu_set_num_threads(int n) {
+  if (n > 0) g_nthreads.store(n, std::memory_order_relaxed);
+  return pool().size();
+}
+
+FA_API int fa_cpu_num_threads(void) { return pool().size(); }
+
+// psnr_bias == FA_PSNR_NONE means "skip the dB conversion", matching the CUDA
+// side's sentinel.
+//
+// Sums, divided, and optionally converted to dB -- the whole reduction, before
+// returning to Python. Doing those last three steps as torch ops on scalar
+// tensors cost ~10us of dispatch per call, which at 512x512 was half the total
+// runtime of `psnr()`. The CUDA path has always folded them into its finalize
+// kernel; this is the CPU counterpart.
+FA_API int fa_cpu_pixel_reduce(const void* a, const void* b, int dtype,
+                               int64_t n_images, int64_t n_per_image,
+                               int op, double param, double psnr_bias,
+                               int per_image, double* out) {
+  if (!a || !b || !out) return FA_E_ARG;
+  if (n_images <= 0 || n_per_image <= 0) return FA_E_SHAPE;
+
+  double stack_sums[64];
+  std::vector<double> heap_sums;
+  double* sums = stack_sums;
+  if (n_images > static_cast<int64_t>(sizeof(stack_sums) / sizeof(double))) {
+    heap_sums.resize(static_cast<size_t>(n_images));
+    sums = heap_sums.data();
+  }
+
+  const int rc = pixel_sums(a, b, dtype, n_images, n_per_image, op, param, sums);
+  if (rc != FA_OK) return rc;
+
+  const bool want_psnr = (psnr_bias != FA_PSNR_NONE);
+  // divide, do not multiply by a precomputed reciprocal: the last ulp is the
+  // difference between an exact integer uint8 sum and one that is off by one
+  const double n_each = static_cast<double>(n_per_image);
+  const double n_total = static_cast<double>(n_images) * n_each;
+
+  if (!per_image) {
+    double acc = 0.0;
+    for (int64_t i = 0; i < n_images; ++i) acc += sums[i];
+    const double mean = acc / n_total;
+    // mean == 0 gives log10(0) == -inf, hence +inf dB, which is correct
+    out[0] = want_psnr ? psnr_bias - 10.0 * std::log10(mean) : mean;
+    return FA_OK;
+  }
+  for (int64_t i = 0; i < n_images; ++i) {
+    const double m = sums[i] / n_each;
+    out[i] = want_psnr ? psnr_bias - 10.0 * std::log10(m) : m;
+  }
+  return FA_OK;
+}
+
+FA_API int fa_cpu_ssim(const void* x, const void* y, int dtype,
+                       int N, int C, int H, int W,
+                       const float* win, int K,
+                       double shift, double C1, double C2,
+                       float* map_out, double* out_per_plane) {
+  if (!x || !y || !win || !out_per_plane) return FA_E_ARG;
+  return ssim_impl(x, y, dtype, N, C, H, W, win, K, shift, C1, C2, map_out,
+                   false, out_per_plane, nullptr);
+}
+
+// Plane means of the SSIM map and of its contrast-structure factor -- the
+// per-scale primitive MS-SSIM is built out of.
+FA_API int fa_cpu_ssim_cs(const void* x, const void* y, int dtype,
+                          int N, int C, int H, int W,
+                          const float* win, int K,
+                          double shift, double C1, double C2,
+                          double* out_ssim, double* out_cs) {
+  if (!x || !y || !win || !out_ssim || !out_cs) return FA_E_ARG;
+  return ssim_impl(x, y, dtype, N, C, H, W, win, K, shift, C1, C2, nullptr,
+                   true, out_ssim, out_cs);
+}
+
+FA_API int fa_cpu_gmsd(const void* x, const void* y, int dtype,
+                       int N, int C, int H, int W,
+                       double Tc, double eps, int downsample,
+                       double* out_mean, double* out_std) {
+  if (!x || !y || !out_mean || !out_std) return FA_E_ARG;
+  if (N <= 0 || C <= 0 || H <= 0 || W <= 0) return FA_E_SHAPE;
+
   const int Hd = downsample ? H / 2 : H;
   const int Wd = downsample ? W / 2 : W;
   const int Hout = Hd - 2, Wout = Wd - 2;
-  TORCH_CHECK(Hout > 0 && Wout > 0, "image too small for a 3x3 gradient");
+  if (Hout <= 0 || Wout <= 0) return FA_E_SHAPE;
   const int planes = N * C;
 
   std::vector<Task> tasks;
@@ -838,66 +907,37 @@ std::vector<torch::Tensor> gmsd_sums(torch::Tensor x, torch::Tensor y,
                              std::min(COL_TILE, Wout - c)});
 
   std::vector<double> sums(tasks.size(), 0.0), sumsq(tasks.size(), 0.0);
-  AT_DISPATCH_ALL_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16,
-                             x.scalar_type(), "gmsd_sums", [&] {
-    const scalar_t* xp = x.data_ptr<scalar_t>();
-    const scalar_t* yp = y.data_ptr<scalar_t>();
-    pool().run((int64_t)tasks.size(), [&](int64_t i) {
+  FA_DISPATCH(dtype, {
+    const scalar_t* xp = static_cast<const scalar_t*>(x);
+    const scalar_t* yp = static_cast<const scalar_t*>(y);
+    pool().run(static_cast<int64_t>(tasks.size()), [&](int64_t i) {
       if (downsample) {
-        gmsd_tile<scalar_t, true>(xp, yp, H, W, Hd, Wd, Hout, Wout, (float)Tc,
+        gmsd_tile<scalar_t, true>(xp, yp, H, W, Hout, Wout, (float)Tc,
                                   (float)eps, tasks[i], &sums[i], &sumsq[i]);
       } else {
-        gmsd_tile<scalar_t, false>(xp, yp, H, W, Hd, Wd, Hout, Wout, (float)Tc,
+        gmsd_tile<scalar_t, false>(xp, yp, H, W, Hout, Wout, (float)Tc,
                                    (float)eps, tasks[i], &sums[i], &sumsq[i]);
       }
     });
-  });
+  })
 
-  auto mean = torch::zeros({N}, torch::dtype(torch::kFloat64));
-  auto dev = torch::zeros({N}, torch::dtype(torch::kFloat64));
-  double* mp = mean.data_ptr<double>();
-  double* dp = dev.data_ptr<double>();
+  for (int i = 0; i < N; ++i) { out_mean[i] = 0.0; out_std[i] = 0.0; }
   for (size_t i = 0; i < tasks.size(); ++i) {
     const int img = tasks[i].plane / C;
-    mp[img] += sums[i];
-    dp[img] += sumsq[i];
+    out_mean[img] += sums[i];
+    out_std[img] += sumsq[i];
   }
   // divide, do not multiply by a precomputed reciprocal: N * (1/N) is not
   // exactly 1, and that last ulp is the difference between gmsd(x, x) == 0
   // and gmsd(x, x) == 3e-08
   const double npix = static_cast<double>(Hout) * Wout * C;
   for (int i = 0; i < N; ++i) {
-    const double m = mp[i] / npix;
-    const double var = dp[i] / npix - m * m;
-    mp[i] = m;
-    dp[i] = std::sqrt(var > 0.0 ? var : 0.0);
+    const double m = out_mean[i] / npix;
+    const double var = out_std[i] / npix - m * m;
+    out_mean[i] = m;
+    out_std[i] = std::sqrt(var > 0.0 ? var : 0.0);
   }
-  return {mean, dev};
+  return FA_OK;
 }
 
-}  // namespace cpu
-}  // namespace fa
-
-// -------------------------------------------------------------------------
-
-PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("mse_sums_cpu", &fa::cpu::mse_sums, "per-image squared-error sums (CPU)");
-  m.def("pixel_sums_cpu", &fa::cpu::pixel_sums, "per-image pixel-loss sums (CPU)");
-  m.def("pixel_reduce_cpu", &fa::cpu::pixel_reduce,
-        "per-image and batch pixel-loss means, optionally in dB (CPU)");
-  m.def("ssim_sums_cpu", &fa::cpu::ssim_sums, "per-plane SSIM sums (CPU)");
-  m.def("ssim_cs_cpu", &fa::cpu::ssim_cs, "per-plane SSIM and cs means (CPU)");
-  m.def("gmsd_sums_cpu", &fa::cpu::gmsd_sums, "per-image GMS mean and deviation (CPU)");
-#ifdef WITH_CUDA
-  m.def("mse_partial_cuda", &fa::mse_partial, "block partial squared-error sums (CUDA)");
-  m.def("pixel_partial_cuda", &fa::pixel_partial, "block partial pixel-loss sums (CUDA)");
-  m.def("ssim_fused_cuda", &fa::ssim_fused, "fused SSIM block sums (CUDA)");
-  m.def("ssim_backward_cuda", &fa::ssim_backward, "fused SSIM backward (CUDA)");
-  m.def("ssim_cs_cuda", &fa::ssim_cs, "fused SSIM and cs plane means (CUDA)");
-  m.def("ssim_cs_backward_cuda", &fa::ssim_cs_backward, "fused MS-SSIM backward (CUDA)");
-  m.def("gmsd_cuda", &fa::gmsd_fused, "fused GMS mean and deviation (CUDA)");
-  m.attr("has_cuda") = true;
-#else
-  m.attr("has_cuda") = false;
-#endif
-}
+}  // extern "C"
