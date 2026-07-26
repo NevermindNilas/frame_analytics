@@ -153,10 +153,25 @@ def _f64(device, *shape) -> torch.Tensor:
     return torch.empty(shape, device=device, dtype=torch.float64)
 
 
+def _contig(t: torch.Tensor) -> torch.Tensor:
+    """``t.contiguous()`` without paying the dispatcher when it is a no-op.
+
+    The overwhelmingly common case is an already-contiguous frame, and
+    ``is_contiguous()`` is a direct attribute read where ``contiguous()`` is a
+    full ATen dispatch.
+    """
+    return t if t.is_contiguous() else t.contiguous()
+
+
 def _ptr(t: Optional[torch.Tensor]):
-    if t is None:
-        return None
-    return ctypes.c_void_p(t.data_ptr())
+    """A tensor's data pointer, as a plain int.
+
+    ctypes accepts an int wherever the prototype says ``c_void_p``, and skipping
+    the wrapper object matters more than it looks: the smallest calls here are
+    ~10 us end to end and mostly Python, so three object constructions per call
+    is a percent or two of PSNR on a sub-megapixel frame.
+    """
+    return None if t is None else t.data_ptr()
 
 
 def _dev(t: torch.Tensor) -> int:
@@ -165,7 +180,7 @@ def _dev(t: torch.Tensor) -> int:
 
 
 def _stream(t: torch.Tensor):
-    return ctypes.c_void_p(torch.cuda.current_stream(t.device).cuda_stream)
+    return torch.cuda.current_stream(t.device).cuda_stream
 
 
 def _check(code: int, ext: _Native) -> None:
@@ -328,7 +343,7 @@ def try_mse(x: torch.Tensor, y: torch.Tensor, *, per_image: bool,
         return None
     bias = psnr_bias if psnr_bias is not None else _PSNR_NONE
     try:
-        x, y = x.contiguous(), y.contiguous()
+        x, y = _contig(x), _contig(y)
         if x.is_cuda:
             if not ext.has_cuda:
                 return None
@@ -348,7 +363,7 @@ def try_pixel(x: torch.Tensor, y: torch.Tensor, *, op: int, param: float,
     if ext is None or not _usable(x, y):
         return None
     try:
-        x, y = x.contiguous(), y.contiguous()
+        x, y = _contig(x), _contig(y)
         if x.is_cuda:
             if not ext.has_cuda:
                 return None
@@ -391,7 +406,7 @@ def ssim_fused(x: torch.Tensor, y: torch.Tensor, win: torch.Tensor,
     Returns ``[per_image, total]``, plus the map when asked for it.
     """
     ext = load()
-    x, y = x.contiguous(), y.contiguous()
+    x, y = _contig(x), _contig(y)
     winf = _win_f32(win)
     n, c, h, w = x.shape
     k = int(winf.numel())
@@ -414,7 +429,7 @@ def ssim_fused(x: torch.Tensor, y: torch.Tensor, win: torch.Tensor,
 def ssim_backward(x, y, dL_dmap, grad_scalar, win, shift, C1, C2,
                   need_dx, need_dy):
     ext = load()
-    x, y = x.contiguous(), y.contiguous()
+    x, y = _contig(x), _contig(y)
     winf = _win_f32(win)
     n, c, h, w = x.shape
     k = int(winf.numel())
@@ -464,7 +479,7 @@ def try_ssim(x: torch.Tensor, y: torch.Tensor, *, win_size: int, sigma: float,
     npix = hout * wout
 
     try:
-        x, y = x.contiguous(), y.contiguous()
+        x, y = _contig(x), _contig(y)
         if x.is_cuda:
             if not ext.has_cuda:
                 return None
@@ -555,7 +570,7 @@ def ssim_cs_forward(x, y, win, shift, C1, C2):
 
 def ssim_cs_backward(x, y, gs, gcs, win, shift, C1, C2, need_dx, need_dy):
     ext = load()
-    x, y = x.contiguous(), y.contiguous()
+    x, y = _contig(x), _contig(y)
     winf = _win_f32(win)
     n, c, h, w = x.shape
     k = int(winf.numel())
@@ -590,7 +605,7 @@ def try_ssim_cs(x: torch.Tensor, y: torch.Tensor, *, win: torch.Tensor,
         return None
     n, c = int(x.shape[0]), int(x.shape[1])
     try:
-        x, y = x.contiguous(), y.contiguous()
+        x, y = _contig(x), _contig(y)
         winf = _win_f32(win)
         if x.is_cuda:
             if not ext.has_cuda:
@@ -624,7 +639,7 @@ def try_gmsd(x: torch.Tensor, y: torch.Tensor, *, T: float, eps: float,
     n, c = int(x.shape[0]), int(x.shape[1])
     h, w = int(x.shape[-2]), int(x.shape[-1])
     try:
-        x, y = x.contiguous(), y.contiguous()
+        x, y = _contig(x), _contig(y)
         if x.is_cuda:
             if not ext.has_cuda:
                 return None
