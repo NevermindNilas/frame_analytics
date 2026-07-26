@@ -100,14 +100,13 @@ jobs:
   macos:
     # CPU only, and not by omission: there is no CUDA on macOS, so fa_cuda is
     # never built, never shipped and never referenced by the loader there.
-    strategy:
-      matrix:
-        include:
-          - runner: macos-13      # x86_64
-            plat: macosx_13_0_x86_64
-          - runner: macos-14      # arm64
-            plat: macosx_14_0_arm64
-    runs-on: ${{ matrix.runner }}
+    #
+    # One universal2 wheel from the arm64 runner rather than a job per
+    # architecture: the Intel macOS runners are being retired and queue for
+    # hours, and clang cross-compiles a fat dylib for the cost of an extra
+    # -arch flag. fa_cpu carries both slices; fa_cpu_avx2 is x86_64-only, which
+    # is fine because the loader only consults it on x86 hosts.
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -118,17 +117,19 @@ jobs:
           FA_BUILD_EXT: "1"
           FA_SKIP_CUDA: "1"
           FA_VERBOSE: "1"
-          FA_PLAT_TAG: ${{ matrix.plat }}
-          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.runner == 'macos-13' && '13.0' || '14.0' }}
+          FA_MACOS_ARCHS: "arm64 x86_64"
+          FA_PLAT_TAG: macosx_11_0_universal2
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
         run: |
           python -m pip install --upgrade pip setuptools wheel
           python -m pip wheel . --no-deps --no-build-isolation -w dist
       - name: Show what shipped
         run: |
           python -c "import zipfile,glob;w=glob.glob('dist/*.whl')[0];print(w);[print(' ',n) for n in zipfile.ZipFile(w).namelist() if n.endswith(('.dll','.so','.dylib'))]"
+          for dylib in frame_analytics/lib/*.dylib; do echo "== $dylib"; lipo -info "$dylib"; done
       - uses: actions/upload-artifact@v4
         with:
-          name: wheel-${{ matrix.plat }}
+          name: wheel-macos-universal2
           path: dist/*.whl
 
   sdist:

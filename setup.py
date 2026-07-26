@@ -74,8 +74,12 @@ def _build_libraries() -> None:
     # One /arch:AVX2 binary would fault on pre-Haswell hardware; one baseline
     # binary would give up the vector width the reduction loops exist for, so
     # both ship and the loader picks at runtime.
-    machine = sys.platform, os.environ.get("FA_TARGET_ARCH", "")
-    if cabi._is_x86() or machine[1] in ("x86_64", "amd64"):
+    #
+    # Whether to build it is a question about the *target*, not the host: an
+    # arm64 macOS runner cross-compiling a universal2 binary still owes the
+    # x86_64 slice its AVX2 sibling.
+    mac_archs = os.environ.get("FA_MACOS_ARCHS", "").split()
+    if cabi._is_x86() or "x86_64" in mac_archs:
         targets.append(("fa_cpu_avx2", True))
 
     for stem, avx2 in targets:

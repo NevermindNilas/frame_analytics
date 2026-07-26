@@ -264,6 +264,14 @@ def cpu_compile_command(source: Path, out: Path, avx2: bool,
     if avx2:
         cmd += ["-mavx2", "-mfma"]
     if sys.platform == "darwin":
+        # FA_MACOS_ARCHS lets CI emit one universal2 binary from a single
+        # runner, which matters because the Intel macOS runners are being
+        # retired and queue for hours. Unset (an ordinary build on a user's
+        # Mac) means native, as it should. AVX2 only exists on x86_64, so that
+        # sibling is never fat.
+        archs = ["x86_64"] if avx2 else os.environ.get("FA_MACOS_ARCHS", "").split()
+        for arch in archs:
+            cmd += ["-arch", arch]
         cmd.append("-dynamiclib")
     else:
         # A released Linux wheel has to run against whatever libstdc++ the
