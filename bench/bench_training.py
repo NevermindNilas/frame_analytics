@@ -51,8 +51,17 @@ def timeit(fn, *, iters: int, repeat: int, cuda: bool) -> float:
     return best
 
 
-def peak_mem(fn) -> float:
-    """Peak CUDA allocation *attributable to fn*, in MiB."""
+def peak_mem(fn, setup=None) -> float:
+    """Peak CUDA allocation *attributable to fn*, in MiB.
+
+    ``setup`` runs before the baseline is taken, and for a training step it
+    releases ``.grad``. Left live from the warm-up, the gradient buffer sits in
+    the baseline; the step then frees it and reallocates the same bytes, which
+    nets to zero and reports the gradient as free. Every implementation pays
+    for it, so it belongs in every row.
+    """
+    if setup is not None:
+        setup()
     torch.cuda.synchronize()
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
@@ -182,11 +191,14 @@ def ms_ssim_train_table(dev, sizes, batches, iters, repeat):
             }
             if pm:
                 cases["pytorch-msssim"] = lambda: pm.ms_ssim(x, y, data_range=1.0)
+            def drop_grad():
+                x.grad = None
+
             for k, fn in cases.items():
                 run = step(fn, x)
                 rows[k].append(timeit(run, iters=iters, repeat=repeat, cuda=cuda))
                 if cuda:
-                    mem[k].append(peak_mem(run))
+                    mem[k].append(peak_mem(run, setup=drop_grad))
             del x, y
             if cuda:
                 torch.cuda.empty_cache()

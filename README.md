@@ -88,6 +88,109 @@ Full per-size CPU and CUDA tables: `python bench/bench.py`.
   faster than `pytorch-msssim` and uses *more* memory. The speed claims are
   claims about the kernels; the fallback exists to be correct, not to win.
 
+## Memory
+
+Peak allocation *above the two input frames*, RTX 3090, 3-channel, MiB per
+call. Nothing here is the frames themselves — those you already have:
+
+| CUDA, forward | 1080p | 1080p ×8 | 4K ×8 |
+|---|---:|---:|---:|
+| **SSIM** | **0.02** | **0.19** | **0.75** |
+| pytorch-msssim | 288 | 2253 | 9048 |
+| piq | 336 | 2633 | 10568 |
+| kornia | 360 | 2850 | 11397 |
+| torchmetrics | 550 | 4388 | 17509 |
+| | | | |
+| **MS-SSIM** | **15.5** | **120** | **476** |
+| pytorch-msssim | 288 | 2253 | 9048 |
+| piq | 336 | 2633 | 10568 |
+| | | | |
+| **GMSD** | **0.02** | **0.19** | **0.75** |
+| piq | 72 | 760 | 3040 |
+| | | | |
+| **PSNR / MSE / L1 / Charbonnier** | **0.007** | **0.007** | **0.007** |
+| torchmetrics, kornia, `F.l1_loss` | 48 | 380 | 1520 |
+
+A fused kernel has nowhere to put an intermediate. What is left for SSIM and
+GMSD is the per-block partial sums — sized by the tile grid, so 4K ×8 costs
+0.75 MiB where the alternatives cost 9–17 GiB — and for the pixel metrics, the
+output scalar. The libraries above are not doing anything wrong; five or six
+frame-shaped temporaries is what the textbook formulation asks for, and 2253
+MiB at 1080p ×8 is almost exactly 6× the 380 MiB input.
+
+MS-SSIM is the one metric that must materialise something: the four
+downsampled copies of both frames. That geometric series sums to a third of a
+frame each, and nothing full-resolution survives — 120 MiB at 1080p ×8, where
+the frame pair itself is 380.
+
+The CPU story is the same one. There is no `max_memory_allocated` for host
+memory, so these are peak process footprints, each measured in its own
+interpreter — how much more memory the OS had to hand over, which is the
+number that decides whether the box swaps:
+
+| CPU, forward | 1080p | 1080p ×8 |
+|---|---:|---:|
+| **SSIM** | **2.0** | **2.4** |
+| pytorch-msssim | 433 | 2796 |
+| piq | 446 | 3256 |
+| kornia | 457 | 3305 |
+| torchmetrics | 915 | 7026 |
+| | | |
+| **MS-SSIM**, uint8 in | **8.9** | **10.6** |
+| **MS-SSIM**, fp32 in | 16.8 | 127 |
+| pytorch-msssim | 462 | 2898 |
+| piq | 471 | 3256 |
+| | | |
+| **GMSD** | **0.11** | **0.69** |
+| piq | 84 | 793 |
+| | | |
+| **PSNR / MSE / L1** | **<0.01** | **<0.01** |
+| kornia (PSNR) | 3.0 | 190 |
+| torchmetrics, `F.l1_loss` | 27–28 | 380 |
+
+The pixel metrics reduce two buffers to a scalar and allocate nothing at all.
+SSIM's 2 MiB does not move when the pixel count goes up 8×, so it is fixed
+working set rather than anything per-pixel. MS-SSIM is cheaper from uint8 than
+from float because the cast is fused into the first pooling step: fed uint8 it
+never materialises a full-resolution float copy of either frame, and only the
+pyramid survives.
+
+| CUDA, loss step (fwd + bwd, fp32) | 1080p | 1080p ×8 | 4K ×8 |
+|---|---:|---:|---:|
+| **SSIM** | **94** | **752** | **3022** |
+| pytorch-msssim | 480 | 3763 | 15098 |
+| piq | 456 | 3579 | 14350 |
+| | | | |
+| **MS-SSIM** | **118** | **942** | **3782** |
+| pytorch-msssim | 480 | 3763 | 15098 |
+| piq | 456 | 3579 | 14350 |
+| | | | |
+| **GMSD** | 78 | **616** | **2465** |
+| piq | 72 | 760 | 3040 |
+| | | | |
+| **L1** | **24** | **190** | **760** |
+| `F.l1_loss` | 96 | 760 | 3040 |
+
+Every row includes the gradient with respect to the prediction — 24 MiB at
+1080p, 760 at 4K ×8 — which is unavoidable and which every implementation
+pays. For `fa.l1` it is the *entire* figure: the backward writes the gradient
+and allocates nothing else. SSIM costs three more planes on top of it and
+MS-SSIM four, at every size — the fused backward recomputes the local moments
+instead of saving them, while the autograd implementations keep the forward's
+activations, which is where the 15 GiB comes from. GMSD on a single 1080p
+frame is the one row that loses, by 6 MiB.
+
+`StreamingMetrics` at 1080p RGB holds **18 MiB** — the two device frames plus
+the CUDA graph's private pool — and allocates **nothing** per frame, whether
+it is scoring one metric or nine.
+
+Without the compiled extension the portable path allocates like the rest of
+the field, and slightly worse than the best of it: 2830 MiB for SSIM at
+1080p ×8, and 4.5–4.7 GiB as a loss step depending on what `torch.compile`
+managed to fuse.
+
+Full tables: `python bench/bench_memory.py`.
+
 ## Accuracy
 
 Defaults reproduce `ssim_index.m`: 11×11 Gaussian, σ=1.5, K=(0.01, 0.03),
@@ -139,10 +242,12 @@ loss.backward()
 That mix is Zhao et al., *Loss Functions for Image Restoration with Neural
 Networks* (2016) — the reason MS-SSIM is here at all.
 
-MS-SSIM loss step, 1080p ×8, float32 RGB: **12.7 ms / 752 MiB** against
-pytorch-msssim's 81.3 ms / 3573 MiB — **6.4× faster on 4.8× less memory**. The
+MS-SSIM loss step, 1080p ×8, float32 RGB: **12.7 ms / 942 MiB** against
+pytorch-msssim's 81.3 ms / 3763 MiB — **6.4× faster on 4.0× less memory**. The
 fused backward recomputes the local moments instead of storing them, so nothing
-full-resolution survives the forward pass at any of the five scales.
+full-resolution survives the forward pass at any of the five scales. Both
+figures include the 190 MiB gradient neither implementation can avoid; see
+[Memory](#memory).
 
 Gradients are verified two independent ways — against autograd over the portable
 path, and against central differences on the float64 reference forward — both to
@@ -182,68 +287,6 @@ fa.ssim(a, b, data_range=255.0, luma="matlab", crop_border=scale)   # Y-SSIM
 `test_y_channel=True` computes. `"bt601"` and `"bt709"` are the full-range
 definitions. The crop is a view, so it costs nothing.
 
-## How
-
-The usual SSIM formulation runs five 11×11 convolutions for the five local
-expectations and materialises a dozen full-resolution intermediates. It is
-bandwidth-bound on its own temporaries. The main departures:
-
-- **Separable window** — 22 MACs/px instead of 121, and exactly equal.
-- **Four blurred planes, not five.** SSIM only wants σ<sub>xx</sub>+σ<sub>yy</sub>,
-  never the two apart. Blurring the *difference* keeps every intermediate the
-  size of the answer, so on matched frames it is more accurate than the
-  five-plane form, not less, and takes 20% off the ring buffer.
-- **One fused CUDA kernel, zero intermediates.** A block owns a 32×64 output tile
-  and streams input through shared memory into a ring buffer; SSIM is folded into
-  a block accumulator. DRAM traffic is the two input planes plus ~30% halo.
-- **Compile-time window size** — GPUs have no integer division, and at runtime
-  tap count the ring wrap cost 11 emulated modulos per pixel. Worth 1.7× at 1080p.
-- **Register-blocked vertical tap** — adjacent output rows share 10 of 11 ring
-  rows; shared memory is the scarce resource. Another ~1.25×.
-- **Mean-shift before filtering** — `E[x²]−E[x]²` is a cancellation trap in
-  float32; subtracting a constant is algebraically identical and free.
-- **Backward reuses the forward's machinery** — the gradient collapses to three
-  more Gaussian passes through the same tile kernel with its origin moved back
-  one halo.
-- **MS-SSIM reuses one pass per scale** — SSIM and the contrast-structure term
-  fall out of the same four moments, so the tile kernel emits both from registers.
-- **GMSD in one kernel** — downsample, Prewitt pair, similarity map and both its
-  moments, with nothing full-resolution written. Its variance is taken in float64
-  before the squaring: GMS values sit within ~1e-3 of 1, so float32 `E[q²]−E[q]²`
-  returns exactly zero for near-identical frames.
-- **Pixel losses are one templated kernel** — MSE, L1, Charbonnier and Huber
-  differ only in a compile-time penalty, and uint8 MSE/L1 take an exact 64-bit
-  integer accumulator.
-- **The one loop no auto-vectoriser will touch.** `acc += (int64_t)d*(int64_t)d`
-  is uint8 MSE, and neither MSVC nor GCC will vectorise it — there is no
-  lane-preserving widening multiply into 64 bits, so both emit scalar code, and
-  the hottest loop in the library ran at 5 Gelem/s per core while `cv2.PSNR` ran
-  at 40. The *pairwise* widening multiply does exist (`madd_epi16`, or
-  `vmull_u8`+`vpadalq_u16`), and a uint8 difference squares into 16 bits, so only
-  the accumulator has to widen — flushed to 64 bits every 4096 vectors, before
-  2·255² per lane per iteration can overflow an int32. 50 Gelem/s on one thread,
-  and bit-identical: it is exact integer arithmetic either way, and integer
-  addition does not care how it is reassociated. L1 is left to the compiler,
-  which vectorises abs-and-widen perfectly well and beats a hand-written
-  `sad_epu8` chain.
-- **CPU: same structure, own thread pool.** `at::parallel_for` compiles to an
-  OpenMP region that silently vanishes in a JIT-loaded extension (that was 19×).
-- **Under a megapixel, that pool *was* the metric.** Three things made a launch
-  ~15 µs: the hot atomics shared cache lines, so 16 threads doing `fetch_add` on
-  the task cursor were also invalidating the generation counter and the
-  completion count; *every* worker took the mutex to decrement that count, a
-  15-way convoy at the end of each call; and all 16 woke even for three tasks, to
-  contend for a cursor with nothing behind it. One cache line each, only the last
-  worker out takes the lock, and never wake more helpers than there are tasks:
-  ~4 µs. Together with the loop above, the 512²-RGB squared-error reduction went
-  from 34 µs to 6.
-- **The reduction finishes in C++.** Dividing the sums and taking
-  `10·log10` as torch ops on scalar tensors cost ~10 µs of dispatch, which at
-  512² was half of `psnr()`; and returning the CUDA path's four candidate
-  outputs cost ~1 µs apiece in allocation and pybind wrappers, which was half of
-  what remained. The CPU reduction takes the selector as an argument and
-  allocates the one tensor asked for.
-
 ## Install
 
 ```bash
@@ -274,6 +317,7 @@ pip install -e .
 python tests/validate.py           # accuracy gate
 python bench/bench.py              # speed + accuracy tables
 python bench/bench_training.py     # MS-SSIM / GMSD / pixel losses
+python bench/bench_memory.py       # peak memory, forward and loss step
 python bench/bench_fused_ssim.py   # head-to-head vs fused-ssim
 ```
 
