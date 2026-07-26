@@ -72,8 +72,12 @@ jobs:
           dnf config-manager --add-repo \
             https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
           dnf -y install cuda-nvcc-12-6 cuda-cudart-devel-12-6
+          # nvcc 12.6 refuses any host compiler past gcc 13 and this image
+          # defaults to 14, so install one it will accept and point -ccbin at it
+          dnf -y install gcc-toolset-13-gcc-c++
           echo "/usr/local/cuda-12.6/bin" >> $GITHUB_PATH
           echo "CUDA_HOME=/usr/local/cuda-12.6" >> $GITHUB_ENV
+          echo "FA_NVCC_CCBIN=/opt/rh/gcc-toolset-13/root/usr/bin/g++" >> $GITHUB_ENV
       - name: Build wheel
         env:
           FA_BUILD_EXT: "1"

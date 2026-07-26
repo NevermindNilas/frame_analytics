@@ -290,6 +290,15 @@ def cuda_compile_command(source: Path, out: Path,
     cmd = [nvcc, "-O3", "-shared", "-cudart", "static", "-std=c++17",
            "--expt-relaxed-constexpr", "-prec-div=true", "-prec-sqrt=true",
            "-ftz=false", "-DNDEBUG"]
+    # Every CUDA release hard-refuses host compilers newer than the ones it was
+    # tested against -- CUDA 12.6 stops at gcc 13, and a current distro (or the
+    # manylinux_2_28 image) ships 14 or later. `FA_NVCC_CCBIN` points nvcc at an
+    # older g++ that is installed alongside; overriding the check with
+    # -allow-unsupported-compiler instead would trade a build error for a
+    # runtime one.
+    ccbin = os.environ.get("FA_NVCC_CCBIN")
+    if ccbin:
+        cmd += ["-ccbin", ccbin]
     cmd += list(archs if archs is not None else cuda_arch_flags())
     if sys.platform == "win32":
         # CUDA 13's CCCL headers refuse to build against MSVC's traditional
