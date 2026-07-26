@@ -29,8 +29,8 @@ Verified by running, on this machine:
 | Tests | **178 passing** (`pytest tests/`) against the C-ABI backend |
 | Accuracy gate | passing (`python tests/validate.py`), worst SSIM error 3.2e-09 |
 | CPU + CUDA libraries | build and load, both prebuilt and JIT |
-| Prebuilt wheel | `frame_analytics-0.2.0-py3-none-win_amd64.whl` builds; all three DLLs import only `KERNEL32.dll` |
-| PyPI | **not published.** Name `frame-analytics` verified free |
+| Prebuilt wheels | CI green on all four; `libfa_cuda.so` imports no libcuda/libcudart/libstdc++, the Windows DLLs import only `KERNEL32.dll`, `libfa_cpu.dylib` is fat x86_64+arm64 |
+| PyPI | **published**: 0.2.0, four artifacts (win_amd64, manylinux_2_28_x86_64, macosx_11_0_universal2, sdist) |
 | Version | 0.2.0 |
 
 `git log --oneline`:
