@@ -41,9 +41,13 @@ Conventions this follows exactly
   so the blurred planes genuinely darken towards the border.  That is part of
   the metric; the reference in :mod:`frame_analytics.reference` runs the
   actual IIR recursion instead, which is what pins the equivalence.
-* float32 throughout, as upstream.  ``E[x^2] - E[x]^2`` in float32 is a
-  cancellation trap, and this one cannot be fixed by centring the way
-  :func:`frame_analytics.functional.ssim` does -- ``num_m`` and the 0.55/0.42
+* float32 maps and float64 accumulators, which is upstream's split too: the
+  three error maps are computed in float, and ``SSIMMap``/``EdgeDiffMap`` sum
+  them into ``double``.  So ``dtype`` here selects the precision of the
+  *pipeline* -- colour, blur, moments, maps -- while the norms and the weighted
+  sum are float64 either way.  It matters because ``E[x^2] - E[x]^2`` in
+  float32 is a cancellation trap that cannot be fixed by centring the way
+  :func:`frame_analytics.functional.ssim` does: ``num_m`` and the 0.55/0.42
   offsets tie the formula to the absolute values.  Pass ``dtype=torch.float64``
   to see how much that costs (it is ~1e-4 of a score point on natural images).
 
@@ -59,6 +63,7 @@ computes, so it is reproduced here rather than corrected.
 from __future__ import annotations
 
 import math
+from functools import lru_cache
 from typing import Optional, Tuple
 
 import torch
@@ -130,8 +135,13 @@ assert len(SSIMULACRA2_WEIGHTS) == 108
 # --------------------------------------------------------------------------- #
 
 
+@lru_cache(maxsize=None)
 def recursive_gaussian_taps(sigma: float = 1.5) -> Tuple[float, ...]:
     """The impulse response of ``jxl::CreateRecursiveGaussian(sigma)``.
+
+    Cached: the taps are handed to the compiled blur as a tuple of python
+    floats, i.e. as part of its guard set, and there is no reason to redo a
+    3x3 solve and a dozen trig calls per call to get the same eleven numbers.
 
     Charalampidis 2016, "Recursive Implementation of the Gaussian Filter Using
     Truncated Cosine Functions": the kernel is a sum of three cosines truncated
