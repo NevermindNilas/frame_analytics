@@ -20,6 +20,7 @@ fa.ssim(a, b, data_range=255.0)      # Wang et al. 2004, exactly
 fa.ms_ssim(a, b, data_range=255.0)   # Wang et al. 2003
 fa.gmsd(a, b, data_range=255.0)      # Xue et al. 2014
 fa.lpips(a, b, data_range=255.0)     # Zhang et al. 2018, weights included
+fa.ssimulacra2(a, b, data_range=255.0)   # Sneyers 2022/2023, libjxl's metric
 fa.l1(a, b); fa.charbonnier(a, b); fa.huber(a, b)
 
 fa.ssim(a, b, reduction="none")      # per-image, (8,)
@@ -241,6 +242,29 @@ Worst abs. error vs float64 reference, over CPU and CUDA, native and portable:
 GMSD's similarity map is float32, so deviations below ~1e-7 measure rounding,
 not the images (`gmsd(x, x)` ≈ 3e-08, not 0). A typical GMSD is ~0.03.
 
+### SSIMULACRA 2 against libjxl
+
+Same gate — a float64 transcription of `tools/ssimulacra2.cc`, agreeing to
+4e-11 of a score point — but the interesting comparison is against the
+canonical implementation, which does *not* agree with itself:
+
+| on `rust-av/ssimulacra2`'s own test pair | score |
+|---|---:|
+| **frame_analytics**, float32 / float64 | **17.5070 / 17.50983** |
+| libjxl's recursion in float64 | 17.50983 |
+| `rust-av/ssimulacra2` (float32, its test vector) | 17.3853 |
+| libjxl's recursion in float32, our transcription | 17.2765 |
+
+libjxl blurs with a marginally-stable recursive filter (Charalampidis's
+truncated cosines) in float32, and the rounding it accumulates along a 1448-px
+row is worth ~0.1–0.25 of a score point — which is why the reference port's own
+test allows ±0.25 and its CI "gives different results across different runs".
+That recursion's impulse response is finite, radius 5 with the ±5 taps exactly
+zero, so we convolve the 11 taps instead: same filter, no drift, and float32
+lands 0.003 from float64 rather than 0.23. Zero-padded borders, the odd-size
+downsample clamp and the weight indexing on images too small for six scales all
+follow upstream exactly.
+
 ## LPIPS
 
 PSNR, SSIM and MS-SSIM all reward blur, so a model trained on them alone
@@ -323,6 +347,63 @@ Caveats:
   whatever cuDNN setting is live when `.backward()` is called — deliberate, in
   that the reported number is what has to survive to four decimals and a loss
   gradient does not.
+
+## SSIMULACRA 2
+
+libjxl's metric (Sneyers 2022/2023): six scales, three XYB channels, three
+error maps, two norms — 108 sub-scores, a fitted weight vector, a cubic and a
+power law. It is the number the image-compression world reports, and it exists
+here because it answers a question SSIM cannot: SSIM sees a blur and a ringing
+artefact of the same magnitude as the same damage, and this does not.
+
+```python
+fa.ssimulacra2(orig, dist, data_range=255.0)   # 100 = identical, ~90 = visually lossless
+```
+
+RTX 3090, uint8 sRGB in, ms/call:
+
+| CUDA | 512² | 720p | 1080p | 1080p ×4 | 4K |
+|---|---:|---:|---:|---:|---:|
+| **frame_analytics** | **3.14** | **3.23** | **4.66** | **16.85** | **15.61** |
+| without `torch.compile` | 7.65 | 8.97 | 14.55 | 47.11 | 46.77 |
+| Mpixel/s | 84 | 285 | 445 | 492 | 531 |
+
+215 fps at 1080p, 64 fps at 4K. There is no other GPU implementation to put in
+this table: what exists is libjxl's C++ tool, the Rust port behind
+`ssimulacra2_rs`, and vship's CUDA/HIP kernels, none of which take a torch
+tensor. For scale, the Rust port scores its own 1448×1080 test pair in **322 ms**
+on this machine's CPU (single-threaded, the crate's default), against **4.7 ms**
+here on the GPU and 219 ms on 16 CPU threads.
+
+| CPU, 16 threads | 512² | 720p | 1080p |
+|---|---:|---:|---:|
+| **frame_analytics** | **32.9** | **104** | **219** |
+| without `torch.compile` | 33.8 | 137 | 344 |
+| `ssimulacra2` (the PyPI numpy/scipy package) | 226 | — | 1814 |
+
+The numpy package is not computing quite the same metric — it blurs with
+scipy's mirrored-border Gaussian rather than libjxl's zero-padded recursive
+filter, which is worth ~0.3 of a score point — so read that row as scale, not
+as a head-to-head.
+
+Memory is the weak spot, and honestly so: **452 MiB above the input pair at
+1080p**, against SSIM's 0.02. The metric wants five blurred moment planes per
+scale over three channels, and the portable path materialises the 15-plane
+pack and its blurred copy. That is what a fused kernel would remove, and there
+isn't one yet — `ssimulacra2` is the only metric here with no C-ABI backend, so
+it has no `backend_hint` either.
+
+`dtype=torch.float64` costs 5.1× (23.6 ms at 1080p) and buys ~2e-4 of a score
+point; it exists for the accuracy gate, not for reporting.
+
+One sharp edge worth knowing: a pyramid puts six shapes through the same
+compiled functions, so scoring **one resolution per process** is the fast path.
+Six cache entries per resolution against Dynamo's recompile limit of 8 means a
+process that scores a second resolution finishes it in eager — still correct,
+~2.5× slower, and it says so in a warning. Video scoring, one resolution for
+the length of the run, is the case this is tuned for.
+
+Full tables: `python bench/bench_ssimulacra2.py`.
 - 3-channel RGB is the calibrated case. 1-channel input is replicated to three,
   which is what the field does with grayscale but is not something the human
   judgements behind the weights ever covered.
@@ -447,6 +528,7 @@ python bench/bench_training.py     # MS-SSIM / GMSD / pixel losses
 python bench/bench_memory.py       # peak memory, forward and loss step
 python bench/bench_fused_ssim.py   # head-to-head vs fused-ssim
 python bench/bench_lpips.py        # LPIPS vs lpips / torchmetrics / piq
+python bench/bench_ssimulacra2.py  # SSIMULACRA 2, one fresh process per case
 ```
 
 The LPIPS weight blob is checked in, not generated at install time — building
@@ -475,6 +557,8 @@ gmsd       (x, y, *, data_range=None, T=None, eps=None, downsample=True,
 gms        (x, y, ...)                      # mean of the same map
 lpips      (x, y, *, net="alex", data_range=None, return_map=False,
             allow_tf32=False, ...)
+ssimulacra2(orig, dist, *, data_range=None, reduction="mean", dtype=None,
+            crop_border=0)               # sRGB in, 0..100 out, higher is better
 l1         (x, y, ...)
 charbonnier(x, y, *, eps=1e-3, ...)         # mean sqrt(d^2 + eps^2)
 huber      (x, y, *, delta=1.0, ...)        # matches torch.nn.HuberLoss
@@ -490,8 +574,17 @@ on `ssim` applies MATLAB `ssim.m`'s automatic box-downsample (off by default, as
 in `ssim_index.m` and every PyTorch library); on `gmsd` it is the paper's 2×
 prefilter and is *on* by default.
 
+`ssimulacra2` is the odd one out on two counts: it takes **sRGB-encoded** input
+(it linearises and converts to XYB itself, so linear-light data scores
+something else), and it is *not symmetric* — the first argument is the
+original, because two of its three error maps distinguish "the distortion added
+an edge" from "the distortion removed one". No `luma` (it needs all three
+channels) and no `backend_hint` yet.
+
 Module forms `MSE`, `PSNR`, `SSIM`, `MSSSIM`, `GMSD`, `L1`, `Charbonnier`,
-`Huber`, `LPIPS` cache what they can and expose `.loss()`:
+`Huber`, `LPIPS`, `SSIMULACRA2` cache what they can and expose `.loss()`
+(except `SSIMULACRA2`, whose final power law has an unbounded derivative at
+the perfect-match point):
 
 ```python
 crit = fa.SSIM(data_range=1.0)

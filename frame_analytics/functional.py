@@ -69,13 +69,26 @@ class _LazyCompiled:
     plain eager for the rest of the process.
     """
 
-    __slots__ = ("_fn", "_compiled", "_eager_only", "_key")
+    __slots__ = ("_fn", "_compiled", "_eager_only", "_key", "_dynamic")
 
-    def __init__(self, fn, key: str):
+    def __init__(self, fn, key: str, dynamic=None):
         self._fn = fn
         self._key = key
         self._compiled = None
         self._eager_only = False
+        self._dynamic = dynamic
+
+    @property
+    def active(self) -> bool:
+        """Whether calls will actually be compiled.
+
+        For callers that have two formulations of the same computation -- one
+        that only pays off once Inductor fuses it, one for eager -- and so have
+        to know which of the two to hand over. Optimistic before the first
+        call: it reports what *will* be attempted, and a failed attempt flips
+        it to False for the rest of the process.
+        """
+        return _COMPILE_ENABLED and not self._eager_only
 
     def __call__(self, *args, **kwargs):
         if self._eager_only or not _COMPILE_ENABLED:
@@ -88,7 +101,16 @@ class _LazyCompiled:
                 # dynamic=None: specialise on the first shape (fastest for the
                 # fixed-resolution streams these metrics are used on), then let
                 # Dynamo generalise if a second shape shows up.
-                self._compiled = torch.compile(self._fn, dynamic=None)
+                #
+                # dynamic=False is for callers that hand the *same* function
+                # several shapes within one call -- an image pyramid. Dynamo's
+                # automatic-dynamic marking is keyed on the code object, not on
+                # this wrapper, so the second shape would otherwise re-specialise
+                # every entry as dynamic, and a dynamic reduction kernel is
+                # far slower than a static one (measured 14x on SSIMULACRA 2's
+                # epilogue). Cost: one cache entry per shape, against Dynamo's
+                # limit of 8.
+                self._compiled = torch.compile(self._fn, dynamic=self._dynamic)
             except Exception:
                 self._eager_only = True
                 return self._fn(*args, **kwargs)
@@ -104,10 +126,10 @@ class _LazyCompiled:
             return self._fn(*args, **kwargs)
 
 
-def _maybe_compile(fn, key: str):
+def _maybe_compile(fn, key: str, dynamic=None):
     cached = _compiled_cache.get(key)
     if cached is None:
-        cached = _LazyCompiled(fn, key)
+        cached = _LazyCompiled(fn, key, dynamic)
         _compiled_cache[key] = cached
     return cached
 
