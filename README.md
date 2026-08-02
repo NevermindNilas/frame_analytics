@@ -577,7 +577,22 @@ Or skip the file and get the pools directly, which is the whole-encode case:
 fa_vs.pooled_scores(fa_vs.Metric(ref, enc, "ssim"))["float_ssim"]["mean"]
 ```
 
-`Metric` also takes `device`, `dtype`, `data_range`, `crop_border`,
+Pick where it runs with `accelerator`:
+
+```python
+fa_vs.Metric(ref, enc, "ssim")                        # auto: GPU if present
+fa_vs.Metric(ref, enc, "ssim", accelerator="cpu")     # force CPU
+fa_vs.Metric(ref, enc, "ssim", accelerator="gpu")     # require a GPU
+fa_vs.Metric(ref, enc, "ssim", device="cuda:1")       # second card, or "mps"
+```
+
+`"gpu"` raises when there is no CUDA device rather than quietly falling back —
+a script whose timings assume a card should stop, not run 40× slower. `device`
+takes a torch device for what a word cannot express and wins over
+`accelerator` when both are given. `bench/bench_vapoursynth.py` has the same
+`--accelerator` switch.
+
+`Metric` also takes `dtype`, `data_range`, `crop_border`,
 `backend_hint`, and an `options` dict that forwards per-metric keywords —
 `options={"ssim": {"win_size": 7}}`, or `{"psnr": {"eps": 1e-10}}` if a finite
 number for an identical pair suits you better than `inf`.

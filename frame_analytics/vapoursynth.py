@@ -50,15 +50,18 @@ Differences from the plugin, all of them widenings:
 * **Logging** is available on ``Metric`` itself (the plugin only logs from
   ``vmaf.VMAF``), in the same four formats.
 
-The work happens on the GPU when there is one; ``device="cpu"`` forces
-otherwise.  Frames are converted through the buffer protocol, so a plane costs
-one host->device copy and nothing else.
+The work happens on the GPU when there is one; ``accelerator="cpu"`` forces
+otherwise, and ``accelerator="gpu"`` refuses to run at all without one, which
+is what you want in a script whose timings assume a card.  ``device=`` takes a
+torch device for the cases a word cannot express (``"cuda:1"``, ``"mps"``) and
+wins over ``accelerator`` when both are given.  Frames are converted through
+the buffer protocol, so a plane costs one host->device copy and nothing else.
 
 Threads
 -------
 VapourSynth calls the selector from ``core.num_threads`` workers at once, which
 is free parallelism on CUDA -- the copies and launches from different threads
-overlap.  On ``device="cpu"`` it collides with torch's own intra-op pool:
+overlap.  On ``accelerator="cpu"`` it collides with torch's own intra-op pool:
 24 workers each asking for 24 threads is 576 threads fighting over 24 cores.
 Either ``torch.set_num_threads(1)`` and let VapourSynth do the parallelism, or
 ``core.num_threads = 2`` and let torch do it; the first is usually faster for
@@ -91,6 +94,7 @@ from .perceptual import lpips as _lpips
 from .ssimulacra2 import ssimulacra2 as _ssimulacra2
 
 __all__ = [
+    "ACCELERATORS",
     "Metric",
     "PSNR",
     "SSIM",
@@ -104,6 +108,7 @@ __all__ = [
     "LPIPS",
     "SSIMULACRA2",
     "available_features",
+    "resolve_device",
     "pooled_scores",
 ]
 
@@ -505,13 +510,43 @@ def _check_clips(reference, distorted, feats):
         )
 
 
-def _resolve_device(device) -> torch.device:
-    if device is None:
+#: What ``accelerator`` accepts.  ``"gpu"`` is the word a VapourSynth script
+#: reaches for; the torch spelling works too, and ``device`` is still there for
+#: the cases a word cannot express, like a second card.
+ACCELERATORS = ("auto", "gpu", "cuda", "cpu")
+
+
+def resolve_device(accelerator="auto", device=None) -> torch.device:
+    """Turn ``accelerator``/``device`` into one torch device.
+
+    ``device`` wins when both are given: it is the more specific of the two,
+    and the only way to name ``cuda:1`` or a backend this list has never heard
+    of.  Asking for ``"gpu"`` without one present is an error rather than a
+    silent fall back to the CPU -- a run that quietly went 40x slower is worse
+    than one that stopped.
+    """
+    if device is not None:
+        dev = torch.device(device)
+        if dev.type == "cuda" and not torch.cuda.is_available():
+            raise vs.Error("Metric: device='cuda' but torch reports no CUDA device")
+        return dev
+
+    acc = str(accelerator).strip().lower()
+    if acc == "auto":
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dev = torch.device(device)
-    if dev.type == "cuda" and not torch.cuda.is_available():
-        raise vs.Error("Metric: device='cuda' but torch reports no CUDA device")
-    return dev
+    if acc == "cpu":
+        return torch.device("cpu")
+    if acc in ("gpu", "cuda"):
+        if not torch.cuda.is_available():
+            raise vs.Error(
+                f"Metric: accelerator={accelerator!r} but torch reports no CUDA "
+                "device. Use accelerator=\"cpu\", or accelerator=\"auto\" to take "
+                "whichever is present; other torch backends are reachable as "
+                'device="mps" and so on.'
+            )
+        return torch.device("cuda")
+    raise vs.Error(f"Metric: accelerator must be one of {list(ACCELERATORS)}, "
+                   f"got {accelerator!r}")
 
 
 # --------------------------------------------------------------------------- #
@@ -523,6 +558,7 @@ def Metric(
     distorted: vs.VideoNode,
     feature: Union[int, str, Sequence[Union[int, str]], None] = None,
     *,
+    accelerator: str = "auto",
     device: Union[str, torch.device, None] = None,
     dtype: Optional[torch.dtype] = None,
     data_range: Optional[float] = None,
@@ -547,8 +583,13 @@ def Metric(
     feature
         Ids or names, one or a list; see the table at the top of the module and
         :func:`available_features`.
+    accelerator
+        ``"auto"`` (GPU when there is one, else CPU), ``"gpu"``/``"cuda"``, or
+        ``"cpu"``.  ``"gpu"`` raises when no CUDA device is present rather than
+        quietly running 40x slower on the CPU.
     device
-        Where to compute.  CUDA when there is one, otherwise CPU.
+        A specific torch device, for what a word cannot say -- ``"cuda:1"``,
+        ``"mps"``.  Overrides ``accelerator`` when both are given.
     dtype
         Compute dtype.  Default float32 (float64 for float64 input).
     data_range
@@ -577,7 +618,7 @@ def Metric(
     """
     feats = _resolve_features(feature)
     _check_clips(reference, distorted, feats)
-    dev = _resolve_device(device)
+    dev = resolve_device(accelerator, device)
 
     runner = _Runner(feats, distorted.format, dev, dtype, data_range,
                      crop_border, backend_hint, options)

@@ -126,6 +126,45 @@ def test_names_and_ids_agree():
     assert by_id == by_name
 
 
+@pytest.mark.parametrize("accelerator", ["auto", "cpu"] +
+                         (["gpu", "cuda"] if torch.cuda.is_available() else []))
+def test_accelerator_switch(accelerator):
+    """Same numbers whichever accelerator produced them."""
+    ref, dist = _pair(planes=1)
+    r, d = _clip(ref, vs.GRAY8), _clip(dist, vs.GRAY8)
+    got = _props(fa_vs.Metric(r, d, ["psnr", "ssim"], accelerator=accelerator))
+    want = _props(fa_vs.Metric(r, d, ["psnr", "ssim"], device="cpu"))
+    assert got["psnr_y"] == pytest.approx(want["psnr_y"], rel=1e-6)
+    assert got["float_ssim"] == pytest.approx(want["float_ssim"], rel=1e-6)
+
+
+def test_device_overrides_accelerator():
+    """``device`` is the more specific of the two, so it wins."""
+    assert fa_vs.resolve_device("cpu", "cpu").type == "cpu"
+    assert fa_vs.resolve_device("auto").type == (
+        "cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        # accelerator says CPU, device says otherwise -- device wins
+        assert fa_vs.resolve_device("cpu", "cuda").type == "cuda"
+        assert fa_vs.resolve_device("gpu").type == "cuda"
+
+
+def test_bad_accelerator():
+    ref, dist = _pair(planes=1)
+    r, d = _clip(ref, vs.GRAY8), _clip(dist, vs.GRAY8)
+    with pytest.raises(vs.Error, match="accelerator must be one of"):
+        fa_vs.Metric(r, d, "psnr", accelerator="tpu")
+
+
+@pytest.mark.skipif(torch.cuda.is_available(), reason="needs a machine with no CUDA")
+def test_gpu_without_a_gpu_refuses():
+    """Asking for a GPU that is not there stops, rather than crawling on CPU."""
+    ref, dist = _pair(planes=1)
+    r, d = _clip(ref, vs.GRAY8), _clip(dist, vs.GRAY8)
+    with pytest.raises(vs.Error, match="no CUDA device"):
+        fa_vs.Metric(r, d, "psnr", accelerator="gpu")
+
+
 @pytest.mark.parametrize("device", DEVICES)
 def test_values_match_a_direct_call_yuv(device):
     """Y/Cb/Cr at their own resolutions, luma-only SSIM -- as libvmaf does it."""

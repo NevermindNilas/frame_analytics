@@ -1,7 +1,7 @@
 """VapourSynth throughput: how many frames a second the filter scores.
 
     python bench/bench_vapoursynth.py
-    python bench/bench_vapoursynth.py --frames 400 --device cpu
+    python bench/bench_vapoursynth.py --frames 400 --accelerator cpu
 
 What is being measured is the *filter*, not the kernel: the numbers include
 VapourSynth's frame request, the host->device copy of every plane, the Python
@@ -95,7 +95,10 @@ def _time(clip, frames):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--frames", type=int, default=200)
-    ap.add_argument("--device", default=None, help="cuda / cpu (default: cuda if present)")
+    ap.add_argument("--accelerator", default="auto", choices=fa_vs.ACCELERATORS,
+                    help="auto (default), gpu, cuda or cpu")
+    ap.add_argument("--device", default=None,
+                    help="a specific torch device (cuda:1, mps); overrides --accelerator")
     ap.add_argument("--format", default="YUV420P8")
     ap.add_argument("--size", default=None, choices=[s[0] for s in SIZES],
                     help="one size only -- the honest way to read the "
@@ -104,7 +107,7 @@ def main() -> int:
 
     sizes = [s for s in SIZES if args.size is None or s[0] == args.size]
     fmt = getattr(vs, args.format)
-    device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
+    device = fa_vs.resolve_device(args.accelerator, args.device)
     print(f"VapourSynth {core}\ndevice={device}  format={args.format}  "
           f"frames={args.frames}  threads={core.num_threads}\n")
 
