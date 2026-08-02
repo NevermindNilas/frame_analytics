@@ -360,16 +360,6 @@ def _fmt(v: float) -> str:
     return f"{v:.6f}"
 
 
-def _timestamp(n: int, fps_num: int, fps_den: int) -> str:
-    if fps_num <= 0:
-        fps_num, fps_den = 24, 1
-    total = n * fps_den / fps_num
-    h, rem = divmod(total, 3600.0)
-    m, s = divmod(rem, 60.0)
-    ms = round((s - int(s)) * 1000.0)
-    return f"{int(h):02d}:{int(m):02d}:{int(s):02d},{ms:03d}"
-
-
 class _Logger:
     """Collects per-frame scores and writes them once the clip has been read.
 
@@ -386,7 +376,6 @@ class _Logger:
         self.fmt = _LOG_FORMATS[fmt]
         self.props = list(props)
         self.num_frames = clip.num_frames
-        self.fps = (clip.fps_num, clip.fps_den)
         self.rows: Dict[int, Dict[str, float]] = {}
         self.lock = threading.Lock()
         self.written = False
@@ -460,12 +449,17 @@ class _Logger:
         return "\n".join(out) + "\n"
 
     def _as_sub(self, rows) -> str:
+        """MicroDVD, which is what libvmaf's format 3 actually writes.
+
+        ``{start}{end}`` are frame numbers, not timestamps, so the file needs
+        no frame rate and cannot disagree with the clip's -- and the fields
+        within a line are pipe-separated, MicroDVD's own line break.
+        """
         out = []
-        for i, (n, r) in enumerate(rows, 1):
-            body = "\\N".join(f"{p}: {_fmt(r[p])}" for p in self.props if p in r)
-            out.append(f"{i}\n{_timestamp(n, *self.fps)} --> "
-                       f"{_timestamp(n + 1, *self.fps)}\nframe {n}\\N{body}\n")
-        return "\n".join(out)
+        for n, r in rows:
+            body = "".join(f"{p}: {_fmt(r[p])}|" for p in self.props if p in r)
+            out.append(f"{{{n}}}{{{n + 1}}}frame: {n}|{body}")
+        return "\n".join(out) + "\n"
 
 
 # --------------------------------------------------------------------------- #
@@ -569,8 +563,9 @@ def Metric(
         ``{"ssim": {"win_size": 7}, "gmsd": {"downsample": False}}``.
     log_path, log_format
         Write every frame's scores to a file when the clip has been read
-        through.  Formats: 0 XML, 1 JSON, 2 CSV, 3 subtitle -- the plugin's
-        numbering.  Frames that are never requested never appear.
+        through.  Formats: 0 XML, 1 JSON, 2 CSV, 3 subtitle (MicroDVD, as
+        libvmaf writes it) -- the plugin's numbering.  Frames that are never
+        requested never appear.
 
     Notes
     -----

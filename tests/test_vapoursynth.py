@@ -325,7 +325,7 @@ def _drain(clip):
         pass
 
 
-@pytest.mark.parametrize("fmt,ext", [(0, "xml"), (1, "json"), (2, "csv"), (3, "srt")])
+@pytest.mark.parametrize("fmt,ext", [(0, "xml"), (1, "json"), (2, "csv"), (3, "sub")])
 def test_log_written(tmp_path, fmt, ext):
     r, d = _scored()
     path = tmp_path / f"scores.{ext}"
@@ -342,8 +342,10 @@ def test_log_written(tmp_path, fmt, ext):
     if fmt == 2:
         assert text.splitlines()[0].startswith("frameNum,psnr_r")
         assert len(text.splitlines()) == 4
-    if fmt == 3:
-        assert "-->" in text
+    if fmt == 3:                                 # MicroDVD, as libvmaf writes it
+        assert text.splitlines()[0].startswith("{0}{1}frame: 0|")
+        assert len(text.splitlines()) == 3
+        assert "\\N" not in text                 # a MicroDVD line break is "|"
 
 
 def test_log_of_an_identical_pair_is_still_valid_json(tmp_path):

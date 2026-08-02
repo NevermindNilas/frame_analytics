@@ -562,7 +562,8 @@ Two things need saying:
   plugin cannot hand it one. Everything else about it behaves like a filter.
 
 Logging is on `Metric` itself, in the plugin's four formats — 0 XML, 1 JSON,
-2 CSV, 3 subtitle — written once the clip has been read through, with the
+2 CSV, 3 subtitle (MicroDVD, as libvmaf writes it) — written once the clip has
+been read through, with the
 per-frame scores and libvmaf's four pools (min, max, mean, shifted harmonic
 mean):
 
