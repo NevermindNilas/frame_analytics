@@ -232,6 +232,30 @@ def _weights_tensor(device) -> torch.Tensor:
     return w
 
 
+_opsin_cache: dict = {}
+
+
+def _opsin_cols(device, dtype) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """The opsin matrix as three ``(1,3,1,1)`` columns, cached per device.
+
+    Columns, not rows: broadcasting a column against one input plane gives all
+    three mixed planes in one kernel, so the 3x3 costs three multiplies and two
+    adds instead of nine and six.  Cached for the reason
+    :func:`_blur_window` is -- building them per call is a host-to-device copy,
+    which syncs and is illegal inside a CUDA graph capture.
+    """
+    key = (str(device), dtype)
+    cols = _opsin_cache.get(key)
+    if cols is None:
+        cols = tuple(
+            torch.tensor([_M[0][i], _M[1][i], _M[2][i]], dtype=torch.float64)
+            .view(1, 3, 1, 1).to(device=device, dtype=dtype)
+            for i in range(3)
+        )
+        _opsin_cache[key] = cols
+    return cols
+
+
 def _blur_h(x: torch.Tensor, taps) -> torch.Tensor:
     """One zero-padded horizontal pass, written as shifted adds.
 
@@ -304,23 +328,31 @@ def _srgb_to_linear(v: torch.Tensor) -> torch.Tensor:
                        ((v + 0.055) / 1.055).clamp_min(0.0).pow(2.4))
 
 
-def _xyb_positive(lin: torch.Tensor) -> torch.Tensor:
+def _xyb_positive(lin: torch.Tensor, mr, mg, mb) -> torch.Tensor:
     """Linear sRGB ``(N,3,H,W)`` -> the 0..1-ish XYB of ``MakePositiveXYB``.
 
     ``ToXYB`` at libjxl's default intensity target of 255 nits leaves the
     opsin matrix unscaled, so this is the plain absorbance + cube root, and
     then the three affine adjustments that put X, Y and B-Y into roughly the
     same 0..1 range -- which is what lets one C2 serve all three channels.
+
+    ``mr``/``mg``/``mb`` are the opsin *columns* from :func:`_opsin_cols`.
+    Mixing against them rather than against nine python scalars is the same
+    arithmetic in the same order -- ``M[j][0]*r + M[j][1]*g + M[j][2]*b`` for
+    every ``j``, so it is bit-identical -- but it is three broadcast kernels
+    over the whole frame instead of nine over a third of it, and likewise one
+    ``clamp``/``pow``/``sub`` instead of three. Same element count, a third of
+    the launches, and this function runs twice per scale, twelve times per
+    call: it was 444 of the ~1700 device ops a score costs.
     """
     r = lin[:, 0:1]
     g = lin[:, 1:2]
     b = lin[:, 2:3]
-    m0 = (_M[0][0] * r + _M[0][1] * g + _M[0][2] * b + _OPSIN_BIAS).clamp_min(0.0)
-    m1 = (_M[1][0] * r + _M[1][1] * g + _M[1][2] * b + _OPSIN_BIAS).clamp_min(0.0)
-    m2 = (_M[2][0] * r + _M[2][1] * g + _M[2][2] * b + _OPSIN_BIAS).clamp_min(0.0)
-    m0 = m0.pow(1.0 / 3.0) - _OPSIN_BIAS_CBRT
-    m1 = m1.pow(1.0 / 3.0) - _OPSIN_BIAS_CBRT
-    m2 = m2.pow(1.0 / 3.0) - _OPSIN_BIAS_CBRT
+    mixed = (mr * r + mg * g + mb * b + _OPSIN_BIAS).clamp_min(0.0)
+    mixed = mixed.pow(1.0 / 3.0) - _OPSIN_BIAS_CBRT
+    m0 = mixed[:, 0:1]
+    m1 = mixed[:, 1:2]
+    m2 = mixed[:, 2:3]
 
     x = 0.5 * (m0 - m1)
     y = 0.5 * (m0 + m1)
@@ -354,7 +386,7 @@ def _norms(v: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     return one, four
 
 
-def _scale_maps(x1, x2, mu1, mu2, s11, s22, s12):
+def _scale_maps(x1, x2, mu1, mu2, sp, sd):
     """The six per-channel norms of one scale, as one ``(N, 3, 6)`` tensor.
 
     Takes its planes **flat**, ``(N, 3, H*W)``. Two reasons, both about the
@@ -366,6 +398,10 @@ def _scale_maps(x1, x2, mu1, mu2, s11, s22, s12):
 
     One region: every intermediate is frame-shaped, and the three maps share
     ``mu1``/``mu2``, so splitting them would re-read the same planes 3 times.
+
+    ``sp`` and ``sd`` are ``blur(x1^2 + x2^2)`` and ``blur((x1 - x2)^2)``,
+    which is *four* blurred groups where upstream has five -- see the call
+    site for why that is the same arithmetic.
     """
     # Upstream writes this as 1 - num_m * num_s / den_s with
     # num_m = 1 - (mu1-mu2)^2. Factoring the subtraction into the numerator --
@@ -378,13 +414,21 @@ def _scale_maps(x1, x2, mu1, mu2, s11, s22, s12):
     # emits an approximate fp32 divide (a/a comes back 1 +- 1e-7), and this
     # metric's 100 - 10*s^0.628 has infinite slope at s = 0 -- written the
     # upstream way, an identical pair scores 99.99 on CUDA.
-    v11 = s11 - mu1 * mu1
-    v22 = s22 - mu2 * mu2
-    v12 = s12 - mu1 * mu2
+    #
+    # ds - ns is then v11 + v22 - 2*v12, which telescopes:
+    #   (s11 - m1^2) + (s22 - m2^2) - 2*(s12 - m1*m2)
+    #     == (s11 + s22 - 2*s12) - (m1 - m2)^2  ==  sd - q
+    # so the whole numerator needs only sd, and den_s needs only s11 + s22.
+    # Neither s11, s22 nor s12 is wanted on its own, and blur is linear, so
+    # the sums are formed *before* the blur rather than after it. Computing
+    # sd as blur((x1-x2)^2) also removes the one cancellation left in the
+    # expression: s11 + s22 - 2*s12 subtracts three nearly-equal numbers on a
+    # good match, where blur of a square is non-negative term by term.
     q = (mu1 - mu2) * (mu1 - mu2)
-    num_s = (v12 + v12) + _C2
-    den_s = (v11 + v22) + _C2
-    d = (((den_s - num_s) + q * num_s) / den_s).clamp_min(0.0)
+    den_s = (sp - (mu1 * mu1 + mu2 * mu2)) + _C2
+    num_s = (den_s - sd) + q
+
+    d = (((sd - q) + q * num_s) / den_s).clamp_min(0.0)
 
     # (1 + |dist - blur(dist)|) / (1 + |orig - blur(orig)|) - 1, with the same
     # subtraction folded in: above zero the distorted image has structure the
@@ -467,6 +511,7 @@ def ssimulacra2(
     lin1 = _srgb_to_linear(x4.to(wdt) * (1.0 / L))
     lin2 = _srgb_to_linear(y4.to(wdt) * (1.0 / L))
     win = _blur_window(1.5, x4.device, wdt)
+    mr, mg, mb = _opsin_cols(x4.device, wdt)
     taps = recursive_gaussian_taps(1.5)
     # dynamic=False, and it is the difference between a compiled epilogue that
     # pays for itself and one that costs more than it saves. A pyramid puts six
@@ -497,21 +542,27 @@ def ssimulacra2(
             lin1 = _downsample2(lin1)
             lin2 = _downsample2(lin2)
 
-        x1 = xyb(lin1)
-        x2 = xyb(lin2)
+        x1 = xyb(lin1, mr, mg, mb)
+        x2 = xyb(lin2, mr, mg, mb)
 
-        # mu1, mu2, s11, s22, s12 from one blur over 15 packed planes rather
-        # than five blurs of three.
-        f = _blur(torch.cat([x1, x2, x1 * x1, x2 * x2, x1 * x2], dim=1),
+        # One blur over 12 packed planes rather than five blurs of three.
+        # Upstream blurs x1, x2, x1^2, x2^2 and x1*x2; the last three are only
+        # ever read as s11 + s22 and as s11 + s22 - 2*s12 (see _scale_maps),
+        # and the blur is a linear operator, so summing first and blurring the
+        # sums is the same arithmetic over four groups instead of five. 20% of
+        # the filter's work, and the two convolutions are the single largest
+        # kernel in the profile.
+        dx = x1 - x2
+        f = _blur(torch.cat([x1, x2, x1 * x1 + x2 * x2, dx * dx], dim=1),
                   win, taps)
-        # Viewed as (N, 5, 3, H*W) rather than split on the channel axis: the
-        # five groups are then plain views whatever the batch size, where
+        # Viewed as (N, 4, 3, H*W) rather than split on the channel axis: the
+        # four groups are then plain views whatever the batch size, where
         # `f.split(3, 1)` hands the epilogue strided planes it would have to
         # copy before it could flatten them.
-        fv = f.view(f.shape[0], 5, 3, -1)
+        fv = f.view(f.shape[0], 4, 3, -1)
         flat = x1.shape[0], 3, -1
         per_scale.append(maps(x1.reshape(*flat), x2.reshape(*flat),
-                              fv[:, 0], fv[:, 1], fv[:, 2], fv[:, 3], fv[:, 4]))
+                              fv[:, 0], fv[:, 1], fv[:, 2], fv[:, 3]))
         prev_h, prev_w = lin1.shape[-2], lin1.shape[-1]
 
     # Msssim::Score()'s order: channel-major, then scale, then norm, then the
