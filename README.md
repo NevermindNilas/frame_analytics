@@ -482,6 +482,106 @@ fa.ssim(a, b, data_range=255.0, luma="matlab", crop_border=scale)   # Y-SSIM
 `test_y_channel=True` computes. `"bt601"` and `"bt709"` are the full-range
 definitions. The crop is a view, so it costs nothing.
 
+## VapourSynth
+
+`frame_analytics.vapoursynth` is
+[VapourSynth-VMAF](https://github.com/HomeOfVapourSynthEvolution/VapourSynth-VMAF)'s
+`vmaf.Metric` — same signature, same feature numbering, same frame-property
+names — with these kernels underneath:
+
+```python
+import vapoursynth as vs
+from frame_analytics import vapoursynth as fa_vs
+
+core = vs.core
+ref  = core.lsmas.LWLibavSource("source.mkv")
+enc  = core.lsmas.LWLibavSource("encode.mkv")
+
+enc = fa_vs.Metric(ref, enc, [0, 2, 3])       # psnr, ssim, ms_ssim
+enc.set_output()                              # vspipe -p . out.vpy
+```
+
+```bash
+pip install frame-analytics[vapoursynth]
+```
+
+Every score lands in a frame property, so `vspipe`, `vspreview`, an
+`akarin.Text` overlay or a `std.FrameEval` decision all read it the usual way.
+
+| id | feature | frame properties |
+|---:|---|---|
+| 0 | `psnr` | `psnr_y`, `psnr_cb`, `psnr_cr` |
+| 1 | `psnr_hvs` | *libvmaf only — raises* |
+| 2 | `ssim` | `float_ssim` |
+| 3 | `ms_ssim` | `float_ms_ssim` |
+| 4 | `ciede2000` | *libvmaf only — raises* |
+| 5–10 | `gmsd`, `gms`, `mse`, `l1`, `charbonnier`, `huber` | `gmsd`, `gms`, `mse_y`… |
+| 11 | `lpips` | `lpips` — RGB clips |
+| 12 | `ssimulacra2` | `ssimulacra2` — RGB clips |
+
+Ids 0–4 are libvmaf's own numbering; 1 and 4 are the two features with nothing
+behind them here, and asking for either says so instead of returning nothing.
+Everything from 5 up is an extension, and every feature can be named instead —
+`fa_vs.Metric(ref, enc, ["psnr", "ssim"])` — which is the form worth writing.
+`fa_vs.SSIM(ref, enc)`, `fa_vs.SSIMULACRA2(ref, enc)` and the rest are the
+one-metric spellings.
+
+Where it is wider than the plugin: GRAY/YUV/**RGB**, 8–16 bit integer **and
+32-bit float**, against the plugin's YUV-integer-only. The per-plane metrics
+run on each plane at its own resolution and the single-value ones on luma,
+which is what libvmaf does — `float_ssim` is a luma number there too. On an RGB
+clip they use all three channels instead.
+
+RTX 3090, 24-thread host, VapourSynth R78, YUV420P8 (RGB24 for the last two),
+end-to-end frames per second through `vspipe` — frame request, host→device
+copy, kernel, frame properties:
+
+| | 720p | 1080p | 4K |
+|---|---:|---:|---:|
+| `psnr` | 1102 | 775 | 389 |
+| `ssim` | 1736 | 1324 | 552 |
+| `ms_ssim` | 769 | 772 | 267 |
+| `gmsd` | 1214 | 1110 | 448 |
+| all four at once | 458 | 468 | 143 |
+| `lpips` | 120 | 83 | 14 |
+| `ssimulacra2` | 174 | 130 | 22 |
+
+For scale: `ssimulacra2_rs` scores a 1448×1080 pair in 322 ms on this machine's
+CPU. `python bench/bench_vapoursynth.py` regenerates this; `--device cpu` is
+the other half of the picture.
+
+Two things need saying:
+
+- **LPIPS and SSIMULACRA 2 want real RGB** and refuse YUV rather than guess a
+  matrix: `enc.resize.Bicubic(format=vs.RGBS, matrix_in_s="709")` first.
+  SSIMULACRA 2 additionally wants sRGB-encoded values, which is what that
+  conversion of ordinary video gives you, and it is **not symmetric** — the
+  reference clip goes first.
+- **This is a Python module, not a native plugin.** There is no `core.fa`
+  namespace, because the metric behind it takes a torch tensor and a VapourSynth
+  plugin cannot hand it one. Everything else about it behaves like a filter.
+
+Logging is on `Metric` itself, in the plugin's four formats — 0 XML, 1 JSON,
+2 CSV, 3 subtitle (MicroDVD, as libvmaf writes it) — written once the clip has
+been read through, with the
+per-frame scores and libvmaf's four pools (min, max, mean, shifted harmonic
+mean):
+
+```python
+enc = fa_vs.Metric(ref, enc, ["psnr", "ssim"], log_path="scores.json", log_format=1)
+```
+
+Or skip the file and get the pools directly, which is the whole-encode case:
+
+```python
+fa_vs.pooled_scores(fa_vs.Metric(ref, enc, "ssim"))["float_ssim"]["mean"]
+```
+
+`Metric` also takes `device`, `dtype`, `data_range`, `crop_border`,
+`backend_hint`, and an `options` dict that forwards per-metric keywords —
+`options={"ssim": {"win_size": 7}}`, or `{"psnr": {"eps": 1e-10}}` if a finite
+number for an identical pair suits you better than `inf`.
+
 ## Install
 
 ```bash
@@ -529,6 +629,7 @@ python bench/bench_memory.py       # peak memory, forward and loss step
 python bench/bench_fused_ssim.py   # head-to-head vs fused-ssim
 python bench/bench_lpips.py        # LPIPS vs lpips / torchmetrics / piq
 python bench/bench_ssimulacra2.py  # SSIMULACRA 2, one fresh process per case
+python bench/bench_vapoursynth.py  # end-to-end fps through the VapourSynth filter
 ```
 
 The LPIPS weight blob is checked in, not generated at install time — building
