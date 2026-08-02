@@ -244,6 +244,14 @@ def test_single_metric_wrappers():
     assert set(_props(fa_vs.PSNR(r, d))) == {"psnr_r", "psnr_g", "psnr_b"}
 
 
+def test_numpy_integer_feature():
+    """A numpy scalar is not a Python int; it is accepted either way."""
+    ref, dist = _pair()
+    r, d = _clip(ref, vs.RGB24), _clip(dist, vs.RGB24)
+    assert _props(fa_vs.Metric(r, d, np.int64(2))) == _props(fa_vs.Metric(r, d, 2))
+    assert _props(fa_vs.Metric(r, d, [np.int64(2)])) == _props(fa_vs.Metric(r, d, 2))
+
+
 def test_available_features():
     feats = fa_vs.available_features()
     assert feats["psnr"] == 0 and feats["ssim"] == 2 and feats["ms_ssim"] == 3

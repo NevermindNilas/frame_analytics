@@ -192,7 +192,10 @@ def _resolve_features(feature) -> List[_Feature]:
             "feature is required; pass an id or a name, e.g. 0 / \"psnr\" / "
             f"[0, 2, 3]. Available: {sorted(_BY_NAME)}"
         )
-    if isinstance(feature, (str, int)) and not isinstance(feature, bool):
+    # np.integer alongside int: a numpy scalar is not a Python int, and one
+    # arriving on its own would otherwise be rejected while the same value
+    # inside a list is accepted.
+    if isinstance(feature, (str, int, np.integer)) and not isinstance(feature, bool):
         feature = [feature]
     if not isinstance(feature, Iterable):
         raise TypeError(f"feature must be an int, a str or a sequence of them, "
