@@ -33,9 +33,10 @@ from .functional import (
     ssim,
 )
 from .perceptual import lpips
+from .ssimulacra2 import ssimulacra2
 
 __all__ = ["MSE", "PSNR", "SSIM", "MSSSIM", "GMSD", "L1", "Charbonnier",
-           "Huber", "LPIPS", "StreamingMetrics"]
+           "Huber", "LPIPS", "SSIMULACRA2", "StreamingMetrics"]
 
 
 class MSE(nn.Module):
@@ -284,6 +285,34 @@ class LPIPS(nn.Module):
         return self.forward(x, y)
 
 
+class SSIMULACRA2(nn.Module):
+    """SSIMULACRA 2 (Sneyers 2022/2023). Higher is better; 100 is identical.
+
+    ``forward(orig, dist)`` -- the argument order matters here, unlike SSIM:
+    the metric distinguishes an added edge from a lost one, so it is not
+    symmetric.
+
+    Inputs are **sRGB-encoded** RGB; the metric linearises them itself. There
+    is no ``.loss()``: the final ``100 - 10*s^0.628`` has an unbounded
+    derivative as the pair converges, so it is a reporting metric rather than
+    an objective.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 reduction: str = "mean", dtype: Optional[torch.dtype] = None,
+                 crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        return ssimulacra2(x, y, data_range=self.data_range,
+                           reduction=self.reduction, dtype=self.dtype_,
+                           crop_border=self.crop_border)
+
+
 class StreamingMetrics:
     """Fixed-shape video scorer with CUDA-graph replay and pinned staging.
 
@@ -305,7 +334,7 @@ class StreamingMetrics:
     """
 
     _KNOWN = ("mse", "psnr", "ssim", "ms_ssim", "gmsd", "gms", "l1",
-              "charbonnier", "huber", "lpips")
+              "charbonnier", "huber", "lpips", "ssimulacra2")
 
     def __init__(self, shape, device="cuda", dtype=torch.uint8,
                  data_range: Optional[float] = None, metrics=("mse", "psnr", "ssim"),
@@ -361,6 +390,11 @@ class StreamingMetrics:
             out["gms"] = gms(self.ref, self.dist, data_range=self._L)
         if "lpips" in self.metrics:
             out["lpips"] = lpips(self.ref, self.dist, data_range=self._L)
+        if "ssimulacra2" in self.metrics:
+            # ref is the original, dist the distorted -- the one metric here
+            # that is not symmetric in its two arguments.
+            out["ssimulacra2"] = ssimulacra2(self.ref, self.dist,
+                                             data_range=self._L)
         for name, fn in (("l1", l1), ("charbonnier", charbonnier),
                          ("huber", huber)):
             if name in self.metrics:

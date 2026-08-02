@@ -35,7 +35,8 @@ Issues = "https://github.com/NevermindNilas/frame_analytics/issues"
 
 [project.optional-dependencies]
 # what the accuracy gate and the comparison tables need
-bench = ["scikit-image", "opencv-python", "pytorch-msssim", "piq", "torchmetrics", "kornia"]
+bench = ["scikit-image", "opencv-python", "pytorch-msssim", "piq", "torchmetrics",
+         "kornia", "ssimulacra2"]
 test = ["pytest", "scikit-image"]
 
 [tool.setuptools.dynamic]

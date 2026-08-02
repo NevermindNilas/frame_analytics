@@ -31,6 +31,13 @@ TOL_PSNR = 1e-6
 TOL_LPIPS = 5e-7
 TOL_LPIPS64 = 1e-8
 
+# SSIMULACRA 2 is a 0..100 score, so these are absolute score points. float32
+# costs ~1e-4 of a point; libjxl's own float32 recursive blur wobbles by ~0.1
+# against exact arithmetic, so this is an order of magnitude inside the spread
+# the reference implementation has with itself.
+TOL_SSIMULACRA2 = 5e-3
+TOL_SSIMULACRA2_64 = 1e-8
+
 RNG = np.random.default_rng(0xC0FFEE)
 
 
@@ -215,6 +222,30 @@ def main():
             ok &= report(f"{dev} lpips {h}x{w} fp64",
                          float(fa.lpips(ta.double(), tb.double(), data_range=255.0,
                                         dtype=torch.float64)), want, TOL_LPIPS64)
+
+    # SSIMULACRA 2. The reference marches libjxl's recursive Gaussian sample by
+    # sample in python, so these stay small; what is being checked is that the
+    # 11-tap FIR the torch path convolves with really is that recursion.
+    print("\n  -- SSIMULACRA 2 (vs the float64 reference) --")
+    s2_rng = np.random.default_rng(0x5217)
+    for h, w in ((64, 64), (81, 97)):
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float64)
+        base = 128 + 60 * np.sin(xx / 9.0) * np.cos(yy / 7.0)
+        a4 = np.stack([np.clip(base + 30 * np.sin(xx / 23.0), 0, 255),
+                       np.clip(base * 0.8 + 40, 0, 255),
+                       np.clip(base * 1.1 - 10, 0, 255)]).round()
+        b4 = np.clip(a4 + 6.0 * s2_rng.standard_normal(a4.shape), 0, 255).round()
+        want = ref.ssimulacra2_reference(a4, b4, 255.0)
+        for dev in devices:
+            ta = torch.as_tensor(a4, dtype=torch.uint8, device=dev)
+            tb = torch.as_tensor(b4, dtype=torch.uint8, device=dev)
+            ok &= report(f"{dev} ssimulacra2 {h}x{w} fp32",
+                         float(fa.ssimulacra2(ta, tb, data_range=255.0)),
+                         want, TOL_SSIMULACRA2)
+            ok &= report(f"{dev} ssimulacra2 {h}x{w} fp64",
+                         float(fa.ssimulacra2(ta, tb, data_range=255.0,
+                                              dtype=torch.float64)),
+                         want, TOL_SSIMULACRA2_64)
 
     # identity
     print("\n  -- degenerate cases --")
