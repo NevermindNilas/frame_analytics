@@ -92,17 +92,19 @@ def test_batch_and_reduction(dev):
     assert per.shape == (2,)
     assert abs(float(fa.ssimulacra2(x, y, data_range=255.0))
                - float(per.mean())) < 1e-9
-    # Each batch element is scored independently. Bit-identical in float64;
-    # in float32 the CPU backend vectorises a batch of two differently from a
-    # batch of one, which is worth ~1e-5 of a score point -- four orders below
-    # what the metric resolves, but not zero.
+    # Each batch element is scored independently. What "independently" can
+    # promise is float rounding, not bit-exactness: a batch of two does not
+    # reduce in the same order as a batch of one. In float32 the CPU backend
+    # vectorises the two differently, worth ~1e-5 of a score point; in float64
+    # the CUDA path moves by ~1 ulp since the moment blur folded to four
+    # groups. Both are orders below what the metric resolves, but not zero.
     solo = float(fa.ssimulacra2(x[0], y[0], data_range=255.0))
     assert abs(solo - float(per[0])) < 1e-3
     solo64 = float(fa.ssimulacra2(x[0], y[0], data_range=255.0,
                                   dtype=torch.float64))
     per64 = fa.ssimulacra2(x, y, data_range=255.0, reduction="none",
                            dtype=torch.float64)
-    assert solo64 == float(per64[0])
+    assert solo64 == pytest.approx(float(per64[0]), rel=1e-12)
 
 
 @pytest.mark.parametrize("dev", DEVICES)
