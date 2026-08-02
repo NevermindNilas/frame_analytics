@@ -13,7 +13,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "Nilas" }]
 keywords = [
     "ssim", "psnr", "mse", "image-quality", "video-quality", "metrics",
-    "pytorch", "cuda", "perceptual-loss",
+    "pytorch", "cuda", "perceptual-loss", "vapoursynth", "ssimulacra2", "lpips",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -38,6 +38,10 @@ Issues = "https://github.com/NevermindNilas/frame_analytics/issues"
 bench = ["scikit-image", "opencv-python", "pytorch-msssim", "piq", "torchmetrics",
          "kornia", "ssimulacra2"]
 test = ["pytest", "scikit-image"]
+# `frame_analytics.vapoursynth` only. On Linux the PyPI package is a source
+# build against an already-installed VapourSynth; on Windows the wheel is
+# self-contained.
+vapoursynth = ["vapoursynth>=57"]
 
 [tool.setuptools.dynamic]
 version = { attr = "frame_analytics.__version__" }

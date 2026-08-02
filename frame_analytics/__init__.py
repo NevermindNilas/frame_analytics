@@ -15,6 +15,11 @@ Three layers, all producing the same numbers:
 ``frame_analytics.backend``
     Optional C++/CUDA extension. Single fused kernel, zero intermediates.
     Used automatically when it builds; skipped silently when it does not.
+
+``frame_analytics.vapoursynth``
+    VapourSynth filter with ``VapourSynth-VMAF``'s ``vmaf.Metric`` API. Imported
+    on request, since it needs VapourSynth:
+    ``from frame_analytics import vapoursynth as fa_vs``.
 """
 
 from .functional import (  # noqa: F401
