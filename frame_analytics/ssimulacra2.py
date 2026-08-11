@@ -303,18 +303,71 @@ def _blur_conv(planes: torch.Tensor, win: torch.Tensor) -> torch.Tensor:
     return out.reshape(n, c, h, w)
 
 
-def _blur(planes: torch.Tensor, win: torch.Tensor, taps) -> torch.Tensor:
-    """Separable zero-padded blur over every plane, output same size as input.
+def _scale_stats(lin1, lin2, mr, mg, mb, taps):
+    """One pyramid scale, linear RGB in, the six per-channel norms out.
 
-    Zero padding is not a convenience here, it is the definition: libjxl's
-    scan reads 0 outside the image and does not renormalise, so the blurred
-    border is genuinely attenuated and the metric was tuned with that in it.
+    XYB for both images, the four-group moment pack, the separable blur and
+    the map/norm epilogue, as a single ``torch.compile`` region. The same
+    arithmetic used to live in four compiled functions with eager glue
+    between them -- the ``cat`` of the pack, the ``dx``/square elementwise
+    ops -- and that glue was pure memory traffic: every operand is
+    frame-shaped, so each eager op is another full read+write of the frame.
+    Fused, Inductor folds the pack construction into the blur's first pass
+    and the whole scale runs in a handful of kernels.
+
+    Zero padding in the blur is not a convenience, it is the definition:
+    libjxl's scan reads 0 outside the image and does not renormalise, so the
+    blurred border is genuinely attenuated and the metric was tuned with that
+    in it.
     """
-    fh = _maybe_compile(_blur_h, "ssimu2:blurh", dynamic=False)
-    fv = _maybe_compile(_blur_v, "ssimu2:blurv", dynamic=False)
-    if fh.active and fv.active:
-        return fv(fh(planes, taps), taps)
-    return _blur_conv(planes, win)
+    x1 = _xyb_positive(lin1, mr, mg, mb)
+    x2 = _xyb_positive(lin2, mr, mg, mb)
+
+    # One blur over 12 packed planes rather than five blurs of three.
+    # Upstream blurs x1, x2, x1^2, x2^2 and x1*x2; the last three are only
+    # ever read as s11 + s22 and as s11 + s22 - 2*s12 (see _scale_maps),
+    # and the blur is a linear operator, so summing first and blurring the
+    # sums is the same arithmetic over four groups instead of five.
+    #
+    # That is 20% of the filter's work, but only where the filter is what
+    # the wall clock is waiting for: measured (pre-fusion) against the same
+    # tree with the pack folding alone reverted, it was worth 1.056x at 1080p
+    # and 1.052x at 720p, and nothing at all at 360p (1.006x against a 1.007x
+    # A/A null), where the pyramid is bound by launch count rather than by
+    # pixels. It also carries the whole of the memory saving, because three
+    # fewer planes are in flight through the blur.
+    #
+    # Blurring (x1 - x2)^2 rather than reconstructing it from s11, s22 and
+    # s12 is also better conditioned; see _scale_maps.
+    dx = x1 - x2
+    f = _blur_v(_blur_h(torch.cat([x1, x2, x1 * x1 + x2 * x2, dx * dx],
+                                  dim=1), taps), taps)
+    # Viewed as (N, 4, 3, H*W) rather than split on the channel axis: the
+    # four groups are then plain views whatever the batch size, where
+    # `f.split(3, 1)` hands the epilogue strided planes it would have to
+    # copy before it could flatten them.
+    fv = f.view(f.shape[0], 4, 3, -1)
+    flat = x1.shape[0], 3, -1
+    return _scale_maps(x1.reshape(*flat), x2.reshape(*flat),
+                       fv[:, 0], fv[:, 1], fv[:, 2], fv[:, 3])
+
+
+def _scale_stats_eager(lin1, lin2, mr, mg, mb, win):
+    """The eager twin of :func:`_scale_stats`.
+
+    Same arithmetic; only the blur changes form. Shifted adds would
+    materialise a full-resolution temporary per tap with no Inductor to fuse
+    them, so the blur runs as two plain convolutions instead -- see
+    :func:`_blur_conv`.
+    """
+    x1 = _xyb_positive(lin1, mr, mg, mb)
+    x2 = _xyb_positive(lin2, mr, mg, mb)
+    dx = x1 - x2
+    f = _blur_conv(torch.cat([x1, x2, x1 * x1 + x2 * x2, dx * dx], dim=1), win)
+    fv = f.view(f.shape[0], 4, 3, -1)
+    flat = x1.shape[0], 3, -1
+    return _scale_maps(x1.reshape(*flat), x2.reshape(*flat),
+                       fv[:, 0], fv[:, 1], fv[:, 2], fv[:, 3])
 
 
 # --------------------------------------------------------------------------- #
@@ -328,6 +381,19 @@ def _srgb_to_linear(v: torch.Tensor) -> torch.Tensor:
                        ((v + 0.055) / 1.055).clamp_min(0.0).pow(2.4))
 
 
+def _linearize_pair(x4, y4, inv_l, wdt):
+    """Input scaling plus the EOTF for both frames, as one compiled region.
+
+    Eager, this is nine full-resolution kernels per image -- the cast, the
+    scale, the compare, the two branch chains and the ``where`` -- every one
+    of them another full read+write of the frame. Fused, each input is read
+    once. It runs once per call and only at full resolution, so it costs a
+    single Dynamo cache entry per resolution.
+    """
+    return (_srgb_to_linear(x4.to(wdt) * inv_l),
+            _srgb_to_linear(y4.to(wdt) * inv_l))
+
+
 def _xyb_positive(lin: torch.Tensor, mr, mg, mb) -> torch.Tensor:
     """Linear sRGB ``(N,3,H,W)`` -> the 0..1-ish XYB of ``MakePositiveXYB``.
 
@@ -339,11 +405,19 @@ def _xyb_positive(lin: torch.Tensor, mr, mg, mb) -> torch.Tensor:
     ``mr``/``mg``/``mb`` are the opsin *columns* from :func:`_opsin_cols`.
     Mixing against them rather than against nine python scalars is the same
     arithmetic in the same order -- ``M[j][0]*r + M[j][1]*g + M[j][2]*b`` for
-    every ``j``, so it is bit-identical -- but it is three broadcast kernels
-    over the whole frame instead of nine over a third of it, and likewise one
-    ``clamp``/``pow``/``sub`` instead of three. Same element count, a third of
-    the launches, and this function runs twice per scale, twelve times per
-    call: it was 444 of the ~1700 device ops a score costs.
+    every ``j`` -- but it is three broadcast kernels over the whole frame
+    instead of nine over a third of it, and likewise one ``clamp``/``pow``/
+    ``sub`` instead of three. Same element count, a third of the launches, and
+    this function runs twice per scale, twelve times per call: it was 444 of
+    the ~1700 device ops a score costs.
+
+    The mix itself is bitwise identical to the nine-scalar form everywhere.
+    The *function* is bitwise identical on CUDA in both dtypes and on CPU in
+    float64; on CPU in float32 it moves by up to 4.8e-7, which is ATen's
+    vectorised ``pow(1/3)`` returning a 1-ulp different value on a 3-channel
+    contiguous tensor than on three 1-channel ones, amplified by the ``x14``
+    on X. That is a kernel-layout artefact of the wider tensor, not a
+    different sum.
     """
     r = lin[:, 0:1]
     g = lin[:, 1:2]
@@ -508,8 +582,10 @@ def ssimulacra2(
         raise ValueError(
             f"SSIMULACRA 2 needs at least 8x8, got {tuple(x4.shape[-2:])}")
 
-    lin1 = _srgb_to_linear(x4.to(wdt) * (1.0 / L))
-    lin2 = _srgb_to_linear(y4.to(wdt) * (1.0 / L))
+    # No .active branch: the eager form of this one is the same expression,
+    # and _LazyCompiled already runs it eagerly when compile is off.
+    linz = _maybe_compile(_linearize_pair, "ssimu2:linearize", dynamic=False)
+    lin1, lin2 = linz(x4, y4, 1.0 / L, wdt)
     win = _blur_window(1.5, x4.device, wdt)
     mr, mg, mb = _opsin_cols(x4.device, wdt)
     taps = recursive_gaussian_taps(1.5)
@@ -527,8 +603,7 @@ def ssimulacra2(
     # Video scoring, which is one resolution for the length of the run, is the
     # case being optimised for; sweep several resolutions in one process and
     # you will see the warning and the eager numbers.
-    xyb = _maybe_compile(_xyb_positive, "ssimu2:xyb", dynamic=False)
-    maps = _maybe_compile(_scale_maps, "ssimu2:maps", dynamic=False)
+    fused = _maybe_compile(_scale_stats, "ssimu2:scale", dynamic=False)
 
     per_scale = []
     prev_h, prev_w = lin1.shape[-2], lin1.shape[-1]
@@ -542,40 +617,30 @@ def ssimulacra2(
             lin1 = _downsample2(lin1)
             lin2 = _downsample2(lin2)
 
-        x1 = xyb(lin1, mr, mg, mb)
-        x2 = xyb(lin2, mr, mg, mb)
-
-        # One blur over 12 packed planes rather than five blurs of three.
-        # Upstream blurs x1, x2, x1^2, x2^2 and x1*x2; the last three are only
-        # ever read as s11 + s22 and as s11 + s22 - 2*s12 (see _scale_maps),
-        # and the blur is a linear operator, so summing first and blurring the
-        # sums is the same arithmetic over four groups instead of five. 20% of
-        # the filter's work, and the two convolutions are the single largest
-        # kernel in the profile.
-        dx = x1 - x2
-        f = _blur(torch.cat([x1, x2, x1 * x1 + x2 * x2, dx * dx], dim=1),
-                  win, taps)
-        # Viewed as (N, 4, 3, H*W) rather than split on the channel axis: the
-        # four groups are then plain views whatever the batch size, where
-        # `f.split(3, 1)` hands the epilogue strided planes it would have to
-        # copy before it could flatten them.
-        fv = f.view(f.shape[0], 4, 3, -1)
-        flat = x1.shape[0], 3, -1
-        per_scale.append(maps(x1.reshape(*flat), x2.reshape(*flat),
-                              fv[:, 0], fv[:, 1], fv[:, 2], fv[:, 3]))
+        if fused.active:
+            per_scale.append(fused(lin1, lin2, mr, mg, mb, taps))
+        else:
+            per_scale.append(_scale_stats_eager(lin1, lin2, mr, mg, mb, win))
         prev_h, prev_w = lin1.shape[-2], lin1.shape[-1]
 
     # Msssim::Score()'s order: channel-major, then scale, then norm, then the
     # three maps. Flattened into one (N, 108) dot product rather than 108
     # scalar multiplies, each of which would be its own kernel launch.
-    cols = []
-    for ch in range(3):
-        for sc in per_scale:
-            for norm in range(2):
-                cols.append(sc[:, ch, norm])          # SSIM'
-                cols.append(sc[:, ch, 2 + norm])      # ringing
-                cols.append(sc[:, ch, 4 + norm])      # blurring
-    raw = torch.stack(cols, dim=-1).abs()
+    #
+    # A scale's six norms sit as (map, norm) pairs -- [ssim1, ssim4, art1,
+    # art4, lost1, lost4], i.e. index 2*map + norm -- so the whole reordering
+    # is one permute of the stacked (N, scale, ch, map, norm) block into
+    # (N, ch, scale, norm, map) and a flatten, rather than gathering 108
+    # per-column views one python slice at a time. Same element order in the
+    # result, so the weighted sum below reduces in the same sequence.
+    #
+    # When there are fewer than 6 scales this still reads the weight vector
+    # from the start (see the module docstring): the flatten runs ch-major
+    # over the scales that exist, exactly as the slice loop did.
+    raw = (torch.stack(per_scale, dim=1)      # (N, scale, ch, 6)
+           .unflatten(-1, (3, 2))             # (N, scale, ch, map, norm)
+           .permute(0, 2, 1, 4, 3)            # (N, ch, scale, norm, map)
+           .flatten(1).abs())
     w = _weights_tensor(x4.device)[: raw.shape[-1]]
     s = (raw * w).sum(dim=-1)
 
