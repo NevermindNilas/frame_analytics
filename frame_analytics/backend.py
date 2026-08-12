@@ -292,9 +292,8 @@ def _gmsd_workspace(ext: _Native, h: int, w: int, downsample: bool) -> int:
 
 
 def _pixel_cuda(ext: _Native, x: torch.Tensor, y: torch.Tensor, *, op: int,
-                param: float, per_image: bool,
+                param: float, n: int, per_image: bool,
                 psnr_bias: float) -> torch.Tensor:
-    n = int(x.shape[0])
     per = x.numel() // n
     dev = _dev(x)
     bpi = _pixel_workspace(ext, n, per, dev)
@@ -317,9 +316,8 @@ def _pixel_cuda(ext: _Native, x: torch.Tensor, y: torch.Tensor, *, op: int,
 
 
 def _pixel_cpu(ext: _Native, x: torch.Tensor, y: torch.Tensor, *, op: int,
-               param: float, per_image: bool,
+               param: float, n: int, per_image: bool,
                psnr_bias: float) -> torch.Tensor:
-    n = int(x.shape[0])
     per = x.numel() // n
     out = torch.empty((n,) if per_image else (), dtype=torch.float64)
     _check(ext.cpu.fa_cpu_pixel_reduce(
@@ -344,13 +342,62 @@ def try_mse(x: torch.Tensor, y: torch.Tensor, *, per_image: bool,
     bias = psnr_bias if psnr_bias is not None else _PSNR_NONE
     try:
         x, y = _contig(x), _contig(y)
+        n = int(x.shape[0])
         if x.is_cuda:
             if not ext.has_cuda:
                 return None
-            return _pixel_cuda(ext, x, y, op=_OP_MSE, param=0.0,
+            return _pixel_cuda(ext, x, y, op=_OP_MSE, param=0.0, n=n,
                                per_image=per_image, psnr_bias=bias)
-        return _pixel_cpu(ext, x, y, op=_OP_MSE, param=0.0,
+        return _pixel_cpu(ext, x, y, op=_OP_MSE, param=0.0, n=n,
                           per_image=per_image, psnr_bias=bias)
+    except Exception as exc:
+        _warn_once(exc)
+        return None
+
+
+def try_mse_flat(x: torch.Tensor, y: torch.Tensor, *, per_image: bool,
+                 psnr_bias: Optional[float] = None) -> Optional[torch.Tensor]:
+    """Squared-error reduction with no shape normalisation at all.
+
+    ``functional.mse``/``functional.psnr`` call this before ``_prep``: for the
+    no-luma / no-crop case the kernel only needs ``(n_images, n_per_image)``
+    and a base pointer, so the 4-D view that ``_prep`` builds is four ATen
+    dispatches spent on nothing.  That prep was ~4.5 us of the ~10.6 us a
+    256x256 PSNR cost -- more than three times the kernel itself -- and is why
+    ``cv2.PSNR`` (a ~0.5 us pybind11 binding) beat this library outright below
+    720p.
+
+    Every guard below is a cheap attribute read, and any miss returns ``None``
+    so the ordinary path can produce its usual error message or fallback; this
+    function must never raise on bad input, only decline.
+    """
+    ext = load()
+    if ext is None:
+        return None
+    if (x.dtype is not y.dtype or x.dtype not in _SUPPORTED
+            or x.shape != y.shape):
+        return None
+    nd = x.dim()
+    if nd < 2 or nd > 4:
+        return None
+    if not (x.is_contiguous() and y.is_contiguous()):
+        return None
+    if torch.is_grad_enabled() and (x.requires_grad or y.requires_grad):
+        return None
+    # For the scalar mean the split into images cancels out of sum/(n*per), so
+    # n=1 is always right; only a per-image reduction needs the real batch.
+    n = int(x.shape[0]) if (per_image and nd == 4) else 1
+    bias = psnr_bias if psnr_bias is not None else _PSNR_NONE
+    try:
+        # is_cpu/is_cuda are attribute reads; comparing .device objects would
+        # construct two of them per call, a measurable slice at 256x256
+        if x.is_cpu and y.is_cpu:
+            return _pixel_cpu(ext, x, y, op=_OP_MSE, param=0.0, n=n,
+                              per_image=per_image, psnr_bias=bias)
+        if x.is_cuda and y.is_cuda and ext.has_cuda and x.device == y.device:
+            return _pixel_cuda(ext, x, y, op=_OP_MSE, param=0.0, n=n,
+                               per_image=per_image, psnr_bias=bias)
+        return None
     except Exception as exc:
         _warn_once(exc)
         return None
@@ -364,13 +411,14 @@ def try_pixel(x: torch.Tensor, y: torch.Tensor, *, op: int, param: float,
         return None
     try:
         x, y = _contig(x), _contig(y)
+        n = int(x.shape[0])
         if x.is_cuda:
             if not ext.has_cuda:
                 return None
-            out = _pixel_cuda(ext, x, y, op=op, param=param,
+            out = _pixel_cuda(ext, x, y, op=op, param=param, n=n,
                               per_image=per_image, psnr_bias=_PSNR_NONE)
         else:
-            out = _pixel_cpu(ext, x, y, op=op, param=param,
+            out = _pixel_cpu(ext, x, y, op=op, param=param, n=n,
                              per_image=per_image, psnr_bias=_PSNR_NONE)
         return out.to(dtype)
     except Exception as exc:

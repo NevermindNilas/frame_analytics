@@ -322,14 +322,23 @@ def mse(
         Drop this many pixels from every edge first, as the super-resolution
         literature does (usually by the upscale factor).
     """
-    x4, y4, L, mode = _prep(x, y, luma, crop_border, None)
-    wdt = _work_dtype(x4, dtype)
-    x4, y4 = _apply_luma(x4, y4, mode, L, wdt)
     if reduction not in ("mean", "none"):
         raise ValueError(f"reduction must be 'mean' or 'none', got {reduction!r}")
     per_image = reduction == "none"
 
     from . import backend  # local import: avoids a cycle at module import time
+
+    # Flat fast path: no luma and no crop means the kernel needs nothing that
+    # _prep computes, and _prep costs more than the kernel below ~720p.
+    if ((luma is None or luma is False) and crop_border == 0
+            and dtype is None and out_dtype is torch.float64):
+        fast = backend.try_mse_flat(x, y, per_image=per_image)
+        if fast is not None:
+            return fast
+
+    x4, y4, L, mode = _prep(x, y, luma, crop_border, None)
+    wdt = _work_dtype(x4, dtype)
+    x4, y4 = _apply_luma(x4, y4, mode, L, wdt)
 
     fast = backend.try_mse(x4, y4, per_image=per_image, dtype=out_dtype)
     if fast is not None:
@@ -365,11 +374,24 @@ def psnr(
     """
     if reduction not in ("mean", "none"):
         raise ValueError(f"reduction must be 'mean' or 'none', got {reduction!r}")
+
+    from . import backend
+
+    # Flat fast path, as in :func:`mse`: for the plain-PSNR call the 4-D view,
+    # the luma resolution and the crop are all no-ops, and skipping them takes
+    # a 256x256 call from ~11 us to ~5 us -- the difference between losing to
+    # cv2.PSNR below 720p and losing only at 256x256.
+    if (not eps and (luma is None or luma is False) and crop_border == 0
+            and dtype is None and out_dtype is torch.float64):
+        L = float(data_range) if data_range is not None else _infer_data_range(x)
+        fast = backend.try_mse_flat(x, y, per_image=reduction == "none",
+                                    psnr_bias=math.log10(L * L) * 10.0)
+        if fast is not None:
+            return fast
+
     x4, y4, L, mode = _prep(x, y, luma, crop_border, data_range)
     x4, y4 = _apply_luma(x4, y4, mode, L, _work_dtype(x4, dtype))
     bias = math.log10(L * L) * 10.0
-
-    from . import backend
 
     if not eps:
         # native path folds the dB conversion into the reduction kernel
