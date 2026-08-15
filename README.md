@@ -5,8 +5,13 @@ accuracy. Fused kernels for forward and backward, so the same code works as an
 evaluation metric and as a training loss.
 
 ```bash
-pip install frame-analytics
+pip install frame-analytics        # uses the torch you already have
 ```
+
+Requires an existing PyTorch ≥ 2.0 — deliberately not installed automatically,
+so your CUDA build is never replaced by the CPU wheel from PyPI. No torch yet?
+Grab the right build from [pytorch.org](https://pytorch.org/get-started/locally/),
+or accept the PyPI wheel with `pip install frame-analytics[torch]`.
 
 ```python
 import torch, frame_analytics as fa
@@ -603,9 +608,16 @@ number for an identical pair suits you better than `inf`.
 pip install frame-analytics
 ```
 
-torch ≥ 2.0, numpy — and nothing else. No `torchvision`, and nothing is fetched
-at first call: the LPIPS weights are inside the wheel. It is 9.7 MiB, of which
-8.8 is those weights and 0.8 is the kernels.
+Needs torch ≥ 2.0 and numpy — and nothing else. Only numpy is installed
+automatically: torch is left alone on purpose, so pip never swaps an existing
+CUDA build for the CPU-only PyPI wheel. If torch is missing, `import
+frame_analytics` says so and points at
+[pytorch.org](https://pytorch.org/get-started/locally/); if the PyPI wheel is
+what you want, `pip install frame-analytics[torch]` pulls it explicitly.
+
+No `torchvision`, and nothing is fetched at first call: the LPIPS weights are
+inside the wheel. It is 9.7 MiB, of which 8.8 is those weights and 0.8 is the
+kernels.
 
 The kernels arrive **precompiled**, one wheel per platform and no version
 matrix — the same wheel works on every Python and every torch build.

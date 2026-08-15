@@ -26,7 +26,11 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Processing",
     "Topic :: Multimedia :: Video",
 ]
-dependencies = ["torch>=2.0", "numpy>=1.20"]
+# torch is required at runtime but deliberately NOT an install-time dependency:
+# pip would resolve it from PyPI (the CPU-only wheel on Windows/Linux) and could
+# clobber a user's existing CUDA build. Install torch yourself (pytorch.org),
+# or opt in with the `[torch]` extra. Import raises a clear error if it is missing.
+dependencies = ["numpy>=1.20"]
 
 [project.urls]
 Homepage = "https://github.com/NevermindNilas/frame_analytics"
@@ -34,6 +38,8 @@ Source = "https://github.com/NevermindNilas/frame_analytics"
 Issues = "https://github.com/NevermindNilas/frame_analytics/issues"
 
 [project.optional-dependencies]
+# explicit opt-in to pulling torch from PyPI (CPU wheel on Windows/Linux)
+torch = ["torch>=2.0"]
 # what the accuracy gate and the comparison tables need
 bench = ["scikit-image", "opencv-python", "pytorch-msssim", "piq", "torchmetrics",
          "kornia", "ssimulacra2"]

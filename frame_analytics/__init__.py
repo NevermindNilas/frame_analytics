@@ -22,6 +22,17 @@ Three layers, all producing the same numbers:
     ``from frame_analytics import vapoursynth as fa_vs``.
 """
 
+try:
+    import torch  # noqa: F401
+except ModuleNotFoundError as e:  # pragma: no cover - depends on environment
+    raise ModuleNotFoundError(
+        "frame_analytics requires PyTorch, which is intentionally not installed "
+        "automatically so an existing (e.g. CUDA) build is never overwritten by "
+        "the CPU wheel from PyPI. Install the build that fits your machine from "
+        "https://pytorch.org/get-started/locally/, or opt in to the PyPI wheel "
+        "with `pip install frame-analytics[torch]`."
+    ) from e
+
 from .functional import (  # noqa: F401
     MS_SSIM_WEIGHTS,
     charbonnier,
