@@ -12,9 +12,9 @@ what most libraries ship.  Here:
 
 1. The 11x11 Gaussian is separable, so it becomes an 11-tap horizontal pass
    plus an 11-tap vertical pass: 22 MACs/px instead of 121.
-2. All five planes are packed into the *batch* dimension and filtered by a
-   single 1-input-channel convolution.  Two kernel launches total, not ten,
-   and no grouped-convolution overhead.
+2. All five planes are filtered together in two convolution calls, not ten.
+   CPU float32 uses channels-last depthwise convolutions; other paths fold
+   the planes into the batch for single-input-channel convolutions.
 3. The plane packing and the SSIM epilogue are ``torch.compile``d, so the
    products, the variance combination, the divide and the mean reduction fuse
    into a couple of bandwidth-bound kernels instead of ~15 separate ones.
@@ -497,22 +497,42 @@ def _no_autocast(t: torch.Tensor):
     return torch.autocast(device_type=t.device.type, enabled=False)
 
 
-def _sep_filter(packed: torch.Tensor, win: torch.Tensor) -> torch.Tensor:
-    """Separable 'valid' Gaussian filter over every plane of ``packed``.
+def _separable_conv(packed: torch.Tensor, win: torch.Tensor,
+                    padding: int = 0) -> torch.Tensor:
+    """Filter independent planes, preserving NCHW output and compute dtype.
 
-    The channel axis is folded into the batch axis so both passes are plain
-    single-input-channel convolutions -- much better mapped than ``groups=5C``
-    depthwise convolutions on both cuDNN and oneDNN.
+    oneDNN's float32 depthwise kernels benefit from channels-last storage:
+    they filter channels together without single-channel convolution's large
+    internal working set. Other backends and dtypes keep the batch-folded
+    implementation. Convert back before callers flatten or reduce the planes.
     """
     n, c, h, w = packed.shape
     k = win.numel()
+    # Below 128x128 the layout conversions can cost as much as the filter.
+    # Keep the original path for small images and the tail of each pyramid.
+    if (packed.device.type == "cpu" and packed.dtype == torch.float32 and c > 1
+            and h * w >= 128 * 128
+            and torch.backends.mkldnn.is_available() and torch.backends.mkldnn.enabled):
+        wh = win.view(1, 1, 1, k).expand(c, 1, 1, k).contiguous()
+        wv = win.view(1, 1, k, 1).expand(c, 1, k, 1).contiguous()
+        with _no_autocast(packed):
+            out = F.conv2d(packed.contiguous(memory_format=torch.channels_last),
+                           wh, padding=(0, padding), groups=c)
+            out = F.conv2d(out, wv, padding=(padding, 0), groups=c)
+        return out.contiguous()
+
     flat = packed.reshape(n * c, 1, h, w)
     wh = win.view(1, 1, 1, k)
     wv = win.view(1, 1, k, 1)
     with _no_autocast(flat):
-        out = F.conv2d(flat, wh)
-        out = F.conv2d(out, wv)
-    return out.reshape(n, c, h - k + 1, w - k + 1)
+        out = F.conv2d(flat, wh, padding=(0, padding))
+        out = F.conv2d(out, wv, padding=(padding, 0))
+    return out.reshape(n, c, h - k + 1 + 2 * padding, w - k + 1 + 2 * padding)
+
+
+def _sep_filter(packed: torch.Tensor, win: torch.Tensor) -> torch.Tensor:
+    """Separable 'valid' Gaussian filter over every plane of ``packed``."""
+    return _separable_conv(packed, win)
 
 
 def _reject_double_backward() -> None:

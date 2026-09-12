@@ -1,0 +1,122 @@
+[
+  {
+    "device": "cpu",
+    "dtype": "torch.float32",
+    "metric": "ssim",
+    "max_score_abs_error": 0.0,
+    "gradient_norm_relative_errors": [
+      9.630959993955912e-07,
+      8.869730550031818e-07
+    ]
+  },
+  {
+    "device": "cpu",
+    "dtype": "torch.float32",
+    "metric": "ms_ssim",
+    "max_score_abs_error": 0.0,
+    "gradient_norm_relative_errors": [
+      1.9016987096165394e-07,
+      1.8165084725296765e-07
+    ]
+  },
+  {
+    "device": "cpu",
+    "dtype": "torch.float32",
+    "metric": "ssimulacra2",
+    "max_score_abs_error": 0.0,
+    "gradient_norm_relative_errors": [
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "device": "cpu",
+    "dtype": "torch.float64",
+    "metric": "ssim",
+    "max_score_abs_error": 0.0,
+    "gradient_norm_relative_errors": [
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "device": "cpu",
+    "dtype": "torch.float64",
+    "metric": "ms_ssim",
+    "max_score_abs_error": 0.0,
+    "gradient_norm_relative_errors": [
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "device": "cpu",
+    "dtype": "torch.float64",
+    "metric": "ssimulacra2",
+    "max_score_abs_error": 0.0,
+    "gradient_norm_relative_errors": [
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "metric": "ssim",
+    "max_score_abs_error": 0.0,
+    "gradient_norm_relative_errors": [
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "metric": "ms_ssim",
+    "max_score_abs_error": 0.0,
+    "gradient_norm_relative_errors": [
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "metric": "ssimulacra2",
+    "max_score_abs_error": 0.0,
+    "gradient_norm_relative_errors": [
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "device": "cuda",
+    "dtype": "torch.float64",
+    "metric": "ssim",
+    "max_score_abs_error": 0.0,
+    "gradient_norm_relative_errors": [
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "device": "cuda",
+    "dtype": "torch.float64",
+    "metric": "ms_ssim",
+    "max_score_abs_error": 0.0,
+    "gradient_norm_relative_errors": [
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "device": "cuda",
+    "dtype": "torch.float64",
+    "metric": "ssimulacra2",
+    "max_score_abs_error": 0.0,
+    "gradient_norm_relative_errors": [
+      0.0,
+      0.0
+    ]
+  }
+]

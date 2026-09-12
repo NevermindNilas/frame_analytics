@@ -1,0 +1,66 @@
+[
+  {
+    "arm": "baseline",
+    "metric": "ssim",
+    "backward": false,
+    "before_mib": 543.1328125,
+    "peak_mib": 1153.98046875,
+    "delta_mib": 610.8515625
+  },
+  {
+    "arm": "candidate",
+    "metric": "ssim",
+    "backward": false,
+    "before_mib": 542.890625,
+    "peak_mib": 763.3359375,
+    "delta_mib": 220.4453125
+  },
+  {
+    "arm": "baseline",
+    "metric": "ssim",
+    "backward": true,
+    "before_mib": 543.0234375,
+    "peak_mib": 1886.14453125,
+    "delta_mib": 1343.12109375
+  },
+  {
+    "arm": "candidate",
+    "metric": "ssim",
+    "backward": true,
+    "before_mib": 542.78515625,
+    "peak_mib": 1021.26171875,
+    "delta_mib": 478.4765625
+  },
+  {
+    "arm": "baseline",
+    "metric": "ms_ssim",
+    "backward": true,
+    "before_mib": 543.03125,
+    "peak_mib": 1919.90625,
+    "delta_mib": 1376.875
+  },
+  {
+    "arm": "candidate",
+    "metric": "ms_ssim",
+    "backward": true,
+    "before_mib": 542.73828125,
+    "peak_mib": 1116.02734375,
+    "delta_mib": 573.2890625
+  },
+  {
+    "arm": "baseline",
+    "metric": "ssimulacra2",
+    "backward": false,
+    "before_mib": 543.1484375,
+    "peak_mib": 1196.6171875,
+    "delta_mib": 653.46875
+  },
+  {
+    "arm": "candidate",
+    "metric": "ssimulacra2",
+    "backward": false,
+    "before_mib": 542.70703125,
+    "peak_mib": 891.6015625,
+    "delta_mib": 348.89453125
+  }
+]

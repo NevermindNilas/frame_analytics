@@ -69,7 +69,7 @@ from typing import Optional, Tuple
 import torch
 import torch.nn.functional as F
 
-from .functional import _maybe_compile, _no_autocast, _prep, _work_dtype
+from .functional import _maybe_compile, _prep, _separable_conv, _work_dtype
 
 __all__ = ["ssimulacra2", "recursive_gaussian_taps", "SSIMULACRA2_WEIGHTS"]
 
@@ -290,17 +290,10 @@ def _blur_conv(planes: torch.Tensor, win: torch.Tensor) -> torch.Tensor:
     """The same filter as two 1-D convolutions -- the uncompiled path.
 
     Eager shifted adds would materialise a full-resolution temporary per tap,
-    so when there is no Inductor to fuse them this is the better shape: the
-    channel axis folds into the batch so both passes are plain single-channel
-    convolutions, as in :func:`frame_analytics.functional._sep_filter`.
+    so when there is no Inductor to fuse them use the shared separable
+    convolution, including its channels-last CPU float32 path.
     """
-    n, c, h, w = planes.shape
-    rad = win.numel() // 2
-    flat = planes.reshape(n * c, 1, h, w)
-    with _no_autocast(flat):
-        out = F.conv2d(flat, win.view(1, 1, 1, -1), padding=(0, rad))
-        out = F.conv2d(out, win.view(1, 1, -1, 1), padding=(rad, 0))
-    return out.reshape(n, c, h, w)
+    return _separable_conv(planes, win, padding=win.numel() // 2)
 
 
 def _scale_stats(lin1, lin2, mr, mg, mb, taps):
