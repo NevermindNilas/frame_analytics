@@ -214,7 +214,7 @@ def _blur_window(sigma: float, device, dtype) -> torch.Tensor:
     per call is a host-to-device copy, which syncs and is illegal inside a CUDA
     graph capture.
     """
-    key = (sigma, str(device), dtype)
+    key = (sigma, device, dtype)
     w = _blur_cache.get(key)
     if w is None:
         w = torch.tensor(recursive_gaussian_taps(sigma),
@@ -224,7 +224,7 @@ def _blur_window(sigma: float, device, dtype) -> torch.Tensor:
 
 
 def _weights_tensor(device) -> torch.Tensor:
-    key = str(device)
+    key = device
     w = _weight_cache.get(key)
     if w is None:
         w = torch.tensor(SSIMULACRA2_WEIGHTS, dtype=torch.float64, device=device)
@@ -244,7 +244,7 @@ def _opsin_cols(device, dtype) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor
     :func:`_blur_window` is -- building them per call is a host-to-device copy,
     which syncs and is illegal inside a CUDA graph capture.
     """
-    key = (str(device), dtype)
+    key = (device, dtype)
     cols = _opsin_cache.get(key)
     if cols is None:
         cols = tuple(
@@ -577,26 +577,25 @@ def ssimulacra2(
 
     # No .active branch: the eager form of this one is the same expression,
     # and _LazyCompiled already runs it eagerly when compile is off.
-    linz = _maybe_compile(_linearize_pair, "ssimu2:linearize", dynamic=False)
+    # Elementwise-only: dynamic costs nothing here (no reduction tiling),
+    # so one entry serves all resolutions instead of one per resolution.
+    linz = _maybe_compile(_linearize_pair, "ssimu2:linearize", dynamic=True)
     lin1, lin2 = linz(x4, y4, 1.0 / L, wdt)
     win = _blur_window(1.5, x4.device, wdt)
     mr, mg, mb = _opsin_cols(x4.device, wdt)
     taps = recursive_gaussian_taps(1.5)
-    # dynamic=False, and it is the difference between a compiled epilogue that
-    # pays for itself and one that costs more than it saves. A pyramid puts six
-    # shapes through the same code object on every call, and Dynamo's
-    # automatic-dynamic marking is keyed on the code object, not on the
-    # call site: left at the default, scale 1 re-specialises what scale 0 just
-    # compiled, and the dynamic-shape reduction kernel that results runs the
-    # 1080p epilogue in 7.7 ms where the static one takes 0.56.
-    #
-    # The cost is one Dynamo cache entry per shape, six per resolution against
-    # its limit of 8 -- so a process that scores two different resolutions
-    # trips the limit and drops back to eager (still correct, ~2.4x slower).
-    # Video scoring, which is one resolution for the length of the run, is the
-    # case being optimised for; sweep several resolutions in one process and
-    # you will see the warning and the eager numbers.
-    fused = _maybe_compile(_scale_stats, "ssimu2:scale", dynamic=False)
+    # dynamic=False: static reduction tiles the (N,3,H*W) epilogue in 0.56 ms
+    # where the dynamic one takes 7.7 ms at 1080p. Cost is one Dynamo entry
+    # per shape. One wrapper for all six scales = 6 entries per resolution
+    # against the per-code-object limit of 8, so the 2nd resolution falls back
+    # to eager (~2.4x slower). One wrapper per scale index = 1 entry per
+    # resolution per cache = 8 resolutions before eviction, same 6 compiles
+    # for the single-resolution (video) case. Each torch.compile() object has
+    # its own Dynamo cache even though the underlying code object is shared,
+    # so sharding is pure cache sharding with identical arithmetic.
+    fused_scales = [_maybe_compile(_scale_stats, f"ssimu2:scale{i}",
+                                   dynamic=False)
+                    for i in range(_NUM_SCALES)]
 
     per_scale = []
     prev_h, prev_w = lin1.shape[-2], lin1.shape[-1]
@@ -610,8 +609,9 @@ def ssimulacra2(
             lin1 = _downsample2(lin1)
             lin2 = _downsample2(lin2)
 
-        if fused.active:
-            per_scale.append(fused(lin1, lin2, mr, mg, mb, taps))
+        fn = fused_scales[scale]
+        if fn.active:
+            per_scale.append(fn(lin1, lin2, mr, mg, mb, taps))
         else:
             per_scale.append(_scale_stats_eager(lin1, lin2, mr, mg, mb, win))
         prev_h, prev_w = lin1.shape[-2], lin1.shape[-1]

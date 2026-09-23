@@ -403,6 +403,19 @@ class StreamingMetrics:
 
     def _try_capture(self):
         try:
+            # Preload capturability hazards *before* the side stream so the
+            # captured region holds convolutions/kernels only. NOTE: must NOT
+            # run under inference_mode — caches (windows, weights, compiled
+            # artifacts) would become inference tensors and poison later
+            # autograd tests (inference tensors cannot be saved for backward).
+            if "lpips" in self.metrics:
+                from .perceptual import _load_net
+                _load_net("alex", self.ref.device, torch.float32)
+            if "ssimulacra2" in self.metrics:
+                from .ssimulacra2 import _blur_window, _opsin_cols
+                _blur_window(1.5, self.ref.device, torch.float32)
+                _opsin_cols(self.ref.device, torch.float32)
+            self._compute()
             self.ref.zero_()
             self.dist.zero_()
             side = torch.cuda.Stream()
@@ -424,11 +437,15 @@ class StreamingMetrics:
     def _stage(self, buf: torch.Tensor, src, host_slot: int) -> None:
         if not torch.is_tensor(src):
             src = torch.from_numpy(src)
-        src = src.reshape(self.shape) if src.shape != self.shape else src
+        if src.shape != self.shape:
+            src = src.reshape(self.shape)
         if src.is_cuda:
             buf.copy_(src, non_blocking=True)
             return
         if self._host is not None:
+            if src.is_pinned() and src.is_contiguous():
+                buf.copy_(src, non_blocking=True)
+                return
             h = self._host[host_slot]
             h.copy_(src)
             buf.copy_(h, non_blocking=True)

@@ -88,6 +88,10 @@ def ensure_host_compiler() -> None:
     if _msvc_done:
         return
     _msvc_done = True
+    if os.environ.get("FA_SKIP_MSVC", "0").lower() in ("1", "on", "true", "yes"):
+        return
+    if "DISTUTILS_USE_SDK" in os.environ or os.environ.get("VSINSTALLDIR"):
+        return
     try:
         _ensure_msvc_env()
     except Exception:
@@ -115,7 +119,7 @@ def _ensure_msvc_env() -> None:
                 [str(vswhere), "-latest", "-products", "*",
                  "-requires", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
                  "-property", "installationPath"],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True, text=True, timeout=8,
             ).stdout.strip()
             if out:
                 candidates.append(Path(out) / "VC" / "Auxiliary" / "Build" / "vcvars64.bat")
@@ -132,7 +136,7 @@ def _ensure_msvc_env() -> None:
             continue
         try:
             res = subprocess.run(f'"{vc}" >nul 2>&1 && set', shell=True,
-                                 capture_output=True, text=True, timeout=120)
+                                 capture_output=True, text=True, timeout=20)
         except Exception:
             continue
         if res.returncode != 0:
@@ -473,16 +477,22 @@ def _check_abi(lib: ctypes.CDLL, getter: str, origin: Path) -> None:
 
 def load_cpu():
     """Return ``(lib, origin, isa)`` for the CPU kernels."""
-    baseline_path = _prebuilt("fa_cpu")
-    origin = "prebuilt"
-    if baseline_path is None:
-        ensure_host_compiler()
-        baseline_path = _build_cached(
-            "fa_cpu", [_CSRC / "fa_cpu.cpp", _CSRC / "fa_abi.h"],
-            lambda out, objdir: cpu_compile_command(_CSRC / "fa_cpu.cpp", out,
-                                                    False, objdir),
-        )
-        origin = "jit"
+    if os.environ.get("FA_DISABLE_JIT", "0").lower() in ("1", "on", "true", "yes"):
+        baseline_path = _prebuilt("fa_cpu")
+        if baseline_path is None:
+            raise RuntimeError("no prebuilt lib and FA_DISABLE_JIT=1 (would compile ~60s)")
+        origin = "prebuilt"
+    else:
+        baseline_path = _prebuilt("fa_cpu")
+        origin = "prebuilt"
+        if baseline_path is None:
+            ensure_host_compiler()
+            baseline_path = _build_cached(
+                "fa_cpu", [_CSRC / "fa_cpu.cpp", _CSRC / "fa_abi.h"],
+                lambda out, objdir: cpu_compile_command(_CSRC / "fa_cpu.cpp", out,
+                                                        False, objdir),
+            )
+            origin = "jit"
     lib = _bind_cpu(_dlopen(baseline_path))
     _check_abi(lib, "fa_cpu_abi_version", baseline_path)
     isa = "baseline"
@@ -516,15 +526,21 @@ def load_cuda():
     """Return ``(lib, origin)`` for the CUDA kernels."""
     if sys.platform == "darwin":
         raise RuntimeError("no CUDA on macOS")
-    path = _prebuilt("fa_cuda")
-    origin = "prebuilt"
-    if path is None:
-        ensure_host_compiler()
-        path = _build_cached(
-            "fa_cuda", [_CSRC / "fa_cuda.cu", _CSRC / "fa_abi.h"],
-            lambda out, objdir: cuda_compile_command(_CSRC / "fa_cuda.cu", out),
-        )
-        origin = "jit"
+    if os.environ.get("FA_DISABLE_JIT", "0").lower() in ("1", "on", "true", "yes"):
+        path = _prebuilt("fa_cuda")
+        if path is None:
+            raise RuntimeError("no prebuilt lib and FA_DISABLE_JIT=1 (would compile ~60s)")
+        origin = "prebuilt"
+    else:
+        path = _prebuilt("fa_cuda")
+        origin = "prebuilt"
+        if path is None:
+            ensure_host_compiler()
+            path = _build_cached(
+                "fa_cuda", [_CSRC / "fa_cuda.cu", _CSRC / "fa_abi.h"],
+                lambda out, objdir: cuda_compile_command(_CSRC / "fa_cuda.cu", out),
+            )
+            origin = "jit"
     lib = _bind_cuda(_dlopen(path))
     _check_abi(lib, "fa_cuda_abi_version", path)
     return lib, origin

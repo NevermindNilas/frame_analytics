@@ -80,19 +80,29 @@ class _no_tf32:
     one field quietly turns cuDNN off entirely.
     """
 
-    __slots__ = ("_prev",)
+    __slots__ = ("_prev_cudnn", "_prev_matmul")
 
     def __init__(self, active: bool):
-        self._prev = None if not active else torch.backends.cudnn.allow_tf32
+        self._prev_cudnn = self._prev_matmul = None
+        if active:
+            self._prev_cudnn = torch.backends.cudnn.allow_tf32
+            try:
+                self._prev_matmul = torch.backends.cuda.matmul.allow_tf32
+            except Exception:
+                self._prev_matmul = None
 
     def __enter__(self):
-        if self._prev is not None:
+        if self._prev_cudnn is not None:
             torch.backends.cudnn.allow_tf32 = False
+            if self._prev_matmul is not None:
+                torch.backends.cuda.matmul.allow_tf32 = False
         return self
 
     def __exit__(self, *exc):
-        if self._prev is not None:
-            torch.backends.cudnn.allow_tf32 = self._prev
+        if self._prev_cudnn is not None:
+            torch.backends.cudnn.allow_tf32 = self._prev_cudnn
+            if self._prev_matmul is not None:
+                torch.backends.cuda.matmul.allow_tf32 = self._prev_matmul
         return False
 
 
@@ -179,9 +189,10 @@ def _lpips_layer_map(f0: torch.Tensor, f1: torch.Tensor, lin: torch.Tensor):
     all feature-map-shaped, and materialising them separately is most of what
     the textbook formulation costs.
     """
-    n0 = f0 / (f0.pow(2).sum(dim=1, keepdim=True).sqrt() + _NORM_EPS)
-    n1 = f1 / (f1.pow(2).sum(dim=1, keepdim=True).sqrt() + _NORM_EPS)
-    d = (n0 - n1).pow(2)
+    n0 = f0 / (f0.mul(f0).sum(dim=1, keepdim=True).sqrt() + _NORM_EPS)
+    n1 = f1 / (f1.mul(f1).sum(dim=1, keepdim=True).sqrt() + _NORM_EPS)
+    d = n0 - n1
+    d = d * d
     return F.conv2d(d, lin)
 
 
@@ -190,7 +201,7 @@ def _lpips_layer_mean(f0, f1, lin):
 
 
 def _load_net(net: str, device: torch.device, dtype: torch.dtype) -> _LpipsNet:
-    key = (net, str(device), dtype)
+    key = (net, device, dtype)
     hit = _cache.get(key)
     if hit is not None:
         return hit
@@ -200,7 +211,11 @@ def _load_net(net: str, device: torch.device, dtype: torch.dtype) -> _LpipsNet:
             return hit
         path = lpips_weights_path(net)
         try:
-            blob = torch.load(path, map_location="cpu", weights_only=True)
+            try:
+                blob = torch.load(path, map_location="cpu", weights_only=True,
+                                  mmap=True)
+            except TypeError:
+                blob = torch.load(path, map_location="cpu", weights_only=True)
         except (TypeError, RuntimeError):
             # torch<2.6 rejects some of the plain-python entries under
             # weights_only; the file is our own package data either way.
@@ -328,7 +343,7 @@ def lpips(
             ]
             acc = maps[0]
             for m in maps[1:]:
-                acc = acc + m
+                acc.add_(m)
             return acc
 
         per_layer = [

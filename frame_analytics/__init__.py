@@ -64,7 +64,7 @@ from .modules import (  # noqa: F401
 from .perceptual import available_nets, lpips, lpips_weights_path  # noqa: F401
 from .ssimulacra2 import ssimulacra2  # noqa: F401
 
-__version__ = "0.6.1"
+__version__ = "0.6.2"
 
 __all__ = [
     "mse",

@@ -107,7 +107,8 @@ def load(force: bool = False) -> Optional[_Native]:
 
     # CUDA is a separate library and a separate failure: a machine with no
     # toolkit, or macOS, still gets the CPU kernels.
-    if torch.cuda.is_available():
+    cpu_only = os.environ.get("FA_NATIVE_CPU_ONLY", "0").lower() in ("1", "on", "true", "yes")
+    if not cpu_only and torch.cuda.is_available():
         try:
             native.cuda, native.cuda_origin = _cabi.load_cuda()
         except Exception as exc:  # pragma: no cover - environment dependent
@@ -200,7 +201,7 @@ def _win_f32(win: torch.Tensor) -> torch.Tensor:
     """
     if win.dtype == torch.float32:
         return win if win.is_contiguous() else win.contiguous()
-    key = (id(win), str(win.device))
+    key = (id(win), win.device)
     hit = _win_cache.get(key)
     if hit is not None and hit[0] is win:
         return hit[1]
@@ -235,8 +236,8 @@ def _usable(x: torch.Tensor, y: torch.Tensor) -> bool:
     own turned every such call away from the native kernel -- an 8x slowdown on
     the single most common way anybody uses this library.
     """
-    grad_wanted = (torch.is_grad_enabled()
-                   and (x.requires_grad or y.requires_grad))
+    grad_wanted = ((x.requires_grad or y.requires_grad)
+                   and torch.is_grad_enabled())
     return (
         x.dtype in _SUPPORTED
         and x.dtype == y.dtype
@@ -374,19 +375,23 @@ def try_mse_flat(x: torch.Tensor, y: torch.Tensor, *, per_image: bool,
     ext = load()
     if ext is None:
         return None
-    if (x.dtype is not y.dtype or x.dtype not in _SUPPORTED
-            or x.shape != y.shape):
+    if x.dtype is not y.dtype:
+        return None
+    code = _DTYPE_CODE.get(x.dtype)
+    if code is None:
+        return None
+    if x.shape != y.shape:
         return None
     nd = x.dim()
     if nd < 2 or nd > 4:
         return None
     if not (x.is_contiguous() and y.is_contiguous()):
         return None
-    if torch.is_grad_enabled() and (x.requires_grad or y.requires_grad):
+    if (x.requires_grad or y.requires_grad) and torch.is_grad_enabled():
         return None
     # For the scalar mean the split into images cancels out of sum/(n*per), so
     # n=1 is always right; only a per-image reduction needs the real batch.
-    n = int(x.shape[0]) if (per_image and nd == 4) else 1
+    n = x.size(0) if (per_image and nd == 4) else 1
     bias = psnr_bias if psnr_bias is not None else _PSNR_NONE
     try:
         # is_cpu/is_cuda are attribute reads; comparing .device objects would

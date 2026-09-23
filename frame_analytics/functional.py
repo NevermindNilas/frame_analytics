@@ -27,6 +27,7 @@ what most libraries ship.  Here:
 from __future__ import annotations
 
 import math
+import sys as _sys
 import warnings
 from typing import Optional, Sequence, Tuple
 
@@ -138,12 +139,32 @@ def _maybe_compile(fn, key: str, dynamic=None):
 # input handling
 # --------------------------------------------------------------------------- #
 
+_PSNR_BIAS_CACHE: dict = {1.0: 0.0, 255.0: 48.1308036086791}
+
+
+def _psnr_bias(L: float) -> float:
+    b = _PSNR_BIAS_CACHE.get(L)
+    if b is None:
+        b = math.log10(L * L) * 10.0
+        if len(_PSNR_BIAS_CACHE) < 16:
+            _PSNR_BIAS_CACHE[L] = b
+    return b
+
+
+def _backend_mod():
+    return _sys.modules.get("frame_analytics.backend")
+
+
+_HAS_UINT16 = hasattr(torch, "uint16")
+
+
 def _infer_data_range(t: torch.Tensor) -> float:
-    if t.dtype == torch.uint8:
+    dt = t.dtype
+    if dt is torch.uint8:
         return 255.0
-    if t.dtype in (torch.int16, torch.int32):
+    if dt is torch.int16 or dt is torch.int32:
         return 65535.0
-    if getattr(torch, "uint16", None) is not None and t.dtype == torch.uint16:
+    if _HAS_UINT16 and dt is torch.uint16:
         return 65535.0
     return 1.0
 
@@ -162,7 +183,7 @@ def _as_nchw(t: torch.Tensor) -> torch.Tensor:
 def _check_pair(x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     if x.shape != y.shape:
         raise ValueError(f"shape mismatch: {tuple(x.shape)} vs {tuple(y.shape)}")
-    if x.device != y.device:
+    if x.is_cpu != y.is_cpu or x.is_cuda != y.is_cuda or (x.is_cuda and x.device != y.device):
         raise ValueError(f"device mismatch: {x.device} vs {y.device}")
     return _as_nchw(x), _as_nchw(y)
 
@@ -326,7 +347,9 @@ def mse(
         raise ValueError(f"reduction must be 'mean' or 'none', got {reduction!r}")
     per_image = reduction == "none"
 
-    from . import backend  # local import: avoids a cycle at module import time
+    backend = _sys.modules.get("frame_analytics.backend")
+    if backend is None:
+        from . import backend
 
     # Flat fast path: no luma and no crop means the kernel needs nothing that
     # _prep computes, and _prep costs more than the kernel below ~720p.
@@ -346,7 +369,7 @@ def mse(
 
     fn = _maybe_compile(
         _mse_kernel_per_image if per_image else _mse_kernel_mean,
-        f"mse:{per_image}",
+        "mse:1" if per_image else "mse:0",
     )
     return fn(x4, y4, wdt).to(out_dtype)
 
@@ -375,7 +398,9 @@ def psnr(
     if reduction not in ("mean", "none"):
         raise ValueError(f"reduction must be 'mean' or 'none', got {reduction!r}")
 
-    from . import backend
+    backend = _sys.modules.get("frame_analytics.backend")
+    if backend is None:
+        from . import backend
 
     # Flat fast path, as in :func:`mse`: for the plain-PSNR call the 4-D view,
     # the luma resolution and the crop are all no-ops, and skipping them takes
@@ -385,13 +410,13 @@ def psnr(
             and dtype is None and out_dtype is torch.float64):
         L = float(data_range) if data_range is not None else _infer_data_range(x)
         fast = backend.try_mse_flat(x, y, per_image=reduction == "none",
-                                    psnr_bias=math.log10(L * L) * 10.0)
+                                    psnr_bias=_psnr_bias(L))
         if fast is not None:
             return fast
 
     x4, y4, L, mode = _prep(x, y, luma, crop_border, data_range)
     x4, y4 = _apply_luma(x4, y4, mode, L, _work_dtype(x4, dtype))
-    bias = math.log10(L * L) * 10.0
+    bias = _psnr_bias(L)
 
     if not eps:
         # native path folds the dB conversion into the reduction kernel
@@ -429,7 +454,7 @@ def gaussian_window_1d(
     normalising in 1-D and then taking the outer product is *exactly* the same
     as normalising the 2-D window, so separability costs no accuracy.
     """
-    key = (win_size, sigma, str(device), dtype)
+    key = (win_size, sigma, device, dtype)
     w = _window_cache.get(key)
     if w is not None:
         return w
@@ -691,7 +716,9 @@ def ssim(
     # the float32 precision that E[x^2] - E[x]^2 would otherwise throw away.
     shift = 0.5 * L
 
-    from . import backend
+    backend = _sys.modules.get("frame_analytics.backend")
+    if backend is None:
+        from . import backend
 
     # Differentiable native path: only worth taking when a gradient is actually
     # wanted, since it saves x and y and builds an autograd node.
@@ -748,7 +775,7 @@ def _ms_weights(w, device) -> torch.Tensor:
     which is both a per-call sync point and illegal inside a CUDA graph
     capture -- the same reason :func:`gaussian_window_1d` caches.
     """
-    key = (w, str(device))
+    key = (w, device)
     t = _ms_weight_cache.get(key)
     if t is None:
         t = torch.tensor(w, dtype=torch.float64, device=device).view(-1, 1, 1)
@@ -827,7 +854,9 @@ class _FusedSSIMCS(torch.autograd.Function):
 
 def _ssim_cs_pair(x4, y4, win, wdt, shift, C1, C2, backend_hint):
     """``(ssim, cs)``, each ``(N, C)``, from whichever backend can serve it."""
-    from . import backend
+    backend = _sys.modules.get("frame_analytics.backend")
+    if backend is None:
+        from . import backend
 
     if (backend_hint != "torch"
             and (x4.requires_grad or y4.requires_grad)
@@ -952,7 +981,7 @@ _prewitt_cache: dict = {}
 
 def _prewitt_pair(device, dtype) -> torch.Tensor:
     """``(2, 1, 3, 3)``: the horizontal and vertical Prewitt taps, /3."""
-    key = (str(device), dtype)
+    key = (device, dtype)
     k = _prewitt_cache.get(key)
     if k is not None:
         return k
@@ -1027,7 +1056,9 @@ def _gmsd_common(x, y, data_range, T, eps, downsample, dtype, luma, crop_border,
     ev = float(eps) if eps is not None else (1e-6 * L) ** 2
 
     if backend_hint != "torch":
-        from . import backend
+        backend = _sys.modules.get("frame_analytics.backend")
+        if backend is None:
+            from . import backend
 
         # Two cases the native kernel cannot serve: it never materialises the
         # map, and it works in float32 throughout, so a caller who asked for
@@ -1200,7 +1231,9 @@ def _pixel_loss(name, x, y, param, reduction, dtype, out_dtype, luma,
     op, fn_mean, fn_per_image = _PIXEL_OPS[name]
     per_image = reduction == "none"
 
-    from . import backend
+    backend = _sys.modules.get("frame_analytics.backend")
+    if backend is None:
+        from . import backend
 
     if backend_hint != "torch":
         fast = backend.try_pixel(x4, y4, op=op, param=param,
@@ -1211,7 +1244,7 @@ def _pixel_loss(name, x, y, param, reduction, dtype, out_dtype, luma,
             raise RuntimeError(f"native {name} backend unavailable for these inputs")
 
     fn = _maybe_compile(fn_per_image if per_image else fn_mean,
-                        f"pixel:{name}:{per_image}")
+                        f"{name}:{1 if per_image else 0}")
     return fn(x4, y4, wdt, param).to(out_dtype)
 
 
