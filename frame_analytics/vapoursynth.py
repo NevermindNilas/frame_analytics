@@ -13,10 +13,10 @@ so a script written against that plugin keeps working:
 id    feature        frame properties
 ====  =============  ==============================================
 0     psnr           ``psnr_y``, ``psnr_cb``, ``psnr_cr``
-1     psnr_hvs       *not implemented -- libvmaf only*
+1     psnr_hvs       ``psnr_hvs``
 2     ssim           ``float_ssim``
 3     ms_ssim        ``float_ms_ssim``
-4     ciede2000      *not implemented -- libvmaf only*
+4     ciede2000      ``ciede2000``      *(RGB clips only)*
 5     gmsd           ``gmsd``
 6     gms            ``gms``
 7     mse            ``mse_y``, ``mse_cb``, ``mse_cr``
@@ -25,11 +25,25 @@ id    feature        frame properties
 10    huber          ``huber_y``, ...
 11    lpips          ``lpips``          *(RGB clips only)*
 12    ssimulacra2    ``ssimulacra2``    *(RGB clips only)*
+13    adm_like       ``adm_like``
+14    psnr_hvs_m     ``psnr_hvs_m``
+15    ms_gmsd        ``ms_gmsd``
+16    vifp           ``vifp``
+17    iw_ssim        ``iw_ssim``
+18    dss            ``dss``
+19    nlpd           ``nlpd``
+20    fsim           ``fsim``
+21    srsim          ``srsim``
+22    vsi            ``vsi``
+23    mdsi           ``mdsi``
+24    haarpsi        ``haarpsi``
+25    flip           ``flip``           *(RGB clips only)*
+26    scielab        ``scielab``        *(RGB clips only)*
 ====  =============  ==============================================
 
-Ids 1 and 4 are the two libvmaf features with no counterpart here; asking for
-either raises rather than silently returning nothing.  Everything from 5 up is
-an extension, and every feature can also be named as a string --
+Ids 0–4 follow libvmaf's own numbering; everything from 5 up is an
+extension (ids 5–12 predate this release, 13–26 are new here), and every
+feature can also be named as a string --
 ``Metric(ref, dist, ["psnr", "ssim"])`` -- which is the readable form.
 
 Differences from the plugin, all of them widenings:
@@ -92,6 +106,59 @@ except ImportError as exc:  # pragma: no cover - depends on the environment
 from . import functional as _F
 from .perceptual import lpips as _lpips
 from .ssimulacra2 import ssimulacra2 as _ssimulacra2
+from .adm import adm_like as _adm_like
+from .psnrhvs import psnr_hvs as _psnr_hvs, psnr_hvs_m as _psnr_hvs_m
+from .ciede2000 import ciede2000 as _ciede2000
+from .ms_gmsd import ms_gmsd as _ms_gmsd
+from .vifp import vifp as _vifp
+from .iwssim import iw_ssim as _iw_ssim
+from .dss import dss as _dss
+from .nlpd import nlpd as _nlpd
+from .fsim import fsim as _fsim
+from .srsim import srsim as _srsim
+from .vsi import vsi as _vsi
+from .mdsi import mdsi as _mdsi
+from .haarpsi import haarpsi as _haarpsi
+from .flip import flip as _flip
+from .scielab import scielab as _scielab
+
+
+def _crop_apply(x, y, crop_border):
+    if crop_border:
+        b = int(crop_border)
+        x = _F._crop_border(x, b)
+        y = _F._crop_border(y, b)
+    return x, y
+
+
+def _adm_like_vs(x, y, dtype=None, data_range=None, crop_border=0, **options):
+    x, y = _crop_apply(x, y, crop_border)
+    return _adm_like(x, y, data_range=data_range, dtype=dtype, **options)
+
+
+def _psnr_hvs_vs(x, y, dtype=None, data_range=None, crop_border=0, **options):  # noqa: ARG001
+    x, y = _crop_apply(x, y, crop_border)
+    return _psnr_hvs(x, y, data_range=data_range, **options)
+
+
+def _psnr_hvs_m_vs(x, y, dtype=None, data_range=None, crop_border=0, **options):  # noqa: ARG001
+    x, y = _crop_apply(x, y, crop_border)
+    return _psnr_hvs_m(x, y, data_range=data_range, **options)
+
+
+def _ciede2000_vs(x, y, dtype=None, data_range=None, crop_border=0, **options):
+    x, y = _crop_apply(x, y, crop_border)
+    return _ciede2000(x, y, data_range=data_range, dtype=dtype, **options)
+
+
+def _flip_vs(x, y, dtype=None, data_range=None, crop_border=0, **options):
+    x, y = _crop_apply(x, y, crop_border)
+    return _flip(x, y, data_range=data_range, dtype=dtype, **options)
+
+
+def _scielab_vs(x, y, dtype=None, data_range=None, crop_border=0, **options):
+    x, y = _crop_apply(x, y, crop_border)
+    return _scielab(x, y, data_range=data_range, dtype=dtype, **options)
 
 __all__ = [
     "ACCELERATORS",
@@ -107,6 +174,22 @@ __all__ = [
     "Huber",
     "LPIPS",
     "SSIMULACRA2",
+    "ADM_LIKE",
+    "PSNR_HVS",
+    "PSNR_HVS_M",
+    "CIEDE2000",
+    "MS_GMSD",
+    "VIFP",
+    "IWSSIM",
+    "DSS",
+    "NLPD",
+    "FSIM",
+    "SRSIM",
+    "VSI",
+    "MDSI",
+    "HAARPSI",
+    "FLIP",
+    "SCIELAB",
     "available_features",
     "resolve_device",
     "pooled_scores",
@@ -159,8 +242,10 @@ class _Feature:
 
 _FEATURE_LIST = (
     _Feature(0, "psnr", "per_plane", "psnr", _F.psnr),
+    _Feature(1, "psnr_hvs", "image", "psnr_hvs", _psnr_hvs_vs),
     _Feature(2, "ssim", "image", "float_ssim", _F.ssim, backend_hint=True),
     _Feature(3, "ms_ssim", "image", "float_ms_ssim", _F.ms_ssim, backend_hint=True),
+    _Feature(4, "ciede2000", "rgb", "ciede2000", _ciede2000_vs),
     _Feature(5, "gmsd", "image", "gmsd", _F.gmsd, backend_hint=True),
     _Feature(6, "gms", "image", "gms", _F.gms, backend_hint=True),
     _Feature(7, "mse", "per_plane", "mse", _F.mse, data_range=False),
@@ -171,13 +256,28 @@ _FEATURE_LIST = (
              data_range=False, backend_hint=True),
     _Feature(11, "lpips", "rgb", "lpips", _lpips),
     _Feature(12, "ssimulacra2", "rgb", "ssimulacra2", _ssimulacra2),
+    _Feature(13, "adm_like", "image", "adm_like", _adm_like_vs),
+    _Feature(14, "psnr_hvs_m", "image", "psnr_hvs_m", _psnr_hvs_m_vs),
+    _Feature(15, "ms_gmsd", "image", "ms_gmsd", _ms_gmsd),
+    _Feature(16, "vifp", "image", "vifp", _vifp),
+    _Feature(17, "iw_ssim", "image", "iw_ssim", _iw_ssim),
+    _Feature(18, "dss", "image", "dss", _dss),
+    _Feature(19, "nlpd", "image", "nlpd", _nlpd),
+    _Feature(20, "fsim", "image", "fsim", _fsim),
+    _Feature(21, "srsim", "image", "srsim", _srsim),
+    _Feature(22, "vsi", "image", "vsi", _vsi),
+    _Feature(23, "mdsi", "image", "mdsi", _mdsi),
+    _Feature(24, "haarpsi", "image", "haarpsi", _haarpsi),
+    _Feature(25, "flip", "rgb", "flip", _flip_vs),
+    _Feature(26, "scielab", "rgb", "scielab", _scielab_vs),
 )
 
 _BY_NAME = {f.name: f for f in _FEATURE_LIST}
 _BY_ID = {f.id: f for f in _FEATURE_LIST}
 
-# libvmaf's, and only libvmaf's
-_LIBVMAF_ONLY = {1: "psnr_hvs", 4: "ciede2000"}
+# Formerly libvmaf-only ids; both are implemented now, so this stays empty
+# as a compatibility hook for the error message in _resolve_features.
+_LIBVMAF_ONLY: dict = {}
 
 _SUFFIX = {
     vs.GRAY: ("_y",),
@@ -651,8 +751,11 @@ def _wrapper(name):
 
 #: One-metric spellings of :func:`Metric`, for scripts that want one number.
 PSNR = _wrapper("psnr")
+PSNR_HVS = _wrapper("psnr_hvs")
+PSNR_HVS_M = _wrapper("psnr_hvs_m")
 SSIM = _wrapper("ssim")
 MSSSIM = _wrapper("ms_ssim")
+CIEDE2000 = _wrapper("ciede2000")
 GMSD = _wrapper("gmsd")
 GMS = _wrapper("gms")
 MSE = _wrapper("mse")
@@ -661,6 +764,19 @@ Charbonnier = _wrapper("charbonnier")
 Huber = _wrapper("huber")
 LPIPS = _wrapper("lpips")
 SSIMULACRA2 = _wrapper("ssimulacra2")
+ADM_LIKE = _wrapper("adm_like")
+MS_GMSD = _wrapper("ms_gmsd")
+VIFP = _wrapper("vifp")
+IWSSIM = _wrapper("iw_ssim")
+DSS = _wrapper("dss")
+NLPD = _wrapper("nlpd")
+FSIM = _wrapper("fsim")
+SRSIM = _wrapper("srsim")
+VSI = _wrapper("vsi")
+MDSI = _wrapper("mdsi")
+HAARPSI = _wrapper("haarpsi")
+FLIP = _wrapper("flip")
+SCIELAB = _wrapper("scielab")
 
 
 def pooled_scores(clip: vs.VideoNode,

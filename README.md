@@ -516,17 +516,20 @@ Every score lands in a frame property, so `vspipe`, `vspreview`, an
 | id | feature | frame properties |
 |---:|---|---|
 | 0 | `psnr` | `psnr_y`, `psnr_cb`, `psnr_cr` |
-| 1 | `psnr_hvs` | *libvmaf only — raises* |
+| 1 | `psnr_hvs` | `psnr_hvs` |
 | 2 | `ssim` | `float_ssim` |
 | 3 | `ms_ssim` | `float_ms_ssim` |
-| 4 | `ciede2000` | *libvmaf only — raises* |
+| 4 | `ciede2000` | `ciede2000` — RGB clips |
 | 5–10 | `gmsd`, `gms`, `mse`, `l1`, `charbonnier`, `huber` | `gmsd`, `gms`, `mse_y`… |
 | 11 | `lpips` | `lpips` — RGB clips |
 | 12 | `ssimulacra2` | `ssimulacra2` — RGB clips |
+| 13–14 | `adm_like`, `psnr_hvs_m` | `adm_like`, `psnr_hvs_m` |
+| 15–24 | `ms_gmsd`, `vifp`, `iw_ssim`, `dss`, `nlpd`, `fsim`, `srsim`, `vsi`, `mdsi`, `haarpsi` | same name per feature |
+| 25–26 | `flip`, `scielab` | `flip`, `scielab` — RGB clips |
 
-Ids 0–4 are libvmaf's own numbering; 1 and 4 are the two features with nothing
-behind them here, and asking for either says so instead of returning nothing.
-Everything from 5 up is an extension, and every feature can be named instead —
+Ids 0–4 are libvmaf's own numbering; everything from 5 up is an extension
+(ids 5–12 predate this release, 13–26 are new here), and every feature can be
+named instead —
 `fa_vs.Metric(ref, enc, ["psnr", "ssim"])` — which is the form worth writing.
 `fa_vs.SSIM(ref, enc)`, `fa_vs.SSIMULACRA2(ref, enc)` and the rest are the
 one-metric spellings.
@@ -690,6 +693,21 @@ ssimulacra2(orig, dist, *, data_range=None, reduction="mean", dtype=None,
 l1         (x, y, ...)
 charbonnier(x, y, *, eps=1e-3, ...)         # mean sqrt(d^2 + eps^2)
 huber      (x, y, *, delta=1.0, ...)        # matches torch.nn.HuberLoss
+ms_gmsd    (x, y, ...)                      # multi-scale GMSD (Zhang et al. 2017)
+vifp       (x, y, ...)                      # visual information fidelity, pixel domain
+iw_ssim    (x, y, ...)                      # information-weighted SSIM (Wang & Li 2011)
+dss        (x, y, ...)                      # DCT subband similarity (Balanov et al. 2015)
+nlpd       (x, y, ...)                      # normalized Laplacian pyramid distance
+fsim       (x, y, *, chromatic=False, ...)  # feature similarity (Zhang et al. 2011)
+srsim      (x, y, ...)                      # spectral-residual similarity
+vsi        (x, y, ...)                      # visual saliency-induced index
+mdsi       (x, y, ...)                      # mean deviation similarity (lower is better)
+haarpsi    (x, y, ...)                      # Haar wavelet similarity
+adm_like   (x, y, *, wavelet="haar", ...)   # detail-loss style score (not VMAF)
+psnr_hvs   (x, y, ...)                      # PSNR-HVS / PSNR-HVS-M (Egiazarian et al.)
+ciede2000  (x, y, ...)                      # CIEDE2000 colour difference (sRGB in)
+flip       (x, y, *, ppd=67.0, ...)         # FLIP difference evaluator (sRGB in)
+scielab    (x, y, *, ppd=30.0, ...)         # spatial CIELAB difference (sRGB in)
 rgb_to_luma(t, mode="bt601", *, data_range=None, dtype=None)
 ```
 
@@ -731,6 +749,10 @@ CUDA graph, so scoring a frame on ten metrics is still one replay. LPIPS is
 capturable because the trunk is loaded and moved to the device during the
 pre-capture warm-up, leaving convolutions and nothing else inside the captured
 region.
+
+The metrics added in 0.7.0 are also accepted by `StreamingMetrics`.
+When `iw_ssim` is selected, scoring uses eager CUDA operations because its
+eigenvalue calculation cannot be captured safely; `graph_captured` is `False`.
 
 ## License
 

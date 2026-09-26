@@ -196,6 +196,24 @@ def _work_dtype(x: torch.Tensor, dtype: Optional[torch.dtype]) -> torch.dtype:
     return torch.float32
 
 
+def _safe_sqrt(x: torch.Tensor) -> torch.Tensor:
+    """Nonnegative square root with a zero subgradient at zero.
+
+    Mask the operand before the root: masking its result alone still lets
+    backward multiply a zero upstream gradient by an infinite derivative.
+    """
+    positive = x > 0
+    operand = torch.where(positive, x, torch.ones_like(x))
+    return torch.where(positive, operand.sqrt(), torch.zeros_like(x))
+
+
+def _safe_positive_power(x: torch.Tensor, exponent) -> torch.Tensor:
+    """Positive power on nonnegative data, with a zero subgradient at zero."""
+    positive = x > 0
+    operand = torch.where(positive, x, torch.ones_like(x))
+    return torch.where(positive, operand.pow(exponent), torch.zeros_like(x))
+
+
 # --------------------------------------------------------------------------- #
 # luma + border crop
 #
@@ -441,6 +459,8 @@ def psnr(
 _window_cache: dict = {}
 
 
+# Persistent constants must stay usable by autograd after inference scoring.
+@torch.inference_mode(False)
 def gaussian_window_1d(
     win_size: int = 11,
     sigma: float = 1.5,

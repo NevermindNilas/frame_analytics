@@ -294,26 +294,45 @@ def test_numpy_integer_feature():
 def test_available_features():
     feats = fa_vs.available_features()
     assert feats["psnr"] == 0 and feats["ssim"] == 2 and feats["ms_ssim"] == 3
-    assert 1 not in feats.values() and 4 not in feats.values()
+    assert feats["psnr_hvs"] == 1 and feats["ciede2000"] == 4
 
 
 # --------------------------------------------------------------------------- #
 # rejections
 # --------------------------------------------------------------------------- #
 
-def test_libvmaf_only_features_are_named_in_the_error():
-    ref, dist = _pair()
+def test_former_libvmaf_only_feature_ids_compute_scores():
+    ref, dist = _pair(h=64, w=64)
     r, d = _clip(ref, vs.RGB24), _clip(dist, vs.RGB24)
-    for bad, name in ((1, "psnr_hvs"), (4, "ciede2000")):
-        with pytest.raises(ValueError, match=name):
-            fa_vs.Metric(r, d, bad)
+    for feature, name in ((1, "psnr_hvs"), (4, "ciede2000")):
+        props = _props(fa_vs.Metric(r, d, feature, accelerator="cpu"))
+        assert name in props and np.isfinite(props[name])
+
+
+@pytest.mark.parametrize("name,options", [
+    ("psnr_hvs", {"eps": 1e5}),
+    ("psnr_hvs_m", {"eps": 1e5}),
+    ("adm_like", {"wavelet": "db2_like", "scales": 2}),
+    ("ciede2000", {"kL": 2.0}),
+    ("flip", {"ppd": 30.0}),
+    ("scielab", {"ppd": 15.0}),
+])
+def test_new_metric_options_reach_the_metric(name, options):
+    ref, dist = _pair(h=64, w=64)
+    r, d = _clip(ref, vs.RGB24), _clip(dist, vs.RGB24)
+    props = _props(fa_vs.Metric(r, d, name, accelerator="cpu",
+                               options={name: options}, crop_border=2))
+    x = torch.from_numpy(ref.astype(np.uint8)).unsqueeze(0)[..., 2:-2, 2:-2]
+    y = torch.from_numpy(dist.astype(np.uint8)).unsqueeze(0)[..., 2:-2, 2:-2]
+    expected = float(getattr(fa, name)(x, y, data_range=255.0, **options))
+    assert props[name] == pytest.approx(expected, rel=1e-6, abs=1e-7)
 
 
 def test_rgb_only_features_reject_yuv():
     ref, dist = _pair()
     r = _clip(_sub(ref, vs.YUV420P8), vs.YUV420P8)
     d = _clip(_sub(dist, vs.YUV420P8), vs.YUV420P8)
-    for feat in ("lpips", "ssimulacra2"):
+    for feat in ("lpips", "ssimulacra2", "ciede2000", "flip", "scielab"):
         with pytest.raises(vs.Error, match="needs RGB"):
             fa_vs.Metric(r, d, feat)
 

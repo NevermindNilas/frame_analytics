@@ -49,12 +49,28 @@ from .functional import (  # noqa: F401
     ssim,
 )
 from .modules import (  # noqa: F401
+    ADM_LIKE,
+    CIEDE2000,
+    DSS,
+    FLIP,
+    FSIM,
     GMSD,
+    HAARPSI,
+    IWSSIM,
     LPIPS,
+    MDSI,
+    MS_GMSD,
     MSE,
+    NLPD,
     PSNR,
+    PSNR_HVS,
+    PSNR_HVS_M,
+    SCIELAB,
+    SRSIM,
     SSIM,
     SSIMULACRA2,
+    VIFP,
+    VSI,
     Charbonnier,
     Huber,
     L1,
@@ -63,8 +79,23 @@ from .modules import (  # noqa: F401
 )
 from .perceptual import available_nets, lpips, lpips_weights_path  # noqa: F401
 from .ssimulacra2 import ssimulacra2  # noqa: F401
+from .adm import adm_like  # noqa: F401
+from .ciede2000 import ciede2000, delta_e_00, srgb_to_lab  # noqa: F401
+from .dss import dss  # noqa: F401
+from .flip import flip  # noqa: F401
+from .fsim import fsim, fsimc  # noqa: F401
+from .haarpsi import haarpsi  # noqa: F401
+from .iwssim import iw_ssim, iwssim_lite  # noqa: F401
+from .mdsi import gcs_map, mdsi  # noqa: F401
+from .ms_gmsd import MS_GMSD_WEIGHTS, ms_gmsd  # noqa: F401
+from .nlpd import effective_depth, nlpd  # noqa: F401
+from .psnrhvs import mse_hvs, mse_hvs_m, psnr_hvs, psnr_hvs_m  # noqa: F401
+from .scielab import scielab  # noqa: F401
+from .srsim import srsim, srsimc  # noqa: F401
+from .vifp import vifp  # noqa: F401
+from .vsi import sdsp_saliency, vsi  # noqa: F401
 
-__version__ = "0.6.2"
+__version__ = "0.7.0"
 
 __all__ = [
     "mse",
@@ -78,12 +109,55 @@ __all__ = [
     "huber",
     "lpips",
     "ssimulacra2",
+    "ms_gmsd",
+    "MS_GMSD_WEIGHTS",
+    "vifp",
+    "iw_ssim",
+    "iwssim_lite",
+    "dss",
+    "nlpd",
+    "effective_depth",
+    "fsim",
+    "fsimc",
+    "srsim",
+    "srsimc",
+    "vsi",
+    "sdsp_saliency",
+    "mdsi",
+    "gcs_map",
+    "haarpsi",
+    "adm_like",
+    "psnr_hvs",
+    "psnr_hvs_m",
+    "mse_hvs",
+    "mse_hvs_m",
+    "ciede2000",
+    "srgb_to_lab",
+    "delta_e_00",
+    "flip",
+    "scielab",
     "rgb_to_luma",
     "MSE",
     "PSNR",
     "SSIM",
     "MSSSIM",
     "GMSD",
+    "MS_GMSD",
+    "VIFP",
+    "IWSSIM",
+    "DSS",
+    "NLPD",
+    "FSIM",
+    "SRSIM",
+    "VSI",
+    "MDSI",
+    "HAARPSI",
+    "ADM_LIKE",
+    "PSNR_HVS",
+    "PSNR_HVS_M",
+    "CIEDE2000",
+    "FLIP",
+    "SCIELAB",
     "L1",
     "Charbonnier",
     "Huber",

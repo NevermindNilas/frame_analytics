@@ -34,9 +34,27 @@ from .functional import (
 )
 from .perceptual import lpips
 from .ssimulacra2 import ssimulacra2
+from .ms_gmsd import ms_gmsd as _ms_gmsd
+from .vifp import vifp as _vifp
+from .iwssim import iw_ssim as _iw_ssim
+from .dss import dss as _dss
+from .nlpd import nlpd as _nlpd
+from .fsim import fsim as _fsim, fsimc as _fsimc
+from .srsim import srsim as _srsim, srsimc as _srsimc
+from .vsi import vsi as _vsi
+from .mdsi import mdsi as _mdsi
+from .haarpsi import haarpsi as _haarpsi
+from .adm import adm_like as _adm_like
+from .psnrhvs import psnr_hvs as _psnr_hvs, psnr_hvs_m as _psnr_hvs_m
+from .ciede2000 import ciede2000 as _ciede2000
+from .flip import flip as _flip
+from .scielab import scielab as _scielab
 
 __all__ = ["MSE", "PSNR", "SSIM", "MSSSIM", "GMSD", "L1", "Charbonnier",
-           "Huber", "LPIPS", "SSIMULACRA2", "StreamingMetrics"]
+           "Huber", "LPIPS", "SSIMULACRA2", "MS_GMSD", "VIFP", "IWSSIM",
+           "DSS", "NLPD", "FSIM", "SRSIM", "VSI", "MDSI", "HAARPSI",
+           "ADM_LIKE", "PSNR_HVS", "PSNR_HVS_M", "CIEDE2000", "FLIP",
+           "SCIELAB", "StreamingMetrics"]
 
 
 class MSE(nn.Module):
@@ -313,6 +331,402 @@ class SSIMULACRA2(nn.Module):
                            crop_border=self.crop_border)
 
 
+class MS_GMSD(nn.Module):
+    """Multi-scale GMSD. ``forward`` is the deviation (lower is better).
+
+    ``.loss()`` is the deviation itself, like the pixel losses.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 weights: Optional[Sequence[float]] = None,
+                 num_scales: Optional[int] = None,
+                 reduction: str = "mean", dtype: Optional[torch.dtype] = None,
+                 luma=None, crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.weights = tuple(weights) if weights is not None else None
+        self.num_scales = num_scales
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        return _ms_gmsd(x, y, data_range=self.data_range,
+                        weights=self.weights, num_scales=self.num_scales,
+                        reduction=self.reduction, dtype=self.dtype_,
+                        luma=self.luma, crop_border=self.crop_border)
+
+    def loss(self, x, y):
+        return self.forward(x, y)
+
+
+class VIFP(nn.Module):
+    """Visual Information Fidelity, pixel domain. Higher is better, 1 is identical.
+
+    ``.loss()`` is ``1 - VIFp``.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 reduction: str = "mean", dtype: Optional[torch.dtype] = None,
+                 luma=None, crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        return _vifp(x, y, data_range=self.data_range,
+                     reduction=self.reduction, dtype=self.dtype_,
+                     luma=self.luma, crop_border=self.crop_border)
+
+    def loss(self, x, y):
+        return 1.0 - self.forward(x, y)
+
+
+class IWSSIM(nn.Module):
+    """Information-weighted SSIM. Higher is better, 1 is identical.
+
+    ``.loss()`` is ``1 - IW-SSIM``.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 reduction: str = "mean", dtype: Optional[torch.dtype] = None,
+                 luma=None, crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        return _iw_ssim(x, y, data_range=self.data_range,
+                        reduction=self.reduction, dtype=self.dtype_,
+                        luma=self.luma, crop_border=self.crop_border)
+
+    def loss(self, x, y):
+        return 1.0 - self.forward(x, y)
+
+
+class DSS(nn.Module):
+    """DCT subband similarity. Higher is better, 1 is identical.
+
+    ``.loss()`` is ``1 - DSS``.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 reduction: str = "mean", dtype: Optional[torch.dtype] = None,
+                 luma=None, crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        return _dss(x, y, data_range=self.data_range,
+                    reduction=self.reduction, dtype=self.dtype_,
+                    luma=self.luma, crop_border=self.crop_border)
+
+    def loss(self, x, y):
+        return 1.0 - self.forward(x, y)
+
+
+class NLPD(nn.Module):
+    """Normalized Laplacian pyramid distance. Lower is better, 0 is identical.
+
+    ``forward`` and ``.loss()`` are the same thing -- NLPD is already a penalty.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 reduction: str = "mean", dtype: Optional[torch.dtype] = None,
+                 luma=None, crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        return _nlpd(x, y, data_range=self.data_range,
+                     reduction=self.reduction, dtype=self.dtype_,
+                     luma=self.luma, crop_border=self.crop_border)
+
+    def loss(self, x, y):
+        return self.forward(x, y)
+
+
+class FSIM(nn.Module):
+    """Feature similarity. Higher is better, 1 is identical.
+
+    ``chromatic=True`` gives FSIMc on 3-channel input. ``.loss()`` is ``1 - FSIM``.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 chromatic: bool = False, reduction: str = "mean",
+                 dtype: Optional[torch.dtype] = None, luma=None,
+                 crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.chromatic = chromatic
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        if self.chromatic:
+            return _fsimc(x, y, data_range=self.data_range,
+                          reduction=self.reduction, dtype=self.dtype_,
+                          crop_border=self.crop_border)
+        return _fsim(x, y, data_range=self.data_range,
+                     reduction=self.reduction, dtype=self.dtype_,
+                     luma=self.luma, crop_border=self.crop_border)
+
+    def loss(self, x, y):
+        return 1.0 - self.forward(x, y)
+
+
+class SRSIM(nn.Module):
+    """Spectral-residual similarity. Higher is better, 1 is identical.
+
+    ``chromatic=True`` gives SR-SIMc. ``.loss()`` is ``1 - SR-SIM``.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 chromatic: bool = False, reduction: str = "mean",
+                 dtype: Optional[torch.dtype] = None, luma=None,
+                 crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.chromatic = chromatic
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        if self.chromatic:
+            return _srsimc(x, y, data_range=self.data_range,
+                           reduction=self.reduction, dtype=self.dtype_,
+                           crop_border=self.crop_border)
+        return _srsim(x, y, data_range=self.data_range,
+                      reduction=self.reduction, dtype=self.dtype_,
+                      luma=self.luma, crop_border=self.crop_border)
+
+    def loss(self, x, y):
+        return 1.0 - self.forward(x, y)
+
+
+class VSI(nn.Module):
+    """Visual saliency-induced index. Higher is better, 1 is identical.
+
+    ``.loss()`` is ``1 - VSI``.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 reduction: str = "mean", dtype: Optional[torch.dtype] = None,
+                 luma=None, crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        return _vsi(x, y, data_range=self.data_range,
+                    reduction=self.reduction, dtype=self.dtype_,
+                    luma=self.luma, crop_border=self.crop_border)
+
+    def loss(self, x, y):
+        return 1.0 - self.forward(x, y)
+
+
+class MDSI(nn.Module):
+    """Mean deviation similarity. Lower is better, 0 is identical.
+
+    ``forward`` and ``.loss()`` are the same thing -- MDSI is already a penalty.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 reduction: str = "mean", dtype: Optional[torch.dtype] = None,
+                 luma=None, crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        return _mdsi(x, y, data_range=self.data_range,
+                     reduction=self.reduction, dtype=self.dtype_,
+                     luma=self.luma, crop_border=self.crop_border)
+
+    def loss(self, x, y):
+        return self.forward(x, y)
+
+
+class HAARPSI(nn.Module):
+    """Haar wavelet similarity. Higher is better, 1 is identical.
+
+    ``.loss()`` is ``1 - HaarPSI``.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 reduction: str = "mean", dtype: Optional[torch.dtype] = None,
+                 luma=None, crop_border: int = 0):
+        super().__init__()
+        self.data_range = data_range
+        self.reduction = reduction
+        self.dtype_ = dtype
+        self.luma = luma
+        self.crop_border = crop_border
+
+    def forward(self, x, y):
+        return _haarpsi(x, y, data_range=self.data_range,
+                        reduction=self.reduction, dtype=self.dtype_,
+                        luma=self.luma, crop_border=self.crop_border)
+
+    def loss(self, x, y):
+        return 1.0 - self.forward(x, y)
+
+
+class ADM_LIKE(nn.Module):
+    """Detail-loss style score (Haar/DB2). Higher is better, 1 is identical.
+
+    Explicitly not VMAF-compatible; see :func:`frame_analytics.adm_like`.
+    ``.loss()`` is ``1 - adm_like``.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 wavelet: str = "haar", reduction: str = "mean",
+                 dtype: Optional[torch.dtype] = None):
+        super().__init__()
+        self.data_range = data_range
+        self.wavelet = wavelet
+        self.reduction = reduction
+        self.dtype_ = dtype
+
+    def forward(self, x, y):
+        return _adm_like(x, y, data_range=self.data_range,
+                         wavelet=self.wavelet, reduction=self.reduction,
+                         dtype=self.dtype_)
+
+    def loss(self, x, y):
+        return 1.0 - self.forward(x, y)
+
+
+class PSNR_HVS(nn.Module):
+    """PSNR-HVS (Egiazarian et al.). Higher is better, in dB.
+
+    Reporting metric; no ``.loss()`` (dB scale, ``inf`` on identical input).
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 reduction: str = "mean", eps: float = 0.0):
+        super().__init__()
+        self.data_range = data_range
+        self.reduction = reduction
+        self.eps = eps
+
+    def forward(self, x, y):
+        return _psnr_hvs(x, y, data_range=self.data_range,
+                         reduction=self.reduction, eps=self.eps)
+
+
+class PSNR_HVS_M(nn.Module):
+    """PSNR-HVS-M with contrast masking. Higher is better, in dB.
+
+    Reporting metric; no ``.loss()``.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 reduction: str = "mean", eps: float = 0.0):
+        super().__init__()
+        self.data_range = data_range
+        self.reduction = reduction
+        self.eps = eps
+
+    def forward(self, x, y):
+        return _psnr_hvs_m(x, y, data_range=self.data_range,
+                           reduction=self.reduction, eps=self.eps)
+
+
+class CIEDE2000(nn.Module):
+    """CIEDE2000 colour difference on sRGB input. Lower is better, 0 is identical.
+
+    ``forward`` and ``.loss()`` are the same thing.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 reduction: str = "mean",
+                 dtype: Optional[torch.dtype] = None):
+        super().__init__()
+        self.data_range = data_range
+        self.reduction = reduction
+        self.dtype_ = dtype
+
+    def forward(self, x, y):
+        return _ciede2000(x, y, data_range=self.data_range,
+                          reduction=self.reduction, dtype=self.dtype_)
+
+    def loss(self, x, y):
+        return self.forward(x, y)
+
+
+class FLIP(nn.Module):
+    """FLIP difference evaluator. Lower is better, 0 is identical.
+
+    ``forward`` and ``.loss()`` are the same thing. Takes sRGB-encoded RGB.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 ppd: Optional[float] = None, reduction: str = "mean",
+                 dtype: Optional[torch.dtype] = None):
+        super().__init__()
+        self.data_range = data_range
+        self.ppd = ppd
+        self.reduction = reduction
+        self.dtype_ = dtype
+
+    def forward(self, x, y):
+        return _flip(x, y, data_range=self.data_range, ppd=self.ppd,
+                     reduction=self.reduction, dtype=self.dtype_)
+
+    def loss(self, x, y):
+        return self.forward(x, y)
+
+
+class SCIELAB(nn.Module):
+    """Spatial CIELAB difference. Lower is better, 0 is identical.
+
+    ``forward`` and ``.loss()`` are the same thing. Takes sRGB-encoded RGB.
+    """
+
+    def __init__(self, data_range: Optional[float] = None,
+                 ppd: float = 30.0, reduction: str = "mean",
+                 dtype: Optional[torch.dtype] = None):
+        super().__init__()
+        self.data_range = data_range
+        self.ppd = ppd
+        self.reduction = reduction
+        self.dtype_ = dtype
+
+    def forward(self, x, y):
+        return _scielab(x, y, data_range=self.data_range, ppd=self.ppd,
+                        reduction=self.reduction, dtype=self.dtype_)
+
+    def loss(self, x, y):
+        return self.forward(x, y)
+
+
 class StreamingMetrics:
     """Fixed-shape video scorer with CUDA-graph replay and pinned staging.
 
@@ -324,9 +738,13 @@ class StreamingMetrics:
     ...     out = sm.update(ref, dist)      # {"mse":..., "psnr":..., "ssim":...}
 
     ``metrics`` may name any of ``mse``, ``psnr``, ``ssim``, ``ms_ssim``,
-    ``gmsd``, ``gms``, ``l1``, ``charbonnier``, ``huber``, ``lpips``. They all
-    capture into the same graph, so scoring a frame on ten metrics is still one
-    replay.
+    ``gmsd``, ``gms``, ``l1``, ``charbonnier``, ``huber``, ``lpips``,
+    ``ssimulacra2``, ``ms_gmsd``, ``vifp``, ``iw_ssim``, ``dss``, ``nlpd``,
+    ``fsim``, ``srsim``, ``vsi``, ``mdsi``, ``haarpsi``, ``adm_like``,
+    ``psnr_hvs``, ``psnr_hvs_m``, ``ciede2000``, ``flip``, ``scielab``. They all
+    share one CUDA graph when capturable, so scoring a frame on ten metrics
+    can still be one replay. IW-SSIM uses eager scoring because its eigenvalue
+    calculation synchronizes with the host.
 
     ``lpips`` is capturable because the trunk weights are loaded and moved to
     the device during the pre-capture warm-up, so the captured region contains
@@ -334,7 +752,10 @@ class StreamingMetrics:
     """
 
     _KNOWN = ("mse", "psnr", "ssim", "ms_ssim", "gmsd", "gms", "l1",
-              "charbonnier", "huber", "lpips", "ssimulacra2")
+              "charbonnier", "huber", "lpips", "ssimulacra2",
+              "ms_gmsd", "vifp", "iw_ssim", "dss", "nlpd", "fsim",
+              "srsim", "vsi", "mdsi", "haarpsi", "adm_like",
+              "psnr_hvs", "psnr_hvs_m", "ciede2000", "flip", "scielab")
 
     def __init__(self, shape, device="cuda", dtype=torch.uint8,
                  data_range: Optional[float] = None, metrics=("mse", "psnr", "ssim"),
@@ -395,6 +816,47 @@ class StreamingMetrics:
             # that is not symmetric in its two arguments.
             out["ssimulacra2"] = ssimulacra2(self.ref, self.dist,
                                              data_range=self._L)
+        if "ms_gmsd" in self.metrics:
+            out["ms_gmsd"] = _ms_gmsd(self.ref, self.dist, data_range=self._L)
+        if "vifp" in self.metrics:
+            out["vifp"] = _vifp(self.ref, self.dist, data_range=self._L)
+        if "iw_ssim" in self.metrics:
+            out["iw_ssim"] = _iw_ssim(self.ref, self.dist, data_range=self._L)
+        if "dss" in self.metrics:
+            out["dss"] = _dss(self.ref, self.dist, data_range=self._L)
+        if "nlpd" in self.metrics:
+            out["nlpd"] = _nlpd(self.ref, self.dist, data_range=self._L)
+        if "fsim" in self.metrics:
+            out["fsim"] = _fsim(self.ref, self.dist, data_range=self._L)
+        if "srsim" in self.metrics:
+            out["srsim"] = _srsim(self.ref, self.dist, data_range=self._L)
+        if "vsi" in self.metrics:
+            out["vsi"] = _vsi(self.ref, self.dist, data_range=self._L)
+        if "mdsi" in self.metrics:
+            out["mdsi"] = _mdsi(self.ref, self.dist, data_range=self._L)
+        if "haarpsi" in self.metrics:
+            out["haarpsi"] = _haarpsi(self.ref, self.dist, data_range=self._L)
+        if "adm_like" in self.metrics:
+            out["adm_like"] = _adm_like(self.ref, self.dist, data_range=self._L)
+        if "psnr_hvs" in self.metrics:
+            from .psnrhvs import mse_hvs as _mse_hvs
+
+            _m = _mse_hvs(self.ref, self.dist, data_range=self._L)
+            out["psnr_hvs"] = (math.log10(self._L ** 2) * 10.0
+                               - 10.0 * torch.log10(_m))
+        if "psnr_hvs_m" in self.metrics:
+            from .psnrhvs import mse_hvs_m as _mse_hvs_m
+
+            _mm = _mse_hvs_m(self.ref, self.dist, data_range=self._L)
+            out["psnr_hvs_m"] = (math.log10(self._L ** 2) * 10.0
+                                 - 10.0 * torch.log10(_mm))
+        if "ciede2000" in self.metrics:
+            out["ciede2000"] = _ciede2000(self.ref, self.dist,
+                                          data_range=self._L)
+        if "flip" in self.metrics:
+            out["flip"] = _flip(self.ref, self.dist, data_range=self._L)
+        if "scielab" in self.metrics:
+            out["scielab"] = _scielab(self.ref, self.dist, data_range=self._L)
         for name, fn in (("l1", l1), ("charbonnier", charbonnier),
                          ("huber", huber)):
             if name in self.metrics:
@@ -402,6 +864,10 @@ class StreamingMetrics:
         return out
 
     def _try_capture(self):
+        # torch.linalg.eigh synchronizes with the host. Attempting to capture
+        # IW-SSIM can invalidate the CUDA stream before the fallback runs.
+        if "iw_ssim" in self.metrics:
+            return
         try:
             # Preload capturability hazards *before* the side stream so the
             # captured region holds convolutions/kernels only. NOTE: must NOT
