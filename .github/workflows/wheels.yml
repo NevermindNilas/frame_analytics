@@ -105,8 +105,9 @@ jobs:
     # architecture: the Intel macOS runners are being retired and queue for
     # hours, and clang cross-compiles a fat dylib for the cost of an extra
     # -arch flag. fa_cpu carries both slices; fa_cpu_avx2 is x86_64-only, which
-    # is fine because the loader only consults it on x86 hosts.
-    runs-on: macos-14
+    # is fine because the loader only consults it on x86 hosts. macos-15: the
+    # macos-14 image has been retired ("configuration not supported").
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
