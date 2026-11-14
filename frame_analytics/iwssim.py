@@ -19,6 +19,7 @@ Color: every channel scored independently and product-pooled, then averaged
 
 from __future__ import annotations
 
+import types
 from typing import Optional, Sequence
 
 import torch
@@ -392,14 +393,49 @@ def _gsm_info_map(x: torch.Tensor, y: torch.Tensor, x_parent=None,
     lam = torch.diagonal(L, offset=0, dim1=-2, dim2=-1).reshape(B, N, 1, 1)
     g = _own(g[:, :, Ly:Ly + nblv, Lx:Lx + nblh].reshape(B, nblv, nblh))
     vv = _own(vv[:, :, Ly:Ly + nblv, Lx:Lx + nblh].reshape(B, nblv, nblh))
-    # dynamic=True plus non-view, batch-merged inputs: one graph per
-    # (N, grad mode) whatever the image size or batch (Dynamo still
-    # specialises B == 1 and square-vs-not). N is the only size the unrolled
-    # quadratic form needs to know.
-    epi = _maybe_compile(_gsm_iw_epilogue, "iwssim:gsm_iw", dynamic=True)
-    iw = epi(_own(Yt), _own(Cu_inv), vv, g, _own(lam),
+    grad = torch.is_grad_enabled() and (Yt.requires_grad or vv.requires_grad
+                                        or g.requires_grad)
+    iw = _gsm_epilogue_for(N, Yt, grad)(_own(Yt), _own(Cu_inv), vv, g, _own(lam),
              float(sigma_nsq), float(eps))
     return iw.view(n, c, nblv, nblh)
+
+
+#: Largest neighbourhood (``blk_size**2`` + parent) given the unrolled,
+#: compiled epilogue. Its trace is N^2 terms: N = 10 (the default 3x3 block
+#: with parent) compiles in seconds, N = 26 (5x5) took ~100 s and N = 50 (7x7)
+#: ~300 s for a gain the eager matmul form mostly matches at those sizes.
+_GSM_UNROLL_MAX_N = 10
+_gsm_epi_variants: dict = {}
+
+
+def _gsm_epilogue_for(N: int, Yt: torch.Tensor, grad: bool):
+    """The epilogue callable for this (N, grad mode, dtype, device).
+
+    Each combination compiles its *own copy* of the function. Dynamo keys its
+    cache -- and its recompile limit of 8 -- on the code object, so a single
+    compiled function shared by N = 9 / 10, train / eval, float32 / float64
+    and CPU / CUDA (each a guard failure) ran out of entries on an ordinary
+    mixed workload and silently dropped every later variant to eager. A copy
+    is left with only the B == 1 and square-vs-not specialisations: at most
+    four entries.
+    """
+    if N > _GSM_UNROLL_MAX_N:
+        return _gsm_iw_epilogue           # eager: the matmul formulation
+    key = (N, grad, Yt.dtype, Yt.device.type)
+    epi = _gsm_epi_variants.get(key)
+    if epi is None:
+        src = _gsm_iw_epilogue
+        name = f"_gsm_iw_epilogue_n{N}_{'g' if grad else 'i'}_{str(Yt.dtype)[6:]}_{Yt.device.type}"
+        code = src.__code__.replace(co_name=name)
+        if hasattr(code, "co_qualname"):
+            code = code.replace(co_qualname=name)
+        clone = types.FunctionType(code, src.__globals__, name,
+                                   src.__defaults__, src.__closure__)
+        # dynamic=True plus non-view, batch-merged inputs: one graph whatever
+        # the image size or batch.
+        epi = _maybe_compile(clone, "iwssim:gsm_iw:" + name, dynamic=True)
+        _gsm_epi_variants[key] = epi
+    return epi
 
 
 def _own(t: torch.Tensor) -> torch.Tensor:

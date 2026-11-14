@@ -136,14 +136,37 @@ def _prep(x, y, data_range):
 # compiled cores: (B,8,8) float32 blocks in, (B,) float32 per-block MSE out
 # --------------------------------------------------------------------------- #
 
+def _fp32_matmul_exact() -> bool:
+    """True unless float32 GEMMs are allowed to use TF32 (or anything coarser).
+
+    Asked through the new ``fp32_precision`` API where it exists: once a
+    program has touched it, reading the legacy ``allow_tf32`` /
+    ``get_float32_matmul_precision`` raises. Every legacy setter is mirrored
+    into it, and so is the global ``torch.backends.fp32_precision``. Anything
+    unreadable counts as inexact -- the slower path is the safe one.
+    """
+    try:
+        mm = torch.backends.cuda.matmul
+        if hasattr(mm, "fp32_precision"):
+            return mm.fp32_precision in ("ieee", "none")
+        return (not mm.allow_tf32
+                and torch.get_float32_matmul_precision() == "highest")
+    except Exception:
+        return False
+
+
 def _dct8x8(blocks, C, CT, KT):
     """Orthonormal 2-D DCT-II of ``(B, 8, 8)`` blocks.
 
     CUDA: one ``(B, 64) @ (C kron C)^T`` GEMM -- batched 8x8 bmm was half of
     PSNR-HVS-M's GPU time. CPU keeps ``C @ X @ C^T`` (the GEMM form measured
-    -9%..+10% there, so not worth changing CPU results).
+    -9%..+10% there, so not worth changing CPU results). ``KT is None`` also
+    selects ``C @ X @ C^T``: the caller passes that whenever float32 matmuls may
+    run on TF32 tensor cores, where the 64-wide GEMM's 10-bit mantissa moved
+    PSNR-HVS-M by 0.13 dB (the masked variant subtracts two separately rounded
+    transforms, so nothing cancels).
     """
-    if blocks.is_cuda:
+    if KT is not None and blocks.is_cuda:
         return (blocks.reshape(-1, 64) @ KT).view(-1, 8, 8)
     return C @ blocks @ CT
 
@@ -195,6 +218,9 @@ def _mse_jnd_per_image(x4, y4, masking: bool) -> torch.Tensor:
     """Perceptual MSE per batch element, ``(N,)`` float64 on the input device."""
     n = x4.shape[0]
     T = _tables(x4.device)
+    # Decided here, outside the compiled region, so each setting gets its own
+    # graph rather than whichever one was traced first.
+    KT = T.KT if _fp32_matmul_exact() else None
     # Per-device-type keys: a CPU-Inductor failure must not poison CUDA.
     dts = x4.device.type
     if masking:
@@ -202,7 +228,7 @@ def _mse_jnd_per_image(x4, y4, masking: bool) -> torch.Tensor:
         Yb = y4.to(_COMPUTE).unfold(2, 8, 8).unfold(3, 8, 8).reshape(-1, 8, 8)
         core = _F._maybe_compile(_hvsm_core, f"psnrhvs:hvsm:{dts}")
         with _F._no_autocast(Xb):
-            pb = core(Xb, Yb, T.C, T.CT, T.KT, T.W, T.MW, T.IW)
+            pb = core(Xb, Yb, T.C, T.CT, KT, T.W, T.MW, T.IW)
     else:
         Xf = x4.to(_COMPUTE)
         Yf = y4.to(_COMPUTE)
@@ -211,7 +237,7 @@ def _mse_jnd_per_image(x4, y4, masking: bool) -> torch.Tensor:
               - Yf.unfold(2, 8, 8).unfold(3, 8, 8)).reshape(-1, 8, 8)
         core = _F._maybe_compile(_hvs_core, f"psnrhvs:hvs:{dts}")
         with _F._no_autocast(Db):
-            pb = core(Db, T.C, T.CT, T.KT, T.W)
+            pb = core(Db, T.C, T.CT, KT, T.W)
     return pb.to(_ACCUM).view(n, -1).mean(dim=1)
 
 

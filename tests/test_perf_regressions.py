@@ -131,3 +131,70 @@ def test_concurrent_cpu_calls_match_serial(metric):
     for t in threads:
         t.join()
     assert not errors
+
+
+# --------------------------------------------------------------------------- #
+# metric modules
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("name", ["flip", "scielab", "dss", "haarpsi"])
+def test_plane_conv_metrics_under_torch_func(name):
+    import importlib
+
+    fn = getattr(importlib.import_module(f"frame_analytics.{name}"), name)
+    g = torch.Generator().manual_seed(0)
+    x = torch.rand(1, 3, 48, 48, generator=g, dtype=torch.float64)
+    y = (x + 0.05 * torch.randn(x.shape, generator=g, dtype=torch.float64)).clamp(0, 1)
+    got = torch.func.grad(lambda t: fn(x, t))(y)
+    yy = y.clone().requires_grad_()
+    (ref,) = torch.autograd.grad(fn(x, yy), yy)
+    torch.testing.assert_close(got, ref)
+    torch.func.vmap(torch.func.grad(lambda t: fn(x, t)))(torch.stack([y, y.flip(-1)]))
+
+
+def test_plane_corr_transforms():
+    from frame_analytics._metric_utils import _PlaneCorr
+
+    torch.manual_seed(0)
+    for groups, c, o in [(1, 1, 3), (3, 3, 3)]:
+        w = torch.randn(o, 1, 5, 4, dtype=torch.float64)
+        for pad in [(0, 0), (2, 1), (4, 3)]:
+            x = torch.randn(2, c, 9, 8, dtype=torch.float64, requires_grad=True)
+
+            def f(t):
+                return _PlaneCorr.apply(t, w, pad, groups)
+
+            assert torch.autograd.gradcheck(f, (x,))
+            assert torch.autograd.gradgradcheck(f, (x,))
+            assert torch.autograd.gradcheck(f, (x,), check_forward_ad=True,
+                                            check_backward_ad=False)
+
+
+def test_fsim_map_double_backward():
+    from frame_analytics.fsim import fsim
+
+    torch.manual_seed(0)
+    x = torch.rand(1, 3, 64, 72, dtype=torch.float64)
+    y = (x + 0.05 * torch.randn_like(x)).clamp(0, 1).requires_grad_(True)
+    (g,) = torch.autograd.grad(fsim(x, y, return_map=True).mean(), y,
+                               create_graph=True)
+    (g * g).sum().backward()
+    assert torch.isfinite(y.grad).all()
+
+
+@cuda
+def test_psnr_hvs_m_ignores_tf32():
+    from frame_analytics.psnrhvs import psnr_hvs_m
+
+    torch.manual_seed(0)
+    x = torch.rand(1, 3, 256, 256, device="cuda")
+    y = ((x + 0.01 * torch.randn_like(x)).clamp(0, 1) * 255).round() / 255
+    ref = float(psnr_hvs_m(x.cpu().double(), y.cpu().double(), data_range=1.0))
+    old = torch.backends.cuda.matmul.fp32_precision
+    try:
+        torch.backends.cuda.matmul.fp32_precision = "tf32"
+        got = float(psnr_hvs_m(x, y, data_range=1.0))
+    finally:
+        torch.backends.cuda.matmul.fp32_precision = old
+    assert abs(got - ref) < 1e-3

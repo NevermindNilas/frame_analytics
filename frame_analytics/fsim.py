@@ -204,7 +204,8 @@ def _pc_orient_block(vr: torch.Tensor):
 
 
 def _phase_congruency_stacked(gray: torch.Tensor,
-                              pc_mode: str = "auto") -> torch.Tensor:
+                              pc_mode: str = "auto",
+                              compile_grad: bool = True) -> torch.Tensor:
     if pc_mode not in ("auto", "batched", "chunked"):
         raise ValueError(f"pc_mode must be 'auto', 'batched' or 'chunked', "
                          f"got {pc_mode!r}")
@@ -221,7 +222,13 @@ def _phase_congruency_stacked(gray: torch.Tensor,
         chunks = [(0, m)]
     else:
         chunks = [(i, min(i + _PC_CHUNK, m)) for i in range(0, m, _PC_CHUNK)]
-    block = _fn._maybe_compile(_pc_orient_block, "fsim:pc_orient")
+    # AOT autograd has no double backward. The map path (return_map=True) has
+    # always been eager end to end, so gradient penalties through it work;
+    # with autograd recording it keeps the eager block (compile_grad=False).
+    if (not compile_grad and torch.is_grad_enabled() and gray.requires_grad):
+        block = _pc_orient_block
+    else:
+        block = _fn._maybe_compile(_pc_orient_block, "fsim:pc_orient")
     for (lo, hi) in chunks:
         sp = spec[lo:hi].unsqueeze(1)
         for o in range(_NORIENT):
@@ -340,7 +347,8 @@ def fsim(
             q1, q2 = _matlab_box_down(q1, ds), _matlab_box_down(q2, ds)
 
     stacked = torch.cat([y1, y2], dim=0)
-    pc = _phase_congruency_stacked(stacked, pc_mode=pc_mode)
+    pc = _phase_congruency_stacked(stacked, pc_mode=pc_mode,
+                                   compile_grad=not return_map)
     gm = _gradient_magnitude_stacked(stacked)
     pc1, pc2 = pc.chunk(2, dim=0)
     gm1, gm2 = gm.chunk(2, dim=0)

@@ -217,7 +217,10 @@ def _pool_ratio(det_o: torch.Tensor, det_d: torch.Tensor,
     b, c, h, w = det_o.shape
     # Light per-element work: splitting only pays from ~256K elements
     # (measured +5% at 256x256, -41% at 512x512, -70% at 1080p, fwd).
-    if starved_reduction(det_o, b, c * h * w, min_elems=1 << 18):
+    # det_o comes from the reference alone; the usual loss setup differentiates
+    # only the distorted side, which still has to count as training.
+    if starved_reduction(det_o, b, c * h * w, min_elems=1 << 18,
+                         requires_grad=det_o.requires_grad or det_d.requires_grad):
         rows = _F._maybe_compile(_restore_rows, "adm_like:restore_rows")(
             det_o, det_d, T, eps)
         return rows.sum(dim=(1, 2)) / (c * h * w)

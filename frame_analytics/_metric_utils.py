@@ -15,6 +15,8 @@ touched (they are process-wide and racy across threads).
 
 from __future__ import annotations
 
+from typing import Optional
+
 import torch
 import torch.nn.functional as F
 
@@ -51,14 +53,32 @@ class _PlaneCorr(torch.autograd.Function):
     double backward still works. Two layouts: ``groups == 1`` with one input
     plane (``w`` ``(O, 1, kh, kw)``), or depthwise ``groups == C`` with one
     filter per channel (``w`` ``(C, 1, kh, kw)``).
+
+    New-style (``setup_context``) with a generated vmap rule and a ``jvp``:
+    every step is plain torch ops, so ``torch.func`` (grad / vmap / jacrev)
+    and forward-mode AD work through it.
     """
 
+    generate_vmap_rule = True
+
     @staticmethod
-    def forward(ctx, x, weight, padding, groups):
+    def forward(x, weight, padding, groups):
+        return F.conv2d(x, weight, padding=padding, groups=groups)
+
+    @staticmethod
+    def setup_context(ctx, inputs, output):
+        _, weight, padding, groups = inputs
         ctx.save_for_backward(weight)
+        ctx.save_for_forward(weight)
         ctx.padding = padding
         ctx.groups = groups
-        return F.conv2d(x, weight, padding=padding, groups=groups)
+
+    @staticmethod
+    def jvp(ctx, tx, tw, tp, tg):
+        # linear in x, and the bank is a constant (plane_conv never routes a
+        # weight that requires grad here)
+        (weight,) = ctx.saved_tensors
+        return F.conv2d(tx, weight, padding=ctx.padding, groups=ctx.groups)
 
     @staticmethod
     def backward(ctx, g):
@@ -125,16 +145,20 @@ SPLIT_MAX_GROUPS = 4
 
 
 def starved_reduction(t: torch.Tensor, groups: int, elems_per_group: int,
-                      min_elems: int = SPLIT_MIN_ELEMS) -> bool:
+                      min_elems: int = SPLIT_MIN_ELEMS,
+                      requires_grad: Optional[bool] = None) -> bool:
     """Whether a compiled whole-image reduction of ``t`` should be split.
 
     ``min_elems`` is per call site (cheap per-element work needs larger
     groups before splitting pays). With autograd recording, the fused
     region's compiled backward keeps it ahead longer, so the bar is 4x.
+    ``requires_grad`` overrides ``t.requires_grad`` for callers whose ``t``
+    is only one of the differentiated inputs.
     """
     if not t.is_cuda or groups >= SPLIT_MAX_GROUPS:
         return False
-    if t.requires_grad and torch.is_grad_enabled():
+    rg = t.requires_grad if requires_grad is None else requires_grad
+    if rg and torch.is_grad_enabled():
         min_elems *= 4
     return elems_per_group > min_elems
 
