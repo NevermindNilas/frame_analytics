@@ -167,10 +167,22 @@ class TaskPool {
   void run(int64_t ntasks, const std::function<void(int64_t)>& fn) {
     if (ntasks <= 0) return;
     const int W = static_cast<int>(workers_.size());
-    if (W == 0 || ntasks == 1) {
+    // A task that itself calls run() (or a pool worker doing so) would wait on
+    // a pool it is part of: run those inline.
+    if (W == 0 || ntasks == 1 || in_pool_) {
       for (int64_t i = 0; i < ntasks; ++i) fn(i);
       return;
     }
+    // The pool holds one job at a time -- fn_/cursor_/total_/active_ are
+    // single-job state. ctypes drops the GIL around every call, so two Python
+    // threads can arrive here together; without this they overwrite each
+    // other's job mid-flight (crashes, heap corruption). They queue instead:
+    // either one alone already fills every core.
+    std::lock_guard<std::mutex> job(run_mu_);
+    struct InPool {
+      InPool() { in_pool_ = true; }
+      ~InPool() { in_pool_ = false; }
+    } scope;
     // The calling thread takes a share too, so `ntasks - 1` helpers is the
     // most that can ever be useful.  Waking all 16 for three tasks cost more
     // in cursor contention than the tasks did in work.
@@ -234,6 +246,7 @@ class TaskPool {
         if (stop_.load(std::memory_order_acquire)) return;
       }
       seen = generation_.load(std::memory_order_acquire);
+      in_pool_ = true;
       // no share this round -- back to spinning without touching `cursor_` or
       // `active_`, both of which the participating threads are hammering
       if (id >= target_.load(std::memory_order_acquire)) continue;
@@ -248,8 +261,10 @@ class TaskPool {
     }
   }
 
+  static thread_local bool in_pool_;
   std::vector<std::thread> workers_;
   std::mutex mu_;
+  std::mutex run_mu_;   // one job in the pool at a time; see run()
   std::condition_variable cv_work_, cv_done_;
   const std::function<void(int64_t)>* fn_ = nullptr;
   FA_PAD std::atomic<int64_t> cursor_{0};
@@ -260,6 +275,8 @@ class TaskPool {
   FA_PAD std::atomic<uint64_t> generation_{0};
   FA_PAD std::atomic<bool> stop_{false};
 };
+
+thread_local bool TaskPool::in_pool_ = false;
 
 // The thread count used to arrive as at::get_num_threads(); across a C boundary
 // there is no ATen to ask, so the loader sets it from torch.get_num_threads()

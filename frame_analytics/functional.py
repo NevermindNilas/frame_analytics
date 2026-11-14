@@ -1164,7 +1164,7 @@ def _gmsd_common(x, y, data_range, T, eps, downsample, dtype, luma, crop_border,
             return None, fast
         if (native_ok and for_gms and wdt == torch.float32
                 and (x4.requires_grad or y4.requires_grad) and torch.is_grad_enabled()
-                and backend.gms_autograd_available(x4, y4, ev)):
+                and backend.gms_autograd_available(x4, y4, ev, bool(downsample))):
             xc = x4 if x4.is_contiguous() else x4.contiguous()
             yc = y4 if y4.is_contiguous() else y4.contiguous()
             return None, (_FusedGMS.apply(xc, yc, Tv, ev, bool(downsample)), None)

@@ -228,6 +228,41 @@ def _win_f32(win: torch.Tensor) -> torch.Tensor:
 
 _warned: set = set()
 
+# gridDim.y / gridDim.z cap: the tile kernels put one plane per z-block.
+_MAX_GRID_YZ = 65535
+
+try:  # private, but the only way to see a functorch wrapper without unwrapping it
+    from torch._C._functorch import is_functorch_wrapped_tensor as _ft_wrapped
+except Exception:  # pragma: no cover - depends on the torch build
+    def _ft_wrapped(t):  # type: ignore[misc]
+        return False
+
+import torch.autograd.forward_ad as _fwAD
+
+
+def _plain_autograd(*ts: torch.Tensor) -> bool:
+    """Can a native ``autograd.Function`` serve these tensors?
+
+    The fused Functions implement reverse mode only, on raw device pointers:
+    under ``torch.func`` (grad / vmap / jacrev ...) the inputs are functorch
+    wrappers they cannot see through, and under forward-mode AD there is no
+    jvp. Both must take the portable, all-torch path, which supports them.
+    """
+    if any(_ft_wrapped(t) for t in ts):
+        return False
+    if _fwAD._current_level >= 0 and any(
+            _fwAD.unpack_dual(t).tangent is not None for t in ts):
+        return False
+    return True
+
+
+def _gms_shape_ok(h: int, w: int, downsample: bool) -> bool:
+    """The Prewitt window needs 3x3 after the optional 2x pool; smaller input
+    is the portable path's to reject with its own ValueError."""
+    if downsample:
+        h, w = h // 2, w // 2
+    return h >= 3 and w >= 3
+
 
 def _warn_once(exc: BaseException) -> None:
     """A native-kernel failure is silently survivable -- the caller falls back
@@ -465,8 +500,11 @@ def pixel_autograd_available(x: torch.Tensor, y: torch.Tensor,
         return False
     if x.dtype != y.dtype or x.dtype not in _GRAD_DTYPES or x.shape != y.shape:
         return False
+    if x.numel() == 0:   # the portable path's nan / empty gradient
+        return False
     want = torch.float64 if x.dtype == torch.float64 else torch.float32
-    return wdt == want and not torch.cuda.is_current_stream_capturing()
+    return (wdt == want and not torch.cuda.is_current_stream_capturing()
+            and _plain_autograd(x, y))
 
 
 def pixel_forward(x, y, op: int, param: float, per_image: bool):
@@ -509,7 +547,9 @@ def ssim_autograd_available(x: torch.Tensor, y: torch.Tensor, win_size: int) -> 
         and x.shape == y.shape
         and x.dim() == 4
         and win_size in (3, 5, 7, 9, 11)
+        and 0 < x.shape[0] * x.shape[1] <= _MAX_GRID_YZ
         and not torch.cuda.is_current_stream_capturing()
+        and _plain_autograd(x, y)
     )
 
 
@@ -655,7 +695,9 @@ def ssim_cs_autograd_available(x: torch.Tensor, y: torch.Tensor,
         and x.shape == y.shape
         and x.dim() == 4
         and win_size in (3, 5, 7, 9, 11)
+        and 0 < x.shape[0] * x.shape[1] <= _MAX_GRID_YZ
         and not torch.cuda.is_current_stream_capturing()
+        and _plain_autograd(x, y)
     )
 
 
@@ -826,7 +868,8 @@ def try_ms_ssim(x: torch.Tensor, y: torch.Tensor, *, win: torch.Tensor,
 # --------------------------------------------------------------------------- #
 
 
-def gms_autograd_available(x: torch.Tensor, y: torch.Tensor, eps: float) -> bool:
+def gms_autograd_available(x: torch.Tensor, y: torch.Tensor, eps: float,
+                           downsample: bool = False) -> bool:
     """Can the fused GMS (native forward + native backward) take this call?
 
     CUDA float32 4-D pairs only, as for SSIM; and ``eps > 0``, without which a
@@ -840,7 +883,10 @@ def gms_autograd_available(x: torch.Tensor, y: torch.Tensor, eps: float) -> bool
         and x.dtype == torch.float32 and y.dtype == torch.float32
         and x.shape == y.shape and x.dim() == 4
         and eps > 0
+        and 0 < x.shape[0] * x.shape[1] <= _MAX_GRID_YZ
+        and _gms_shape_ok(int(x.shape[-2]), int(x.shape[-1]), downsample)
         and not torch.cuda.is_current_stream_capturing()
+        and _plain_autograd(x, y)
     )
 
 
@@ -883,6 +929,8 @@ def try_gmsd(x: torch.Tensor, y: torch.Tensor, *, T: float, eps: float,
         return None
     n, c = int(x.shape[0]), int(x.shape[1])
     h, w = int(x.shape[-2]), int(x.shape[-1])
+    if not _gms_shape_ok(h, w, downsample):
+        return None   # not a kernel failure: let the portable path raise
     try:
         x, y = _contig(x), _contig(y)
         if x.is_cuda:

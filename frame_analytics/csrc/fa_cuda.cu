@@ -293,10 +293,13 @@ __device__ inline A pix_term(A d, A param) {
 template <typename T, int OP>
 __global__ void pixel_kernel(const T* __restrict__ a, const T* __restrict__ b,
                              double* __restrict__ partial, long n_per_image,
-                             double param, int blocks_per_image) {
+                             double param, int blocks_per_image,
+                             int img0) {
   __shared__ double warp_sums[32];
   constexpr bool WIDE_TERM = std::is_same<T, double>::value;
-  const int img = blockIdx.y;
+  // gridDim.y caps at 65535, so the host launches in image chunks; img0 is
+  // this launch's first image.
+  const int img = img0 + static_cast<int>(blockIdx.y);
   const long base = static_cast<long>(img) * n_per_image;
 
   double acc = 0.0;
@@ -318,7 +321,7 @@ __global__ void pixel_kernel(const T* __restrict__ a, const T* __restrict__ b,
   const double mine = WIDE_TERM ? acc
                                 : static_cast<double>(thi) + static_cast<double>(tlo);
   const double s = block_reduce_sum(mine, warp_sums);
-  if (threadIdx.x == 0) partial[img * blocks_per_image + blockIdx.x] = s;
+  if (threadIdx.x == 0) partial[static_cast<long>(img) * blocks_per_image + blockIdx.x] = s;
 }
 
 // uint8 specialisation: 4-wide vectorised loads. MSE and L1 additionally
@@ -328,10 +331,11 @@ __global__ void pixel_kernel_u8(const uchar4* __restrict__ a, const uchar4* __re
                                 double* __restrict__ partial, long n_vec, long tail_start,
                                 const unsigned char* __restrict__ a_raw,
                                 const unsigned char* __restrict__ b_raw,
-                                long n_per_image, float param, int blocks_per_image) {
+                                long n_per_image, float param, int blocks_per_image,
+                                int img0) {
   __shared__ double warp_sums[32];
   constexpr bool EXACT = (OP == FA_OP_MSE || OP == FA_OP_L1);
-  const int img = blockIdx.y;
+  const int img = img0 + static_cast<int>(blockIdx.y);   // chunked, as above
   const long vec_base = static_cast<long>(img) * n_vec;
 
   long long iacc = 0;
@@ -373,7 +377,7 @@ __global__ void pixel_kernel_u8(const uchar4* __restrict__ a, const uchar4* __re
       EXACT ? static_cast<double>(iacc)
             : static_cast<double>(fhi) + static_cast<double>(flo),
       warp_sums);
-  if (threadIdx.x == 0) partial[img * blocks_per_image + blockIdx.x] = s;
+  if (threadIdx.x == 0) partial[static_cast<long>(img) * blocks_per_image + blockIdx.x] = s;
 }
 
 // --------------------------------------------------------------------------
@@ -1503,18 +1507,27 @@ FA_API int fa_cuda_pixel_reduce(const void* a, const void* b, int dtype,
   cudaStream_t st = static_cast<cudaStream_t>(stream);
 
   const int threads = 256;
-  dim3 grid(bpi, static_cast<unsigned>(n_images));
+  // gridDim.y is capped at 65535: images go in chunks of at most that many.
+  constexpr int64_t kMaxGridY = 65535;
+  if (n_images > INT32_MAX) return FA_E_SHAPE;
   const float p = static_cast<float>(param);
 
 #define FA_PIX_U8(OP)                                                          \
-  pixel_kernel_u8<OP><<<grid, threads, 0, st>>>(                               \
-      reinterpret_cast<const uchar4*>(a), reinterpret_cast<const uchar4*>(b),  \
-      partial, n_vec, tail, static_cast<const unsigned char*>(a),              \
-      static_cast<const unsigned char*>(b), n_per_image, p, bpi)
+  for (int64_t i0 = 0; i0 < n_images; i0 += kMaxGridY) {                       \
+    dim3 grid(bpi, static_cast<unsigned>(std::min(kMaxGridY, n_images - i0))); \
+    pixel_kernel_u8<OP><<<grid, threads, 0, st>>>(                             \
+        reinterpret_cast<const uchar4*>(a), reinterpret_cast<const uchar4*>(b),\
+        partial, n_vec, tail, static_cast<const unsigned char*>(a),            \
+        static_cast<const unsigned char*>(b), n_per_image, p, bpi,             \
+        static_cast<int>(i0));                                                 \
+  }
 #define FA_PIX(SC, OP)                                                         \
-  pixel_kernel<SC, OP><<<grid, threads, 0, st>>>(                              \
-      static_cast<const SC*>(a), static_cast<const SC*>(b), partial,           \
-      n_per_image, param, bpi)
+  for (int64_t i0 = 0; i0 < n_images; i0 += kMaxGridY) {                       \
+    dim3 grid(bpi, static_cast<unsigned>(std::min(kMaxGridY, n_images - i0))); \
+    pixel_kernel<SC, OP><<<grid, threads, 0, st>>>(                            \
+        static_cast<const SC*>(a), static_cast<const SC*>(b), partial,         \
+        n_per_image, param, bpi, static_cast<int>(i0));                        \
+  }
 #define FA_PIX_DISPATCH(LAUNCH)                                                \
   switch (op) {                                                                \
     case FA_OP_MSE:   LAUNCH(FA_OP_MSE);   break;                              \

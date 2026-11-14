@@ -251,6 +251,14 @@ def cuda_arch_flags() -> List[str]:
 
 _recip_flag_cache: dict = {}
 
+# Stands in for `_no_recip_flags(cxx)` in a compile command until the command
+# actually runs. Resolving it means asking the compiler who it is (a
+# subprocess); the command also feeds the cache stamp, which is computed on
+# every import, so resolving it eagerly spawned `c++ --version` per process
+# even when the cached library was current -- and a machine whose compiler had
+# since gone away saw its stamp change and attempted a rebuild it could not do.
+_NO_RECIP = "@fa-no-recip-flags@"
+
 
 def _no_recip_flags(cxx: str) -> List[str]:
     """Flags that keep ``-ffast-math`` from approximating sqrt and division.
@@ -302,7 +310,8 @@ def cpu_compile_command(source: Path, out: Path, avx2: bool,
            "-fvisibility=hidden", "-DNDEBUG"]
     if avx2:
         cmd += ["-mavx2", "-mfma"]
-    cmd += _no_recip_flags(cxx)
+    if _is_x86() and sys.platform != "darwin":
+        cmd.append(_NO_RECIP)   # resolved by _run_build, see _NO_RECIP
     if sys.platform == "darwin":
         # FA_MACOS_ARCHS lets CI emit one universal2 binary from a single
         # runner, which matters because the Intel macOS runners are being
@@ -374,6 +383,9 @@ def _source_stamp(sources: Sequence[Path], cmd: Sequence[str]) -> str:
 
 
 def _run_build(cmd: Sequence[str], cwd: Path) -> None:
+    if _NO_RECIP in cmd:
+        flags = _no_recip_flags(str(cmd[0]))
+        cmd = [f for c in cmd for f in ([c] if c != _NO_RECIP else flags)]
     if _verbose():
         print("frame_analytics: " + " ".join(str(c) for c in cmd), file=sys.stderr)
     res = subprocess.run([str(c) for c in cmd], cwd=str(cwd),
