@@ -1,0 +1,2 @@
+FAILED tests/test_training_metrics.py::test_double_backward_refuses_loudly_and_has_a_way_out[ms_ssim]
+2 failed, 216 passed, 1 skipped, 2 warnings in 27.02s

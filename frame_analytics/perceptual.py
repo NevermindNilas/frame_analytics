@@ -317,16 +317,31 @@ def lpips(
             f"LPIPS needs at least 32x32 after cropping, got {h}x{w}: the "
             "trunk's stride-4 conv and two max-pools leave nothing behind")
 
-    # [0, L] -> [-1, 1]. Written as one affine map so a float input with
-    # data_range=1.0 reduces to the reference's exact `2 * x - 1`.
-    xs = x4.to(wdt) * (2.0 / L) - 1.0
-    ys = y4.to(wdt) * (2.0 / L) - 1.0
-
     net_mod = _load_net(net, x4.device, wdt)
 
+    # Both images go through the trunk as one 2N batch when they need the same
+    # treatment from autograd: half the convolution launches (and the bias /
+    # ReLU / pool kernels around them), which at 256x256 is 1.6x on the whole
+    # metric and still a few percent at 1080p, with the very same per-image
+    # arithmetic -- the results are bit-identical. Not when exactly one side
+    # wants a gradient (LPIPS as a loss against a fixed target): a batched
+    # trunk would then compute input gradients for the target's half too.
+    grad_on = torch.is_grad_enabled()
+    batched = (x4.requires_grad and grad_on) == (y4.requires_grad and grad_on)
+
     with _no_tf32(active=x4.is_cuda and not allow_tf32 and wdt == torch.float32):
-        f0 = net_mod.features(xs)
-        f1 = net_mod.features(ys)
+        # [0, L] -> [-1, 1]. Written as one affine map so a float input with
+        # data_range=1.0 reduces to the reference's exact `2 * x - 1`.
+        if batched:
+            n = x4.shape[0]
+            both = torch.cat([x4, y4]).to(wdt) * (2.0 / L) - 1.0
+            feats = net_mod.features(both)
+            f0 = [t[:n] for t in feats]
+            f1 = [t[n:] for t in feats]
+            del both, feats
+        else:
+            f0 = net_mod.features(x4.to(wdt) * (2.0 / L) - 1.0)
+            f1 = net_mod.features(y4.to(wdt) * (2.0 / L) - 1.0)
 
         # Keyed per layer, not per function: the five taps have five different
         # channel counts, so one shared compiled callable would need five

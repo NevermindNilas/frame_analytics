@@ -22,6 +22,7 @@ import torch
 import torch.nn.functional as F
 
 from . import functional as _functional
+from ._metric_utils import plane_conv
 from .functional import (
     _maybe_compile,
     _no_autocast,
@@ -116,6 +117,48 @@ def _freq_weights(d: int, sigma: float, device):
     return hit
 
 
+_PLAN_CACHE: dict = {}
+_LUMA_CACHE: dict = {}
+
+
+@torch.inference_mode(False)
+def _subband_plan(d: int, sigma: float, device, dtype):
+    """Per-call constants as device tensors, built once (bounded cache).
+
+    Building them per call from Python lists meant several small
+    host-to-device copies per call (each a sync point on pageable memory,
+    and illegal inside CUDA-graph capture). Values are unchanged.
+    """
+    key = (d, sigma, str(device), dtype)
+    hit = _PLAN_CACHE.get(key)
+    if hit is None:
+        wfull, kept = _freq_weights(d, sigma, device)
+        flat_idx = torch.tensor([m * d + n for m, n in kept], dtype=torch.long,
+                                device=device)
+        cvec = torch.tensor([_DC_C if (m == 0 and n == 0) else _AC_C
+                             for m, n in kept],
+                            device=device, dtype=dtype).view(1, len(kept), 1)
+        w64 = wfull[[m for m, _ in kept], [n for _, n in kept]].to(torch.float64)
+        dc_idx = next((i for i, mn in enumerate(kept) if mn == (0, 0)), None)
+        c_dc = torch.tensor(_DC_C, device=device, dtype=dtype)
+        hit = (kept, flat_idx, cvec, w64, dc_idx, c_dc)
+        if len(_PLAN_CACHE) < 64:
+            _PLAN_CACHE[key] = hit
+    return hit
+
+
+@torch.inference_mode(False)
+def _bt601_weights(device, dtype) -> torch.Tensor:
+    key = (str(device), dtype)
+    w = _LUMA_CACHE.get(key)
+    if w is None:
+        w = torch.tensor((0.299, 0.587, 0.114), device=device,
+                         dtype=dtype).view(1, 3, 1, 1)
+        if len(_LUMA_CACHE) < 64:
+            _LUMA_CACHE[key] = w
+    return w
+
+
 def _epi_left(vx, vy, c):
     s = _functional._safe_sqrt(vx * vy)
     return (2.0 * s + c) / (vx + vy + c), s
@@ -180,8 +223,7 @@ def dss(
         xl = xl.reshape(n_batch * xl.shape[1], 1, xl.shape[-2], xl.shape[-1])
         yl = yl.reshape(n_batch * yl.shape[1], 1, yl.shape[-2], yl.shape[-1])
     elif n_chan == 3:
-        w = torch.tensor((0.299, 0.587, 0.114),
-                         device=x4.device, dtype=cdt).view(1, 3, 1, 1)
+        w = _bt601_weights(x4.device, cdt)
         xl = (x4.to(cdt) * scale * w).sum(dim=1, keepdim=True)
         yl = (y4.to(cdt) * scale * w).sum(dim=1, keepdim=True)
     else:
@@ -203,8 +245,8 @@ def dss(
     np_ = dx_all.shape[0]
     hs, ws = dx_all.shape[-2], dx_all.shape[-1]
 
-    wfull, kept = _freq_weights(d, sigma_weight, dx_all.device)
-    flat_idx = [m * d + n for m, n in kept]
+    kept, flat_idx, cvec, w64, dc_idx, c_dc = _subband_plan(
+        d, sigma_weight, dx_all.device, dx_all.dtype)
     na = len(kept)
     xf = dx_all.reshape(np_, d * d, hs, ws)[:, flat_idx].reshape(np_ * na, 1, hs, ws)
     yf = dy_all.reshape(np_, d * d, hs, ws)[:, flat_idx].reshape(np_ * na, 1, hs, ws)
@@ -212,18 +254,17 @@ def dss(
     k = _gaussian_kernel(kernel_size, sigma_similarity,
                          dx_all.device, dx_all.dtype).view(1, 1, kernel_size, kernel_size)
     pad = kernel_size // 2
-    with _no_autocast(xf):
-        mu = F.conv2d(torch.cat([xf, yf], dim=0), k, padding=pad)
-        sq = F.conv2d(torch.cat([xf * xf, yf * yf], dim=0), k, padding=pad)
+    # plane_conv: single-plane batches; with autograd it avoids cuDNN's
+    # heuristic TF32/slow dgrad kernels on CUDA and oneDNN's slow backward on
+    # CPU (see _metric_utils). Inference is unchanged F.conv2d.
+    mu = plane_conv(torch.cat([xf, yf], dim=0), k, padding=pad)
+    sq = plane_conv(torch.cat([xf * xf, yf * yf], dim=0), k, padding=pad)
     mu_x, mu_y = mu[: np_ * na], mu[np_ * na:]
     vx = (sq[: np_ * na] - mu_x * mu_x).clamp_min(0.0)
     vy = (sq[np_ * na:] - mu_y * mu_y).clamp_min(0.0)
     vx = vx.reshape(np_, na, -1)
     vy = vy.reshape(np_, na, -1)
 
-    cvec = torch.tensor([_DC_C if (m == 0 and n == 0) else _AC_C
-                         for m, n in kept],
-                        device=dx_all.device, dtype=dx_all.dtype).view(1, na, 1)
     epi_left = _maybe_compile(_epi_left, "dss:epi_left")
     left, s = epi_left(vx, vy, cvec)
 
@@ -232,19 +273,16 @@ def dss(
     sim = torch.topk(left, kpts, dim=-1, largest=False).values.mean(
         dim=-1, dtype=torch.float64)
 
-    dc_idx = next((i for i, mn in enumerate(kept) if mn == (0, 0)), None)
     if dc_idx is not None:
         xdf = xf.reshape(np_, na, hs, ws)[:, dc_idx:dc_idx + 1].reshape(np_, 1, hs, ws)
         ydf = yf.reshape(np_, na, hs, ws)[:, dc_idx:dc_idx + 1].reshape(np_, 1, hs, ws)
         with _no_autocast(xf):
-            vxy = (F.conv2d(xdf * ydf, k, padding=pad)
+            vxy = (plane_conv(xdf * ydf, k, padding=pad)
                    - (mu_x.reshape(np_, na, hs, ws)[:, dc_idx:dc_idx + 1]
                       * mu_y.reshape(np_, na, hs, ws)[:, dc_idx:dc_idx + 1]))
         vxy = vxy.reshape(np_, 1, -1)
         epi_right = _maybe_compile(_epi_right, "dss:epi_right")
-        right = epi_right(vxy, s[:, dc_idx:dc_idx + 1],
-                          torch.tensor(_DC_C, device=dx_all.device,
-                                       dtype=dx_all.dtype))
+        right = epi_right(vxy, s[:, dc_idx:dc_idx + 1], c_dc)
         dc_factor = torch.topk(
             right, kpts, dim=-1, largest=False).values.mean(
                 dim=-1, dtype=torch.float64).squeeze(-1)
@@ -252,7 +290,6 @@ def dss(
                          (sim[:, dc_idx] * dc_factor).unsqueeze(1),
                          sim[:, dc_idx + 1:]], dim=1)
 
-    w64 = wfull[[m for m, _ in kept], [n for _, n in kept]].to(torch.float64)
     pooled = (sim * w64.unsqueeze(0)).sum(dim=-1)
     per_image = pooled.reshape(n_batch, pooled.shape[0] // n_batch).mean(dim=1)
 

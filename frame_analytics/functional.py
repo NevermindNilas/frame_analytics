@@ -384,6 +384,9 @@ def mse(
     fast = backend.try_mse(x4, y4, per_image=per_image, dtype=out_dtype)
     if fast is not None:
         return fast
+    fast = _fused_pixel(x4, y4, _OP_MSE, 0.0, per_image, wdt, backend)
+    if fast is not None:
+        return fast.to(out_dtype)
 
     fn = _maybe_compile(
         _mse_kernel_per_image if per_image else _mse_kernel_mean,
@@ -962,6 +965,21 @@ def ms_ssim(
     # to float32 themselves, but the portable path would otherwise inherit a
     # float32-rounded window even when the caller asked for float64
     win = gaussian_window_1d(win_size, sigma, device=x4.device, dtype=wdt)
+
+    # Inference: the whole pyramid in one native call. The per-scale loop
+    # below is the same arithmetic, but at small frames its ~20 launches and
+    # their dispatch cost more than the kernels, and on CPU it alternated
+    # between torch's thread pool and the library's at every scale.
+    if backend_hint != "torch" and wdt == torch.float32:
+        backend = _sys.modules.get("frame_analytics.backend")
+        if backend is None:
+            from . import backend
+        fast = backend.try_ms_ssim(x4, y4, win=win, shift=shift, C1=C1, C2=C2,
+                                   weights=w, weights_t=_ms_weights(w, x4.device),
+                                   per_image=reduction == "none")
+        if fast is not None:
+            return fast
+
     cx, cy = x4, y4
     terms = []
     for i, wi in enumerate(w):
@@ -1013,8 +1031,12 @@ def _prewitt_pair(device, dtype) -> torch.Tensor:
     return k
 
 
-def _gms_map(x4, y4, wdt, T, eps, downsample):
-    """The gradient-magnitude similarity map, shape ``(N, C, H', W')``."""
+def _gms_map(x4, y4, wdt, T, eps, downsample, eager=False):
+    """The gradient-magnitude similarity map, shape ``(N, C, H', W')``.
+
+    ``eager`` skips torch.compile for the elementwise tail, for the one caller
+    that needs a twice-differentiable graph (AOT autograd is not).
+    """
     xf = x4.to(wdt)
     yf = y4.to(wdt)
     if downsample:
@@ -1034,7 +1056,8 @@ def _gms_map(x4, y4, wdt, T, eps, downsample):
     # point in would add a batch-size dimension to the guard set and walk into
     # the recompile limit on a mixed workload. The slices are views.
     nc = n * c
-    q = _maybe_compile(_gms_sq, "gms:sq")(g[:nc], g[nc:], T, eps)
+    sq = _gms_sq if eager else _maybe_compile(_gms_sq, "gms:sq")
+    q = sq(g[:nc], g[nc:], T, eps)
     return q.reshape(n, c, h - 2, w - 2)
 
 
@@ -1062,9 +1085,58 @@ def _gms_stats(q):
     return f.mean(dim=1), f.var(dim=1, correction=0)
 
 
+class _FusedGMS(torch.autograd.Function):
+    """Differentiable native per-image GMS mean -- ``GMSD.loss()``'s primitive.
+
+    Forward is the inference kernel; backward is one fused kernel that
+    recomputes the Prewitt pair and the map per tile and scatters the
+    transposed filter straight into the gradient, so nothing but x and y is
+    saved. The portable route kept the four directional gradients, both
+    magnitudes and the map alive for autograd.
+
+    Under ``create_graph=True`` the backward is re-derived through the eager
+    portable path instead (twice differentiable, slower), so a gradient
+    penalty on ``1 - gms`` keeps working.
+    """
+
+    @staticmethod
+    def forward(ctx, x, y, T, eps, downsample):
+        from . import backend
+
+        mean = backend.gms_forward(x, y, T, eps, downsample)
+        ctx.save_for_backward(x, y)
+        ctx.cfg = (T, eps, downsample)
+        return mean
+
+    @staticmethod
+    def backward(ctx, g):
+        from . import backend
+
+        x, y = ctx.saved_tensors
+        T, eps, downsample = ctx.cfg
+        need_dx, need_dy = ctx.needs_input_grad[0], ctx.needs_input_grad[1]
+        if not (need_dx or need_dy):
+            return None, None, None, None, None
+        if torch.is_grad_enabled():
+            q = _gms_map(x, y, torch.float32, T, eps, downsample, eager=True)
+            mean = q.reshape(q.shape[0], -1).double().mean(dim=1)
+            wrt = [t for t, need in ((x, need_dx), (y, need_dy)) if need]
+            grads = list(torch.autograd.grad(mean, wrt, g, create_graph=True))
+            dx = grads.pop(0) if need_dx else None
+            dy = grads.pop(0) if need_dy else None
+            return dx, dy, None, None, None
+        dx, dy = backend.gms_backward(x, y, g, T, eps, downsample, need_dx, need_dy)
+        return dx, dy, None, None, None
+
+
 def _gmsd_common(x, y, data_range, T, eps, downsample, dtype, luma, crop_border,
-                 reduction, return_map, backend_hint):
-    """``(map, None)`` or ``(None, (gms_mean, gmsd))``, per image."""
+                 reduction, return_map, backend_hint, for_gms=False):
+    """``(map, None)`` or ``(None, (gms_mean, gmsd))``, per image.
+
+    With ``for_gms`` the caller only reads the mean, so a call that wants a
+    gradient may take the fused native backward; the deviation is then
+    ``None``.
+    """
     if reduction not in ("mean", "none"):
         raise ValueError(f"reduction must be 'mean' or 'none', got {reduction!r}")
     x4, y4, L, mode = _prep(x, y, luma, crop_border, data_range)
@@ -1090,6 +1162,12 @@ def _gmsd_common(x, y, data_range, T, eps, downsample, dtype, luma, crop_border,
                 if native_ok else None)
         if fast is not None:
             return None, fast
+        if (native_ok and for_gms and wdt == torch.float32
+                and (x4.requires_grad or y4.requires_grad) and torch.is_grad_enabled()
+                and backend.gms_autograd_available(x4, y4, ev)):
+            xc = x4 if x4.is_contiguous() else x4.contiguous()
+            yc = y4 if y4.is_contiguous() else y4.contiguous()
+            return None, (_FusedGMS.apply(xc, yc, Tv, ev, bool(downsample)), None)
         if backend_hint == "native":
             raise RuntimeError(
                 "native GMSD backend unavailable for these inputs"
@@ -1124,7 +1202,8 @@ def gms(
     agree, which is exactly where a converging model spends its time.
     """
     q, stats = _gmsd_common(x, y, data_range, T, eps, downsample, dtype, luma,
-                            crop_border, reduction, return_map, backend_hint)
+                            crop_border, reduction, return_map, backend_hint,
+                            for_gms=True)
     if q is not None:
         return q
     per_image = stats[0]
@@ -1193,6 +1272,76 @@ _OP_CHARB = 2
 _OP_HUBER = 3
 
 
+def _pixel_deriv(d: torch.Tensor, op: int, param: float) -> torch.Tensor:
+    """d(penalty)/d(residual), as differentiable torch ops."""
+    if op == _OP_MSE:
+        return 2.0 * d
+    if op == _OP_L1:
+        return torch.sign(d)
+    if op == _OP_CHARB:
+        return d / torch.sqrt(d * d + param)
+    # Huber: quadratic zone inclusive of the boundary, as _huber_terms' where
+    return torch.where(d.abs() <= param, d, param * torch.sign(d))
+
+
+class _FusedPixelLoss(torch.autograd.Function):
+    """Pixel loss with a native forward *and* a native backward (CUDA).
+
+    The forward is the inference reduction kernel; the backward is one pass
+    that reads x and y and writes the gradient(s) -- the upstream gradient is
+    read on the device, so nothing syncs. Without it, a training step went
+    through autograd over the compiled forward, ~1.8x slower at 4K x8 with the
+    same result.
+
+    Twice differentiable: under ``create_graph=True`` the backward is the same
+    derivative written as torch ops on the saved inputs, so it stays attached
+    to the caller's graph and gradient penalties keep working.
+    """
+
+    @staticmethod
+    def forward(ctx, x, y, op, param, per_image, wdt):
+        from . import backend
+
+        out = backend.pixel_forward(x, y, op, param, per_image)
+        ctx.save_for_backward(x, y)
+        ctx.cfg = (op, param, per_image, wdt)
+        return out
+
+    @staticmethod
+    def backward(ctx, g):
+        from . import backend
+
+        x, y = ctx.saved_tensors
+        op, param, per_image, wdt = ctx.cfg
+        need_dx, need_dy = ctx.needs_input_grad[0], ctx.needs_input_grad[1]
+        if not (need_dx or need_dy):
+            return None, None, None, None, None, None
+        if torch.is_grad_enabled():
+            d = x.to(wdt) - y.to(wdt)
+            if per_image:
+                gs = (g / d[0].numel()).to(wdt).view(-1, *([1] * (d.dim() - 1)))
+            else:
+                gs = (g / d.numel()).to(wdt)
+            gx = gs * _pixel_deriv(d, op, param)
+            return (gx.to(x.dtype) if need_dx else None,
+                    (-gx).to(y.dtype) if need_dy else None,
+                    None, None, None, None)
+        dx, dy = backend.pixel_backward(x, y, g, op, param, per_image,
+                                        need_dx, need_dy)
+        return dx, dy, None, None, None, None
+
+
+def _fused_pixel(x4, y4, op, param, per_image, wdt, backend):
+    """The fused pixel loss when it applies, else ``None``."""
+    if not ((x4.requires_grad or y4.requires_grad) and torch.is_grad_enabled()):
+        return None
+    if not backend.pixel_autograd_available(x4, y4, wdt):
+        return None
+    x4 = x4 if x4.is_contiguous() else x4.contiguous()
+    y4 = y4 if y4.is_contiguous() else y4.contiguous()
+    return _FusedPixelLoss.apply(x4, y4, op, float(param), per_image, wdt)
+
+
 # One top-level function per (penalty, reduction) rather than one with an `op`
 # argument: Dynamo guards on a Python int parameter and recompiles the *same*
 # code object once per value, which walks straight into the recompile limit in
@@ -1258,6 +1407,10 @@ def _pixel_loss(name, x, y, param, reduction, dtype, out_dtype, luma,
     if backend_hint != "torch":
         fast = backend.try_pixel(x4, y4, op=op, param=param,
                                  per_image=per_image, dtype=out_dtype)
+        if fast is None:
+            fast = _fused_pixel(x4, y4, op, param, per_image, wdt, backend)
+            if fast is not None:
+                fast = fast.to(out_dtype)
         if fast is not None:
             return fast
         if backend_hint == "native":

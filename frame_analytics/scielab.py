@@ -24,6 +24,7 @@ import torch
 import torch.nn.functional as F
 
 from . import functional as _F
+from ._metric_utils import plane_conv
 from .functional import set_compile_enabled
 
 __all__ = [
@@ -157,9 +158,11 @@ def _separable_crop(padded: torch.Tensor, k: torch.Tensor, trim: int,
     """Horizontal + vertical valid pass, then center-crop ``trim`` px (a view)."""
     kh = k.view(1, 1, 1, -1)
     kv = k.view(1, 1, -1, 1)
+    # plane_conv: single-plane batches; cuDNN's backward picked TF32 kernels
+    # here (slow, and ~1e-4 gradient error) -- see _metric_utils.
     with _F._no_autocast(padded):
-        out = F.conv2d(padded, kh)
-        out = F.conv2d(out, kv)
+        out = plane_conv(padded, kh)
+        out = plane_conv(out, kv)
     if trim:
         out = out.narrow(2, trim, h).narrow(3, trim, w)
     return out

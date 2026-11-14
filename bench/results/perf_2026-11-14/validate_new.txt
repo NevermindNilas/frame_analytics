@@ -1,0 +1,231 @@
+backend: {'available': True, 'cuda': True, 'error': None, 'cpu_source': 'jit', 'cpu_isa': 'avx2', 'cuda_source': 'jit', 'cuda_error': None}
+  PASS  [64x64 uniform] skimage vs reference         got=0.966259230656 ref=0.966259230656 |err|=3.331e-16 tol=5e-06
+  PASS  [64x64 uniform] cpu/torch ssim uint8         got=0.966259231395 ref=0.966259230656 |err|=7.386e-10 tol=5e-06
+  PASS  [64x64 uniform] cpu/torch ssim fp32          got=0.966259231395 ref=0.966259230656 |err|=7.386e-10 tol=5e-06
+  PASS  [64x64 uniform] cpu/torch ssim map max|err|=3.746e-07 tol=5e-05
+  PASS  [64x64 uniform] cpu/auto ssim uint8          got=0.966259232867 ref=0.966259230656 |err|=2.210e-09 tol=5e-06
+  PASS  [64x64 uniform] cpu/auto ssim fp32           got=0.966259232867 ref=0.966259230656 |err|=2.210e-09 tol=5e-06
+  PASS  [64x64 uniform] cpu/auto ssim map max|err|=2.585e-07 tol=5e-05
+  PASS  [64x64 uniform] cpu mse uint8                got=360.713867187500 ref=360.713867187500 |err|=0.000e+00 tol=1e-09
+  PASS  [64x64 uniform] cpu psnr uint8               got=22.559175223276 ref=22.559175223276 |err|=3.553e-15 tol=1e-06
+  PASS  [64x64 uniform] cuda/torch ssim uint8        got=0.966259227879 ref=0.966259230656 |err|=2.777e-09 tol=5e-06
+  PASS  [64x64 uniform] cuda/torch ssim fp32         got=0.966259227879 ref=0.966259230656 |err|=2.777e-09 tol=5e-06
+  PASS  [64x64 uniform] cuda/torch ssim map max|err|=4.220e-07 tol=5e-05
+  PASS  [64x64 uniform] cuda/auto ssim uint8         got=0.966259224731 ref=0.966259230656 |err|=5.925e-09 tol=5e-06
+  PASS  [64x64 uniform] cuda/auto ssim fp32          got=0.966259224731 ref=0.966259230656 |err|=5.925e-09 tol=5e-06
+  PASS  [64x64 uniform] cuda/auto ssim map max|err|=2.551e-07 tol=5e-05
+  PASS  [64x64 uniform] cuda mse uint8               got=360.713867187500 ref=360.713867187500 |err|=0.000e+00 tol=1e-09
+  PASS  [64x64 uniform] cuda psnr uint8              got=22.559175223276 ref=22.559175223276 |err|=3.553e-15 tol=1e-06
+  PASS  [127x233 natural] skimage vs reference       got=0.950938005242 ref=0.950938005242 |err|=6.661e-16 tol=5e-06
+  PASS  [127x233 natural] cpu/torch ssim uint8       got=0.950938002818 ref=0.950938005242 |err|=2.424e-09 tol=5e-06
+  PASS  [127x233 natural] cpu/torch ssim fp32        got=0.950938002818 ref=0.950938005242 |err|=2.424e-09 tol=5e-06
+  PASS  [127x233 natural] cpu/torch ssim map max|err|=1.084e-05 tol=5e-05
+  PASS  [127x233 natural] cpu/auto ssim uint8        got=0.950937999313 ref=0.950938005242 |err|=5.929e-09 tol=5e-06
+  PASS  [127x233 natural] cpu/auto ssim fp32         got=0.950937999313 ref=0.950938005242 |err|=5.929e-09 tol=5e-06
+  PASS  [127x233 natural] cpu/auto ssim map max|err|=5.238e-07 tol=5e-05
+  PASS  [127x233 natural] cpu mse uint8              got=65.090534284073 ref=65.090534284073 |err|=0.000e+00 tol=1e-09
+  PASS  [127x233 natural] cpu psnr uint8             got=29.995625244824 ref=29.995625244824 |err|=3.553e-15 tol=1e-06
+  PASS  [127x233 natural] cuda/torch ssim uint8      got=0.950937998523 ref=0.950938005242 |err|=6.719e-09 tol=5e-06
+  PASS  [127x233 natural] cuda/torch ssim fp32       got=0.950937998523 ref=0.950938005242 |err|=6.719e-09 tol=5e-06
+  PASS  [127x233 natural] cuda/torch ssim map max|err|=8.995e-06 tol=5e-05
+  PASS  [127x233 natural] cuda/auto ssim uint8       got=0.950938000986 ref=0.950938005242 |err|=4.256e-09 tol=5e-06
+  PASS  [127x233 natural] cuda/auto ssim fp32        got=0.950938000986 ref=0.950938005242 |err|=4.256e-09 tol=5e-06
+  PASS  [127x233 natural] cuda/auto ssim map max|err|=1.349e-06 tol=5e-05
+  PASS  [127x233 natural] cuda mse uint8             got=65.090534284073 ref=65.090534284073 |err|=0.000e+00 tol=1e-09
+  PASS  [127x233 natural] cuda psnr uint8            got=29.995625244824 ref=29.995625244824 |err|=3.553e-15 tol=1e-06
+  PASS  [256x256 natural] skimage vs reference       got=0.992770439607 ref=0.992770439607 |err|=7.772e-16 tol=5e-06
+  PASS  [256x256 natural] cpu/torch ssim uint8       got=0.992770444824 ref=0.992770439607 |err|=5.216e-09 tol=5e-06
+  PASS  [256x256 natural] cpu/torch ssim fp32        got=0.992770444824 ref=0.992770439607 |err|=5.216e-09 tol=5e-06
+  PASS  [256x256 natural] cpu/torch ssim map max|err|=9.319e-06 tol=5e-05
+  PASS  [256x256 natural] cpu/auto ssim uint8        got=0.992770429519 ref=0.992770439607 |err|=1.009e-08 tol=5e-06
+  PASS  [256x256 natural] cpu/auto ssim fp32         got=0.992770429519 ref=0.992770439607 |err|=1.009e-08 tol=5e-06
+  PASS  [256x256 natural] cpu/auto ssim map max|err|=3.130e-07 tol=5e-05
+  PASS  [256x256 natural] cpu mse uint8              got=9.064178466797 ref=9.064178466797 |err|=0.000e+00 tol=1e-09
+  PASS  [256x256 natural] cpu psnr uint8             got=38.557519129995 ref=38.557519129995 |err|=0.000e+00 tol=1e-06
+  PASS  [256x256 natural] cuda/torch ssim uint8      got=0.992770443863 ref=0.992770439607 |err|=4.256e-09 tol=5e-06
+  PASS  [256x256 natural] cuda/torch ssim fp32       got=0.992770443863 ref=0.992770439607 |err|=4.256e-09 tol=5e-06
+  PASS  [256x256 natural] cuda/torch ssim map max|err|=8.783e-06 tol=5e-05
+  PASS  [256x256 natural] cuda/auto ssim uint8       got=0.992770434352 ref=0.992770439607 |err|=5.256e-09 tol=5e-06
+  PASS  [256x256 natural] cuda/auto ssim fp32        got=0.992770434352 ref=0.992770439607 |err|=5.256e-09 tol=5e-06
+  PASS  [256x256 natural] cuda/auto ssim map max|err|=3.510e-07 tol=5e-05
+  PASS  [256x256 natural] cuda mse uint8             got=9.064178466797 ref=9.064178466797 |err|=0.000e+00 tol=1e-09
+  PASS  [256x256 natural] cuda psnr uint8            got=38.557519129995 ref=38.557519129995 |err|=0.000e+00 tol=1e-06
+  PASS  [512x384 natural] skimage vs reference       got=0.671401830465 ref=0.671401830465 |err|=2.220e-16 tol=5e-06
+  PASS  [512x384 natural] cpu/torch ssim uint8       got=0.671401844538 ref=0.671401830465 |err|=1.407e-08 tol=5e-06
+  PASS  [512x384 natural] cpu/torch ssim fp32        got=0.671401844538 ref=0.671401830465 |err|=1.407e-08 tol=5e-06
+  PASS  [512x384 natural] cpu/torch ssim map max|err|=7.358e-06 tol=5e-05
+  PASS  [512x384 natural] cpu/auto ssim uint8        got=0.671401830712 ref=0.671401830465 |err|=2.468e-10 tol=5e-06
+  PASS  [512x384 natural] cpu/auto ssim fp32         got=0.671401830712 ref=0.671401830465 |err|=2.468e-10 tol=5e-06
+  PASS  [512x384 natural] cpu/auto ssim map max|err|=3.586e-06 tol=5e-05
+  PASS  [512x384 natural] cpu mse uint8              got=608.362085978190 ref=608.362085978190 |err|=0.000e+00 tol=1e-09
+  PASS  [512x384 natural] cpu psnr uint8             got=20.289182205158 ref=20.289182205158 |err|=0.000e+00 tol=1e-06
+  PASS  [512x384 natural] cuda/torch ssim uint8      got=0.671401843873 ref=0.671401830465 |err|=1.341e-08 tol=5e-06
+  PASS  [512x384 natural] cuda/torch ssim fp32       got=0.671401843873 ref=0.671401830465 |err|=1.341e-08 tol=5e-06
+  PASS  [512x384 natural] cuda/torch ssim map max|err|=7.229e-06 tol=5e-05
+  PASS  [512x384 natural] cuda/auto ssim uint8       got=0.671401838685 ref=0.671401830465 |err|=8.220e-09 tol=5e-06
+  PASS  [512x384 natural] cuda/auto ssim fp32        got=0.671401838685 ref=0.671401830465 |err|=8.220e-09 tol=5e-06
+  PASS  [512x384 natural] cuda/auto ssim map max|err|=4.783e-06 tol=5e-05
+  PASS  [512x384 natural] cuda mse uint8             got=608.362085978190 ref=608.362085978190 |err|=0.000e+00 tol=1e-09
+  PASS  [512x384 natural] cuda psnr uint8            got=20.289182205158 ref=20.289182205158 |err|=0.000e+00 tol=1e-06
+  PASS  [720x1280 natural] skimage vs reference      got=0.896538012915 ref=0.896538012915 |err|=5.551e-16 tol=5e-06
+  PASS  [720x1280 natural] cpu/torch ssim uint8      got=0.896538023697 ref=0.896538012915 |err|=1.078e-08 tol=5e-06
+  PASS  [720x1280 natural] cpu/torch ssim fp32       got=0.896538023697 ref=0.896538012915 |err|=1.078e-08 tol=5e-06
+  PASS  [720x1280 natural] cpu/torch ssim map max|err|=1.624e-05 tol=5e-05
+  PASS  [720x1280 natural] cpu/auto ssim uint8       got=0.896538007621 ref=0.896538012915 |err|=5.294e-09 tol=5e-06
+  PASS  [720x1280 natural] cpu/auto ssim fp32        got=0.896538007621 ref=0.896538012915 |err|=5.294e-09 tol=5e-06
+  PASS  [720x1280 natural] cpu/auto ssim map max|err|=2.841e-06 tol=5e-05
+  PASS  [720x1280 natural] cpu mse uint8             got=142.653824869792 ref=142.653824869792 |err|=0.000e+00 tol=1e-09
+  PASS  [720x1280 natural] cpu psnr uint8            got=26.587969403072 ref=26.587969403072 |err|=3.553e-15 tol=1e-06
+  PASS  [720x1280 natural] cuda/torch ssim uint8     got=0.896538023319 ref=0.896538012915 |err|=1.040e-08 tol=5e-06
+  PASS  [720x1280 natural] cuda/torch ssim fp32      got=0.896538023319 ref=0.896538012915 |err|=1.040e-08 tol=5e-06
+  PASS  [720x1280 natural] cuda/torch ssim map max|err|=1.326e-05 tol=5e-05
+  PASS  [720x1280 natural] cuda/auto ssim uint8      got=0.896538016508 ref=0.896538012915 |err|=3.593e-09 tol=5e-06
+  PASS  [720x1280 natural] cuda/auto ssim fp32       got=0.896538016508 ref=0.896538012915 |err|=3.593e-09 tol=5e-06
+  PASS  [720x1280 natural] cuda/auto ssim map max|err|=5.307e-06 tol=5e-05
+  PASS  [720x1280 natural] cuda mse uint8            got=142.653824869792 ref=142.653824869792 |err|=0.000e+00 tol=1e-09
+  PASS  [720x1280 natural] cuda psnr uint8           got=26.587969403072 ref=26.587969403072 |err|=3.553e-15 tol=1e-06
+  PASS  [33x41 flat] skimage vs reference            got=0.695082283270 ref=0.695082283271 |err|=1.461e-13 tol=5e-06
+  PASS  [33x41 flat] cpu/torch ssim uint8            got=0.695082279693 ref=0.695082283271 |err|=3.578e-09 tol=5e-06
+  PASS  [33x41 flat] cpu/torch ssim fp32             got=0.695082279693 ref=0.695082283271 |err|=3.578e-09 tol=5e-06
+  PASS  [33x41 flat] cpu/torch ssim map max|err|=1.509e-07 tol=5e-05
+  PASS  [33x41 flat] cpu/auto ssim uint8             got=0.695082306862 ref=0.695082283271 |err|=2.359e-08 tol=5e-06
+  PASS  [33x41 flat] cpu/auto ssim fp32              got=0.695082306862 ref=0.695082283271 |err|=2.359e-08 tol=5e-06
+  PASS  [33x41 flat] cpu/auto ssim map max|err|=1.953e-07 tol=5e-05
+  PASS  [33x41 flat] cpu mse uint8                   got=26.668144863267 ref=26.668144863267 |err|=0.000e+00 tol=1e-09
+  PASS  [33x41 flat] cpu psnr uint8                  got=33.870875552893 ref=33.870875552893 |err|=0.000e+00 tol=1e-06
+  PASS  [33x41 flat] cuda/torch ssim uint8           got=0.695082282034 ref=0.695082283271 |err|=1.237e-09 tol=5e-06
+  PASS  [33x41 flat] cuda/torch ssim fp32            got=0.695082282034 ref=0.695082283271 |err|=1.237e-09 tol=5e-06
+  PASS  [33x41 flat] cuda/torch ssim map max|err|=1.489e-07 tol=5e-05
+  PASS  [33x41 flat] cuda/auto ssim uint8            got=0.695082282786 ref=0.695082283271 |err|=4.846e-10 tol=5e-06
+  PASS  [33x41 flat] cuda/auto ssim fp32             got=0.695082282786 ref=0.695082283271 |err|=4.846e-10 tol=5e-06
+  PASS  [33x41 flat] cuda/auto ssim map max|err|=1.366e-07 tol=5e-05
+  PASS  [33x41 flat] cuda mse uint8                  got=26.668144863267 ref=26.668144863267 |err|=0.000e+00 tol=1e-09
+  PASS  [33x41 flat] cuda psnr uint8                 got=33.870875552893 ref=33.870875552893 |err|=0.000e+00 tol=1e-06
+
+  -- MS-SSIM / GMSD / pixel losses --
+  PASS  [200x232 natural] cpu/torch ms_ssim          got=0.985085731279 ref=0.985085713717 |err|=1.756e-08 tol=5e-06
+  PASS  [200x232 natural] cpu/torch gmsd             got=0.030071585470 ref=0.030071583875 |err|=1.595e-09 tol=5e-06
+  PASS  [200x232 natural] cpu/torch l1               got=6.347456896552 ref=6.347456896552 |err|=0.000e+00 tol=1e-06
+  PASS  [200x232 natural] cpu/torch charbonnier      got=6.347511773368 ref=6.347511815818 |err|=4.245e-08 tol=1e-06
+  PASS  [200x232 natural] cpu/torch huber            got=5.874849137931 ref=5.874849137931 |err|=0.000e+00 tol=1e-06
+  PASS  [200x232 natural] cpu/auto ms_ssim           got=0.985085707257 ref=0.985085713717 |err|=6.460e-09 tol=5e-06
+  PASS  [200x232 natural] cpu/auto gmsd              got=0.030071585286 ref=0.030071583875 |err|=1.411e-09 tol=5e-06
+  PASS  [200x232 natural] cpu/auto l1                got=6.347456896552 ref=6.347456896552 |err|=0.000e+00 tol=1e-06
+  PASS  [200x232 natural] cpu/auto charbonnier       got=6.347511773368 ref=6.347511815818 |err|=4.245e-08 tol=1e-06
+  PASS  [200x232 natural] cpu/auto huber             got=5.874849137931 ref=5.874849137931 |err|=0.000e+00 tol=1e-06
+  PASS  [200x232 natural] cuda/torch ms_ssim         got=0.985085740943 ref=0.985085713717 |err|=2.723e-08 tol=5e-06
+  PASS  [200x232 natural] cuda/torch gmsd            got=0.030071585024 ref=0.030071583875 |err|=1.150e-09 tol=5e-06
+  PASS  [200x232 natural] cuda/torch l1              got=6.347456896552 ref=6.347456896552 |err|=0.000e+00 tol=1e-06
+  PASS  [200x232 natural] cuda/torch charbonnier     got=6.347511773368 ref=6.347511815818 |err|=4.245e-08 tol=1e-06
+  PASS  [200x232 natural] cuda/torch huber           got=5.874849137931 ref=5.874849137931 |err|=8.882e-16 tol=1e-06
+  PASS  [200x232 natural] cuda/auto ms_ssim          got=0.985085717267 ref=0.985085713717 |err|=3.550e-09 tol=5e-06
+  PASS  [200x232 natural] cuda/auto gmsd             got=0.030071584091 ref=0.030071583875 |err|=2.161e-10 tol=5e-06
+  PASS  [200x232 natural] cuda/auto l1               got=6.347456896552 ref=6.347456896552 |err|=0.000e+00 tol=1e-06
+  PASS  [200x232 natural] cuda/auto charbonnier      got=6.347511773368 ref=6.347511815818 |err|=4.245e-08 tol=1e-06
+  PASS  [200x232 natural] cuda/auto huber            got=5.874849137931 ref=5.874849137931 |err|=0.000e+00 tol=1e-06
+  PASS  [257x193 natural] cpu/torch ms_ssim          got=0.918916259427 ref=0.918916257175 |err|=2.252e-09 tol=5e-06
+  PASS  [257x193 natural] cpu/torch gmsd             got=0.100406795258 ref=0.100406793259 |err|=1.999e-09 tol=5e-06
+  PASS  [257x193 natural] cpu/torch l1               got=15.711477591178 ref=15.711477591178 |err|=0.000e+00 tol=1e-06
+  PASS  [257x193 natural] cpu/torch charbonnier      got=15.711505047531 ref=15.711505081802 |err|=3.427e-08 tol=1e-06
+  PASS  [257x193 natural] cpu/torch huber            got=15.225186992198 ref=15.225186992198 |err|=0.000e+00 tol=1e-06
+  PASS  [257x193 natural] cpu/auto ms_ssim           got=0.918916253628 ref=0.918916257175 |err|=3.547e-09 tol=5e-06
+  PASS  [257x193 natural] cpu/auto gmsd              got=0.100406794808 ref=0.100406793259 |err|=1.548e-09 tol=5e-06
+  PASS  [257x193 natural] cpu/auto l1                got=15.711477591178 ref=15.711477591178 |err|=0.000e+00 tol=1e-06
+  PASS  [257x193 natural] cpu/auto charbonnier       got=15.711505047531 ref=15.711505081802 |err|=3.427e-08 tol=1e-06
+  PASS  [257x193 natural] cpu/auto huber             got=15.225186992198 ref=15.225186992198 |err|=0.000e+00 tol=1e-06
+  PASS  [257x193 natural] cuda/torch ms_ssim         got=0.918916269672 ref=0.918916257175 |err|=1.250e-08 tol=5e-06
+  PASS  [257x193 natural] cuda/torch gmsd            got=0.100406795121 ref=0.100406793259 |err|=1.862e-09 tol=5e-06
+  PASS  [257x193 natural] cuda/torch l1              got=15.711477591178 ref=15.711477591178 |err|=0.000e+00 tol=1e-06
+  PASS  [257x193 natural] cuda/torch charbonnier     got=15.711505047531 ref=15.711505081802 |err|=3.427e-08 tol=1e-06
+  PASS  [257x193 natural] cuda/torch huber           got=15.225186992198 ref=15.225186992198 |err|=0.000e+00 tol=1e-06
+  PASS  [257x193 natural] cuda/auto ms_ssim          got=0.918916258182 ref=0.918916257175 |err|=1.007e-09 tol=5e-06
+  PASS  [257x193 natural] cuda/auto gmsd             got=0.100406794830 ref=0.100406793259 |err|=1.570e-09 tol=5e-06
+  PASS  [257x193 natural] cuda/auto l1               got=15.711477591178 ref=15.711477591178 |err|=0.000e+00 tol=1e-06
+  PASS  [257x193 natural] cuda/auto charbonnier      got=15.711505047531 ref=15.711505081802 |err|=3.427e-08 tol=1e-06
+  PASS  [257x193 natural] cuda/auto huber            got=15.225186992198 ref=15.225186992198 |err|=0.000e+00 tol=1e-06
+  PASS  [176x176 uniform] cpu/torch ms_ssim          got=0.988762968153 ref=0.988762952325 |err|=1.583e-08 tol=5e-06
+  PASS  [176x176 uniform] cpu/torch gmsd             got=0.029487108711 ref=0.029487107635 |err|=1.076e-09 tol=5e-06
+  PASS  [176x176 uniform] cpu/torch l1               got=9.244641012397 ref=9.244641012397 |err|=0.000e+00 tol=1e-06
+  PASS  [176x176 uniform] cpu/torch charbonnier      got=9.244678138064 ref=9.244678179307 |err|=4.124e-08 tol=1e-06
+  PASS  [176x176 uniform] cpu/torch huber            got=8.763171487603 ref=8.763171487603 |err|=0.000e+00 tol=1e-06
+  PASS  [176x176 uniform] cpu/auto ms_ssim           got=0.988762956287 ref=0.988762952325 |err|=3.962e-09 tol=5e-06
+  PASS  [176x176 uniform] cpu/auto gmsd              got=0.029487108411 ref=0.029487107635 |err|=7.758e-10 tol=5e-06
+  PASS  [176x176 uniform] cpu/auto l1                got=9.244641012397 ref=9.244641012397 |err|=0.000e+00 tol=1e-06
+  PASS  [176x176 uniform] cpu/auto charbonnier       got=9.244678138064 ref=9.244678179307 |err|=4.124e-08 tol=1e-06
+  PASS  [176x176 uniform] cpu/auto huber             got=8.763171487603 ref=8.763171487603 |err|=0.000e+00 tol=1e-06
+  PASS  [176x176 uniform] cuda/torch ms_ssim         got=0.988762970802 ref=0.988762952325 |err|=1.848e-08 tol=5e-06
+  PASS  [176x176 uniform] cuda/torch gmsd            got=0.029487109918 ref=0.029487107635 |err|=2.283e-09 tol=5e-06
+  PASS  [176x176 uniform] cuda/torch l1              got=9.244641012397 ref=9.244641012397 |err|=0.000e+00 tol=1e-06
+  PASS  [176x176 uniform] cuda/torch charbonnier     got=9.244678138064 ref=9.244678179307 |err|=4.124e-08 tol=1e-06
+  PASS  [176x176 uniform] cuda/torch huber           got=8.763171487603 ref=8.763171487603 |err|=0.000e+00 tol=1e-06
+  PASS  [176x176 uniform] cuda/auto ms_ssim          got=0.988762965083 ref=0.988762952325 |err|=1.276e-08 tol=5e-06
+  PASS  [176x176 uniform] cuda/auto gmsd             got=0.029487108534 ref=0.029487107635 |err|=8.986e-10 tol=5e-06
+  PASS  [176x176 uniform] cuda/auto l1               got=9.244641012397 ref=9.244641012397 |err|=0.000e+00 tol=1e-06
+  PASS  [176x176 uniform] cuda/auto charbonnier      got=9.244678138064 ref=9.244678179307 |err|=4.124e-08 tol=1e-06
+  PASS  [176x176 uniform] cuda/auto huber            got=8.763171487603 ref=8.763171487603 |err|=0.000e+00 tol=1e-06
+
+  -- Y-channel + crop_border (the SR reporting convention) --
+  PASS  [bt601 crop=0] cpu Y-SSIM                    got=0.992663815666 ref=0.992663815386 |err|=2.803e-10 tol=5e-06
+  PASS  [bt601 crop=0] cpu Y-PSNR                    got=32.769819438848 ref=32.769819517942 |err|=7.909e-08 tol=1e-05
+  PASS  [bt601 crop=0] cuda Y-SSIM                   got=0.992663806906 ref=0.992663815386 |err|=8.480e-09 tol=5e-06
+  PASS  [bt601 crop=0] cuda Y-PSNR                   got=32.769819437712 ref=32.769819517942 |err|=8.023e-08 tol=1e-05
+  PASS  [bt601 crop=4] cpu Y-SSIM                    got=0.992675456324 ref=0.992675456110 |err|=2.141e-10 tol=5e-06
+  PASS  [bt601 crop=4] cpu Y-PSNR                    got=32.761420842556 ref=32.761420912301 |err|=6.974e-08 tol=1e-05
+  PASS  [bt601 crop=4] cuda Y-SSIM                   got=0.992675447822 ref=0.992675456110 |err|=8.288e-09 tol=5e-06
+  PASS  [bt601 crop=4] cuda Y-PSNR                   got=32.761420841314 ref=32.761420912301 |err|=7.099e-08 tol=1e-05
+  PASS  [bt709 crop=0] cpu Y-SSIM                    got=0.992676441125 ref=0.992676440160 |err|=9.651e-10 tol=5e-06
+  PASS  [bt709 crop=0] cpu Y-PSNR                    got=31.778558269567 ref=31.778558324112 |err|=5.454e-08 tol=1e-05
+  PASS  [bt709 crop=0] cuda Y-SSIM                   got=0.992676431558 ref=0.992676440160 |err|=8.602e-09 tol=5e-06
+  PASS  [bt709 crop=0] cuda Y-PSNR                   got=31.778558268847 ref=31.778558324112 |err|=5.526e-08 tol=1e-05
+  PASS  [bt709 crop=4] cpu Y-SSIM                    got=0.992681748641 ref=0.992681747791 |err|=8.503e-10 tol=5e-06
+  PASS  [bt709 crop=4] cpu Y-PSNR                    got=31.768576095742 ref=31.768576164454 |err|=6.871e-08 tol=1e-05
+  PASS  [bt709 crop=4] cuda Y-SSIM                   got=0.992681739223 ref=0.992681747791 |err|=8.568e-09 tol=5e-06
+  PASS  [bt709 crop=4] cuda Y-PSNR                   got=31.768576094560 ref=31.768576164454 |err|=6.989e-08 tol=1e-05
+  PASS  [matlab crop=0] cpu Y-SSIM                   got=0.992707956530 ref=0.992707964159 |err|=7.629e-09 tol=5e-06
+  PASS  [matlab crop=0] cpu Y-PSNR                   got=34.091740978428 ref=34.091740829819 |err|=1.486e-07 tol=1e-05
+  PASS  [matlab crop=0] cuda Y-SSIM                  got=0.992707961033 ref=0.992707964159 |err|=3.126e-09 tol=5e-06
+  PASS  [matlab crop=0] cuda Y-PSNR                  got=34.091740979215 ref=34.091740829819 |err|=1.494e-07 tol=1e-05
+  PASS  [matlab crop=4] cpu Y-SSIM                   got=0.992719407511 ref=0.992719415218 |err|=7.707e-09 tol=5e-06
+  PASS  [matlab crop=4] cpu Y-PSNR                   got=34.083342375705 ref=34.083342224178 |err|=1.515e-07 tol=1e-05
+  PASS  [matlab crop=4] cuda Y-SSIM                  got=0.992719412121 ref=0.992719415218 |err|=3.097e-09 tol=5e-06
+  PASS  [matlab crop=4] cuda Y-PSNR                  got=34.083342376639 ref=34.083342224178 |err|=1.525e-07 tol=1e-05
+
+  -- batch & channel handling --
+  PASS  cpu batch[0]                                 got=0.971118790365 ref=0.971118796788 |err|=6.424e-09 tol=5e-06
+  PASS  cpu batch[1]                                 got=0.583181833633 ref=0.583181831236 |err|=2.398e-09 tol=5e-06
+  PASS  cpu batch mean                               got=0.777150311999 ref=0.777150314012 |err|=2.013e-09 tol=5e-06
+  PASS  cpu 2-channel mean                           got=0.777150311999 ref=0.777150314012 |err|=2.013e-09 tol=5e-06
+  PASS  cuda batch[0]                                got=0.971118794365 ref=0.971118796788 |err|=2.423e-09 tol=5e-06
+  PASS  cuda batch[1]                                got=0.583181843822 ref=0.583181831236 |err|=1.259e-08 tol=5e-06
+  PASS  cuda batch mean                              got=0.777150319093 ref=0.777150314012 |err|=5.081e-09 tol=5e-06
+  PASS  cuda 2-channel mean                          got=0.777150319093 ref=0.777150314012 |err|=5.081e-09 tol=5e-06
+
+  -- LPIPS (vs the float64 reference forward) --
+  PASS  cpu lpips 64x64 fp32                         got=0.011838320643 ref=0.011838291171 |err|=2.947e-08 tol=5e-07
+  PASS  cpu lpips 64x64 fp64                         got=0.011838291482 ref=0.011838291171 |err|=3.107e-10 tol=1e-08
+  PASS  cuda lpips 64x64 fp32                        got=0.011838312261 ref=0.011838291171 |err|=2.109e-08 tol=5e-07
+  PASS  cuda lpips 64x64 fp64                        got=0.011838291482 ref=0.011838291171 |err|=3.107e-10 tol=1e-08
+  PASS  cpu lpips 72x96 fp32                         got=0.015857879072 ref=0.015857871105 |err|=7.968e-09 tol=5e-07
+  PASS  cpu lpips 72x96 fp64                         got=0.015857871219 ref=0.015857871105 |err|=1.140e-10 tol=1e-08
+  PASS  cuda lpips 72x96 fp32                        got=0.015857888386 ref=0.015857871105 |err|=1.728e-08 tol=5e-07
+  PASS  cuda lpips 72x96 fp64                        got=0.015857871219 ref=0.015857871105 |err|=1.140e-10 tol=1e-08
+
+  -- SSIMULACRA 2 (vs the float64 reference) --
+  PASS  cpu ssimulacra2 64x64 fp32                   got=52.982463861423 ref=52.982485901301 |err|=2.204e-05 tol=5e-03
+  PASS  cpu ssimulacra2 64x64 fp64                   got=52.982485901256 ref=52.982485901301 |err|=4.466e-11 tol=1e-08
+  PASS  cuda ssimulacra2 64x64 fp32                  got=52.982479676088 ref=52.982485901301 |err|=6.225e-06 tol=5e-03
+  PASS  cuda ssimulacra2 64x64 fp64                  got=52.982485901256 ref=52.982485901301 |err|=4.487e-11 tol=1e-08
+  PASS  cpu ssimulacra2 81x97 fp32                   got=50.521615364938 ref=50.521631761656 |err|=1.640e-05 tol=5e-03
+  PASS  cpu ssimulacra2 81x97 fp64                   got=50.521631761617 ref=50.521631761656 |err|=3.883e-11 tol=1e-08
+  PASS  cuda ssimulacra2 81x97 fp32                  got=50.521622634860 ref=50.521631761656 |err|=9.127e-06 tol=5e-03
+  PASS  cuda ssimulacra2 81x97 fp64                  got=50.521631761617 ref=50.521631761656 |err|=3.881e-11 tol=1e-08
+
+  -- degenerate cases --
+  PASS  cpu ssim(x,x)                                got=1.000000008108 ref=1.000000000000 |err|=8.108e-09 tol=1e-06
+  PASS  cpu mse(x,x)                                 got=0.000000000000 ref=0.000000000000 |err|=0.000e+00 tol=0e+00
+  PASS  cpu psnr(x,x) = inf
+  PASS  cuda ssim(x,x)                               got=0.999999994889 ref=1.000000000000 |err|=5.111e-09 tol=1e-06
+  PASS  cuda mse(x,x)                                got=0.000000000000 ref=0.000000000000 |err|=0.000e+00 tol=0e+00
+  PASS  cuda psnr(x,x) = inf
+
+ALL CHECKS PASSED

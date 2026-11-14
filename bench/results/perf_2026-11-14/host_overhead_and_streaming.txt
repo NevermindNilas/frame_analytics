@@ -1,0 +1,48 @@
+== base
+psnr u8               10.17 us
+mse f32               10.07 us
+ssim u8               13.76 us
+ssim f32              13.80 us
+ssim none             13.90 us
+gmsd u8               17.80 us
+l1 u8                 11.49 us
+ms_ssim(256) u8      172.67 us
+stream lookup          1.54 us
+raw stream             0.05 us
+device.index           0.06 us
+get_device             0.04 us
+empty f64              1.26 us
+empty f64 2d           1.29 us
+data_ptr               0.04 us
+_prep                  0.77 us
+is_grad_enabled        0.04 us
+('psnr', 'ssim', 'ms_ssim', 'gmsd') graph True maxdiff 0.0
+  resident: 0.748 ms/frame = 1337 fps
+  host: 1.310 ms/frame = 763 fps
+('mse', 'psnr', 'ssim') graph True maxdiff 0.0
+  resident: 0.285 ms/frame = 3505 fps
+  host: 0.844 ms/frame = 1184 fps
+== new
+psnr u8                8.20 us
+mse f32                8.23 us
+ssim u8               11.88 us
+ssim f32              13.89 us
+ssim none             13.96 us
+gmsd u8               15.65 us
+l1 u8                  9.47 us
+ms_ssim(256) u8      100.26 us
+stream lookup          1.52 us
+raw stream             0.05 us
+device.index           0.06 us
+get_device             0.04 us
+empty f64              1.31 us
+empty f64 2d           1.31 us
+data_ptr               0.04 us
+_prep                  0.75 us
+is_grad_enabled        0.04 us
+('psnr', 'ssim', 'ms_ssim', 'gmsd') graph True maxdiff 1.7763568394002505e-15
+  resident: 0.584 ms/frame = 1714 fps
+  host: 1.164 ms/frame = 859 fps
+('mse', 'psnr', 'ssim') graph True maxdiff 3.552713678800501e-15
+  resident: 0.226 ms/frame = 4422 fps
+  host: 0.786 ms/frame = 1272 fps

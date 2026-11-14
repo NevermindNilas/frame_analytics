@@ -25,6 +25,7 @@ import torch
 import torch.nn.functional as F
 
 from . import functional as _functional
+from ._metric_utils import starved_reduction
 from .functional import (
     _apply_luma,
     _maybe_compile,
@@ -100,8 +101,7 @@ def _cast_pool2(x, dtype):
     return F.avg_pool2d(x.to(dtype), 2)
 
 
-def _iw_epi_ratio(t: torch.Tensor, C: int, shift: float, C1: float, C2: float,
-                  Cw: float, _unused: float):
+def _iw_moments(t: torch.Tensor, C: int, shift: float, C1: float, C2: float):
     ux = t[:, 0 * C:1 * C]
     uy = t[:, 1 * C:2 * C]
     mx = ux + shift
@@ -111,63 +111,60 @@ def _iw_epi_ratio(t: torch.Tensor, C: int, shift: float, C1: float, C2: float,
     sxy = t[:, 4 * C:5 * C] - ux * uy
     cs = (2.0 * sxy + C2) / (sxx + syy + C2)
     lum = (2.0 * mx * my + C1) / (mx * mx + my * my + C1)
-    ssim = lum * cs
+    return sxx, lum * cs, cs
+
+
+def _iw_terms_ratio(t, C, shift, C1, C2, Cw, _unused):
+    sxx, ssim, cs = _iw_moments(t, C, shift, C1, C2)
     sxx_c = sxx.clamp_min(0.0)
     w = sxx_c / (sxx_c + Cw)
-    return (
-        (w * ssim).sum(dim=(2, 3), dtype=torch.float64),
-        (w * cs).sum(dim=(2, 3), dtype=torch.float64),
-        w.sum(dim=(2, 3), dtype=torch.float64),
-        ssim.sum(dim=(2, 3), dtype=torch.float64),
-        cs.sum(dim=(2, 3), dtype=torch.float64),
-    )
+    return w * ssim, w * cs, w, ssim, cs
 
 
-def _iw_epi_log(t: torch.Tensor, C: int, shift: float, C1: float, C2: float,
-                _unused: float, sigma_nsq: float):
-    ux = t[:, 0 * C:1 * C]
-    uy = t[:, 1 * C:2 * C]
-    mx = ux + shift
-    my = uy + shift
-    sxx = t[:, 2 * C:3 * C] - ux * ux
-    syy = t[:, 3 * C:4 * C] - uy * uy
-    sxy = t[:, 4 * C:5 * C] - ux * uy
-    cs = (2.0 * sxy + C2) / (sxx + syy + C2)
-    lum = (2.0 * mx * my + C1) / (mx * mx + my * my + C1)
-    ssim = lum * cs
+def _iw_terms_log(t, C, shift, C1, C2, _unused, sigma_nsq):
+    sxx, ssim, cs = _iw_moments(t, C, shift, C1, C2)
     sxx_c = sxx.clamp_min(0.0)
     w = torch.log2(1.0 + sxx_c / sigma_nsq)
-    return (
-        (w * ssim).sum(dim=(2, 3), dtype=torch.float64),
-        (w * cs).sum(dim=(2, 3), dtype=torch.float64),
-        w.sum(dim=(2, 3), dtype=torch.float64),
-        ssim.sum(dim=(2, 3), dtype=torch.float64),
-        cs.sum(dim=(2, 3), dtype=torch.float64),
-    )
+    return w * ssim, w * cs, w, ssim, cs
 
 
-def _iw_epi_plain(t: torch.Tensor, C: int, shift: float, C1: float, C2: float,
-                  _u1: float, _u2: float):
-    ux = t[:, 0 * C:1 * C]
-    uy = t[:, 1 * C:2 * C]
-    mx = ux + shift
-    my = uy + shift
-    sxx = t[:, 2 * C:3 * C] - ux * ux
-    syy = t[:, 3 * C:4 * C] - uy * uy
-    sxy = t[:, 4 * C:5 * C] - ux * uy
-    cs = (2.0 * sxy + C2) / (sxx + syy + C2)
-    lum = (2.0 * mx * my + C1) / (mx * mx + my * my + C1)
-    ssim = lum * cs
-    return (
-        ssim.sum(dim=(2, 3), dtype=torch.float64),
-        cs.sum(dim=(2, 3), dtype=torch.float64),
-        None, None, None,
-    )
+def _iw_terms_plain(t, C, shift, C1, C2, _u1, _u2):
+    _, ssim, cs = _iw_moments(t, C, shift, C1, C2)
+    return ssim, cs
 
 
-_EPI = {"ratio": (_iw_epi_ratio, "iwssim:epi:ratio"),
-        "log": (_iw_epi_log, "iwssim:epi:log"),
-        "uniform": (_iw_epi_plain, "iwssim:epi:plain")}
+def _iw_epi_planes(terms_fn, t, C, shift, C1, C2, Cw, sigma_nsq):
+    """Per-(image, channel) float64 sums of ``terms_fn``'s maps, ``(N, C)``."""
+    return tuple(m.sum(dim=(2, 3), dtype=torch.float64)
+                 for m in terms_fn(t, C, shift, C1, C2, Cw, sigma_nsq))
+
+
+def _iw_epi_rows(terms_fn, t, C, shift, C1, C2, Cw, sigma_nsq):
+    """The same sums stopped at rows, ``(N, C, H)`` (few large planes; see
+    ``_metric_utils.starved_reduction``); the caller finishes them."""
+    return tuple(m.sum(dim=3, dtype=torch.float64)
+                 for m in terms_fn(t, C, shift, C1, C2, Cw, sigma_nsq))
+
+
+_TERMS = {"ratio": _iw_terms_ratio, "log": _iw_terms_log,
+          "uniform": _iw_terms_plain}
+
+
+def _iw_epilogue(mode: str, t: torch.Tensor, C: int, shift: float, C1: float,
+                 C2: float, Cw: float, sigma_nsq: float):
+    """``(N, C)`` float64 plane sums for weight mode ``mode``.
+
+    ``uniform``: ``(ssim, cs)``; ``ratio``/``log``: ``(w*ssim, w*cs, w, ssim,
+    cs)``. Fused into one compiled reduction unless that would starve the GPU.
+    """
+    terms_fn = _TERMS[mode]
+    n, h, w = t.shape[0], t.shape[-2], t.shape[-1]
+    if starved_reduction(t, n * C, h * w):
+        rows = _maybe_compile(_iw_epi_rows, "iwssim:epi:rows")(
+            terms_fn, t, C, shift, C1, C2, Cw, sigma_nsq)
+        return tuple(r.sum(dim=-1) for r in rows)
+    return _maybe_compile(_iw_epi_planes, "iwssim:epi:planes")(
+        terms_fn, t, C, shift, C1, C2, Cw, sigma_nsq)
 
 
 def _default_weights(num_scales: int):
@@ -185,16 +182,6 @@ def _center_crop(t: torch.Tensor, hn: int, wn: int) -> torch.Tensor:
     h, w = t.shape[-2], t.shape[-1]
     y0, x0 = (h - hn) // 2, (w - wn) // 2
     return t[..., y0:y0 + hn, x0:x0 + wn]
-
-
-def _gsm_shift(x: torch.Tensor, shift) -> torch.Tensor:
-    ny, nx = shift
-    h, w = x.shape[-2], x.shape[-1]
-    yy = (-ny) % h if h else 0
-    xx = (-nx) % w if w else 0
-    v = torch.cat((x[..., yy:, :], x[..., :yy, :]), dim=-2) if yy else x
-    v = torch.cat((v[..., xx:], v[..., :xx]), dim=-1) if xx else v
-    return v
 
 
 def _gsm_enlarge(x: torch.Tensor) -> torch.Tensor:
@@ -268,6 +255,79 @@ def _align_trim(ssim: torch.Tensor, cs: torch.Tensor, wmap: torch.Tensor,
     return ssim, cs, wmap
 
 
+#: Columns per partial Gram product. ``Yt @ Yt^T`` with ``K = H*W`` columns
+#: and a 10x10 result leaves cuBLAS one output tile per matrix -- one thread
+#: block streaming the whole image (~3.7 ms per 512x512 plane on an RTX
+#: 3090). Splitting K into chunks, as a strided batch, and summing the
+#: partial Grams spreads the reduction over the device.
+_GRAM_CHUNK = 4096
+
+
+def _gram_planar(Yt: torch.Tensor) -> torch.Tensor:
+    """``Yt @ Yt^T`` for planar ``(..., N, K)`` data, accumulated in K-chunks."""
+    lead, nn, k = Yt.shape[:-2], Yt.shape[-2], Yt.shape[-1]
+    if k < 2 * _GRAM_CHUNK:
+        return torch.matmul(Yt, Yt.transpose(-2, -1))
+    s = k // _GRAM_CHUNK
+    flat = Yt.reshape(-1, nn, k)
+    parts = []
+    for b in range(flat.shape[0]):
+        # (s, N, CHUNK) with batch stride CHUNK: a strided-batched GEMM over
+        # the original storage, no copy.
+        m = flat[b, :, :s * _GRAM_CHUNK].unflatten(-1, (s, _GRAM_CHUNK)).transpose(0, 1)
+        parts.append(torch.bmm(m, m.transpose(-2, -1)).sum(dim=0))
+    out = torch.stack(parts).reshape(*lead, nn, nn)
+    if k > s * _GRAM_CHUNK:
+        rest = Yt[..., s * _GRAM_CHUNK:]
+        out = out + torch.matmul(rest, rest.transpose(-2, -1))
+    return out
+
+
+def _gsm_iw_epilogue(Yt, Ci, vv, g, lam, sn: float, eps: float):
+    """Quadratic form ``ss = y^T C^-1 y / N`` plus the Eq.28 log2 sum.
+
+    Batch-merged shapes (``B = n*c``): ``Yt`` is planar ``(B, N, h, w)``,
+    ``Ci`` is ``(B, N, N)``, ``vv``/``g`` are ``(B, h, w)`` and ``lam`` is
+    ``(B, N, 1, 1)``. Merging n and c keeps Dynamo from specialising (and
+    recompiling) on n == 1 / c == 1 separately.
+
+    Eager runs keep the matmul formulation (``(Ci^T Yt) * Yt``). Under
+    ``torch.compile`` the NxN quadratic form is written out term by term so
+    Inductor emits a single pointwise pass over ``Yt`` instead of
+    materialising the ``(B, N, h, w)`` product. Never run the unrolled form
+    eagerly: it would be ~N^2 tiny kernels.
+    """
+    N = Yt.shape[1]
+    if torch.compiler.is_compiling():
+        # Fully unrolled, so the region is purely pointwise: with symbolic
+        # sizes Inductor will not fuse a reduction over dim 1 and would
+        # materialise a (B, N, h, w) buffer (measured 4x slower, +260 MiB at
+        # 1080p). Same per-term operation order as the eager branch.
+        ss = None
+        for a in range(N):
+            inner = None
+            for b in range(N):
+                t = Ci[:, b, a, None, None] * Yt[:, b]
+                inner = t if inner is None else inner + t
+            t = inner * Yt[:, a] / N
+            ss = t if ss is None else ss + t
+        base = (vv + (1.0 + g * g) * sn) * ss
+        noise = sn * vv
+        iw = None
+        for k in range(N):
+            t = torch.log2(1.0 + (base * lam[:, k] + noise) / (sn * sn))
+            iw = t if iw is None else iw + t
+    else:
+        YC = torch.matmul(Ci.transpose(-2, -1), Yt.flatten(-2)).view_as(Yt)
+        ss = (YC * Yt / N).sum(dim=1, keepdim=True)
+        vv1 = vv.unsqueeze(1)
+        g1 = g.unsqueeze(1)
+        iw = torch.sum(torch.log2(1.0 + ((vv1 + (1.0 + g1 * g1) * sn) * ss * lam
+                                         + sn * vv1) / (sn * sn)), dim=1)
+    iw = torch.where(iw < eps, torch.zeros_like(iw), iw)
+    return iw.clamp_min(0.0)
+
+
 def _gsm_info_map(x: torch.Tensor, y: torch.Tensor, x_parent=None,
                   blk_size: int = 3, sigma_nsq: float = 0.4) -> torch.Tensor:
     """Full GSM Eq.28 information-content map (x = reference convention)."""
@@ -306,37 +366,45 @@ def _gsm_info_map(x: torch.Tensor, y: torch.Tensor, x_parent=None,
     if x_parent is not None:
         up = _gsm_enlarge(x_parent)[:, :, :x.shape[-2], :x.shape[-1]]
         N = N + 1
-    Y = torch.zeros(n, c, nexp, N, device=dev, dtype=dt)
-    m = -1
-    for ny in range(-Ly, Ly + 1):
-        for nx in range(-Lx, Lx + 1):
-            m += 1
-            foo = _gsm_shift(x, [ny, nx])[:, :, Ly:Ly + nblv, Lx:Lx + nblh]
-            Y[..., m] = foo.flatten(start_dim=-2, end_dim=-1)
+    # Neighbourhood vectors, planar: plane m is the image shifted by
+    # (ny, nx) and cropped to the valid block grid. The shift never wraps
+    # (|ny| <= Ly and the crop starts Ly in), so each plane is a plain slice
+    # of ``x`` -- the same values a circular shift + crop produces. Planar
+    # (N, K) storage keeps every copy and reduction below coalesced. Image
+    # and channel are merged into one batch dim B from here on.
+    B = n * c
+    xb = x.flatten(0, 1)
+    cols = [xb[:, Ly - ny:Ly - ny + nblv, Lx - nx:Lx - nx + nblh]
+            for ny in range(-Ly, Ly + 1) for nx in range(-Lx, Lx + 1)]
     if up is not None:
-        m += 1
-        foo = up[:, :, Ly:Ly + nblv, Lx:Lx + nblh]
-        Y[..., m] = foo.flatten(start_dim=-2, end_dim=-1)
+        cols.append(up[:, :, Ly:Ly + nblv, Lx:Lx + nblh].flatten(0, 1))
+    Yt = torch.stack(cols, dim=1)                      # (B, N, nblv, nblh)
+    del cols
 
-    Cu = torch.matmul(Y.transpose(-2, -1), Y) / max(nexp, 1)
+    Cu = _gram_planar(Yt.view(B, N, nexp)) / max(nexp, 1)
     eig_values, eig_vectors = torch.linalg.eigh(Cu)
-    sum_eig = eig_values.sum(dim=-1).view(n, c, 1, 1)
+    sum_eig = eig_values.sum(dim=-1).view(B, 1, 1)
     nz = torch.diag_embed(eig_values * (eig_values > 0))
     sum_nz = nz.sum(dim=(-2, -1), keepdim=True)
     L = nz * sum_eig / (sum_nz + (sum_nz == 0))
     Cu = torch.matmul(torch.matmul(eig_vectors, L), eig_vectors.transpose(-2, -1))
     Cu_inv = torch.linalg.pinv(Cu)
-    ss = torch.matmul(Y, Cu_inv) * Y / N
-    ss = ss.sum(dim=-1, keepdim=True).view(n, c, nblv, nblh)
-    g = g[:, :, Ly:Ly + nblv, Lx:Lx + nblh]
-    vv = vv[:, :, Ly:Ly + nblv, Lx:Lx + nblh]
-    lam = torch.diagonal(L, offset=0, dim1=-2, dim2=-1).unsqueeze(2).unsqueeze(3)
-    sn = float(sigma_nsq)
-    iw = torch.sum(torch.log2(1.0 + ((vv.unsqueeze(-1) + (1.0 + g.unsqueeze(-1)
-            * g.unsqueeze(-1)) * sn) * ss.unsqueeze(-1) * lam
-            + sn * vv.unsqueeze(-1)) / (sn * sn)), dim=-1)
-    iw = torch.where(iw < eps, torch.zeros_like(iw), iw)
-    return iw.clamp_min(0.0)
+    lam = torch.diagonal(L, offset=0, dim1=-2, dim2=-1).reshape(B, N, 1, 1)
+    g = _own(g[:, :, Ly:Ly + nblv, Lx:Lx + nblh].reshape(B, nblv, nblh))
+    vv = _own(vv[:, :, Ly:Ly + nblv, Lx:Lx + nblh].reshape(B, nblv, nblh))
+    # dynamic=True plus non-view, batch-merged inputs: one graph per
+    # (N, grad mode) whatever the image size or batch (Dynamo still
+    # specialises B == 1 and square-vs-not). N is the only size the unrolled
+    # quadratic form needs to know.
+    epi = _maybe_compile(_gsm_iw_epilogue, "iwssim:gsm_iw", dynamic=True)
+    iw = epi(_own(Yt), _own(Cu_inv), vv, g, _own(lam),
+             float(sigma_nsq), float(eps))
+    return iw.view(n, c, nblv, nblh)
+
+
+def _own(t: torch.Tensor) -> torch.Tensor:
+    """``t`` as a non-view tensor (Dynamo guards view inputs via ``_base``)."""
+    return t if t._base is None else t.clone()
 
 
 def iw_ssim(
@@ -457,8 +525,6 @@ def iw_ssim(
             terms.append(score)
             dx_old, dy_old = dx, dy
     else:
-        epi_fn, epi_key = _EPI[weight_mode]
-        epi = _maybe_compile(epi_fn, epi_key)
         cx, cy = x4, y4
         for i in range(num_scales):
             if i:
@@ -469,11 +535,12 @@ def iw_ssim(
             filt = _separable_conv(pack(cx, cy, wdt, shift), win.to(wdt))
             npx = filt.shape[-2] * filt.shape[-1]
             if weight_mode == "uniform":
-                s_sum, cs_sum, _, _, _ = epi(filt, cx.shape[1], shift, C1, C2, Cw, snsq)
+                s_sum, cs_sum = _iw_epilogue(weight_mode, filt, cx.shape[1], shift,
+                                             C1, C2, Cw, snsq)
                 score = (s_sum if i == num_scales - 1 else cs_sum) / npx
             else:
-                ws_s, ws_c, w_sum, s_sum, cs_sum = epi(
-                    filt, cx.shape[1], shift, C1, C2, Cw, snsq)
+                ws_s, ws_c, w_sum, s_sum, cs_sum = _iw_epilogue(
+                    weight_mode, filt, cx.shape[1], shift, C1, C2, Cw, snsq)
                 plain = (s_sum if i == num_scales - 1 else cs_sum) / npx
                 wtd = (ws_s if i == num_scales - 1 else ws_c) / w_sum.clamp_min(1e-300)
                 score = torch.where(w_sum > 0, wtd, plain)

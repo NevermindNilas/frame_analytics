@@ -41,7 +41,7 @@ _PKG = Path(__file__).resolve().parent
 _CSRC = _PKG / "csrc"
 _LIBDIR = _PKG / "lib"
 
-FA_ABI_VERSION = 1
+FA_ABI_VERSION = 2
 
 # Mirrors the codes in fa_abi.h.
 FA_OK = 0
@@ -249,6 +249,41 @@ def cuda_arch_flags() -> List[str]:
     return []
 
 
+_recip_flag_cache: dict = {}
+
+
+def _no_recip_flags(cxx: str) -> List[str]:
+    """Flags that keep ``-ffast-math`` from approximating sqrt and division.
+
+    On x86, GCC and Clang both lower a *vectorised* ``sqrtf`` and float
+    division under ``-ffast-math`` to ``rsqrtps``/``rcpps`` plus one
+    Newton-Raphson step -- up to 2 ulp off, and not even exact on exact
+    inputs: CPU Charbonnier of an identical pair came out 0.2499999851 for
+    ``eps=0.25`` instead of 0.25, and SSIM's and GMSD's per-pixel divides
+    carried the same error. MSVC's ``/fp:fast`` does not do this, which is why
+    it only ever showed up on Linux. The flag is spelled differently by the
+    two compilers (Clang rejects GCC's ``-mno-recip``; GCC silently ignores
+    Clang's ``-mrecip=none``), so ask which one this is. Anything else, or a
+    non-x86 target, gets nothing.
+    """
+    if not _is_x86() or sys.platform == "darwin":
+        return []
+    hit = _recip_flag_cache.get(cxx)
+    if hit is None:
+        hit = []
+        try:
+            banner = subprocess.run([cxx, "--version"], capture_output=True,
+                                    text=True, timeout=20).stdout.lower()
+            if "clang" in banner:
+                hit = ["-mrecip=none"]
+            elif "gcc" in banner or "free software foundation" in banner:
+                hit = ["-mno-recip"]
+        except Exception:
+            pass
+        _recip_flag_cache[cxx] = hit
+    return list(hit)
+
+
 def cpu_compile_command(source: Path, out: Path, avx2: bool,
                         objdir: Path) -> List[str]:
     if sys.platform == "win32":
@@ -267,6 +302,7 @@ def cpu_compile_command(source: Path, out: Path, avx2: bool,
            "-fvisibility=hidden", "-DNDEBUG"]
     if avx2:
         cmd += ["-mavx2", "-mfma"]
+    cmd += _no_recip_flags(cxx)
     if sys.platform == "darwin":
         # FA_MACOS_ARCHS lets CI emit one universal2 binary from a single
         # runner, which matters because the Intel macOS runners are being
@@ -425,6 +461,8 @@ def _bind_cpu(lib: ctypes.CDLL) -> ctypes.CDLL:
         "fa_cpu_ssim": ([_P, _P, _I, _I, _I, _I, _I, _P, _I, _D, _D, _D, _P, _P], _I),
         "fa_cpu_ssim_cs": ([_P, _P, _I, _I, _I, _I, _I, _P, _I, _D, _D, _D, _P, _P], _I),
         "fa_cpu_gmsd": ([_P, _P, _I, _I, _I, _I, _I, _D, _D, _I, _P, _P], _I),
+        "fa_cpu_ms_ssim":
+            ([_P, _P, _I, _I, _I, _I, _I, _P, _I, _D, _D, _D, _I, _P, _P, _P], _I),
     }
     for name, (args, res) in sig.items():
         fn = getattr(lib, name)
@@ -441,6 +479,8 @@ def _bind_cuda(lib: ctypes.CDLL) -> ctypes.CDLL:
         "fa_cuda_pixel_workspace": ([_L, _L, _I, _P], _I),
         "fa_cuda_pixel_reduce":
             ([_P, _P, _I, _L, _L, _I, _D, _D, _P, _I, _P, _P, _P, _P, _I, _P], _I),
+        "fa_cuda_pixel_backward":
+            ([_P, _P, _I, _L, _L, _I, _D, _P, _I, _P, _P, _I, _P], _I),
         "fa_cuda_ssim_workspace": ([_I, _I, _I, _P], _I),
         "fa_cuda_ssim":
             ([_P, _P, _I, _I, _I, _I, _I, _P, _I, _D, _D, _D, _P, _P, _I, _P, _P,
@@ -454,7 +494,13 @@ def _bind_cuda(lib: ctypes.CDLL) -> ctypes.CDLL:
         "fa_cuda_ssim_cs_backward":
             ([_P, _P, _P, _P, _P, _I, _I, _I, _I, _I, _D, _D, _D, _P, _P, _P,
               _I, _P], _I),
+        "fa_cuda_ms_ssim_workspace": ([_I, _I, _I, _I, _I, _P, _P], _I),
+        "fa_cuda_ms_ssim":
+            ([_P, _P, _I, _I, _I, _I, _I, _P, _I, _D, _D, _D, _I, _P, _P, _P, _P,
+              _I, _P, _P, _P, _P, _I, _P], _I),
         "fa_cuda_gmsd_workspace": ([_I, _I, _I, _P], _I),
+        "fa_cuda_gms_backward":
+            ([_P, _P, _P, _I, _I, _I, _I, _D, _D, _I, _P, _P, _I, _P], _I),
         "fa_cuda_gmsd":
             ([_P, _P, _I, _I, _I, _I, _I, _D, _D, _I, _P, _P, _I, _P, _P, _I,
               _P], _I),

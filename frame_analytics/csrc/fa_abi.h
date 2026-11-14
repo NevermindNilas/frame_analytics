@@ -38,7 +38,7 @@ extern "C" {
 // Bumped whenever a signature in this header changes meaning.  The loader
 // checks it after dlopen/LoadLibrary, so a stale prebuilt binary sitting next
 // to newer Python sources is rejected loudly instead of corrupting results.
-#define FA_ABI_VERSION 1
+#define FA_ABI_VERSION 2
 
 // dtype codes -- mirrors frame_analytics.backend._DTYPE_CODE
 #define FA_U8    0
@@ -108,6 +108,16 @@ FA_API int fa_cpu_ssim_cs(const void* x, const void* y, int dtype,
                           double shift, double C1, double C2,
                           double* out_ssim, double* out_cs);
 
+// MS-SSIM, whole pyramid: pooling, per-scale (ssim, cs) and the weighted
+// product. weights: n_scales host doubles. out_per_image: N doubles, out_total:
+// one; either may be null. (ABI 2)
+FA_API int fa_cpu_ms_ssim(const void* x, const void* y, int dtype,
+                          int N, int C, int H, int W,
+                          const float* win, int K,
+                          double shift, double C1, double C2,
+                          int n_scales, const double* weights,
+                          double* out_per_image, double* out_total);
+
 // out_mean / out_std: N doubles each.
 FA_API int fa_cpu_gmsd(const void* x, const void* y, int dtype,
                        int N, int C, int H, int W,
@@ -145,6 +155,15 @@ FA_API int fa_cuda_pixel_reduce(const void* a, const void* b, int dtype,
                                 double* out_psnr_per_image,
                                 double* out_psnr_total,
                                 int device, void* stream);
+
+// Gradient of a pixel-loss reduction (ABI 2): d/da = g * f'(a - b) / count,
+// d/db = -d/da, written in the inputs' dtype. g is one float64 (per_image ==
+// 0) or n_images of them, on the device. da / db may each be null.
+FA_API int fa_cuda_pixel_backward(const void* a, const void* b, int dtype,
+                                  int64_t n_images, int64_t n_per_image,
+                                  int op, double param, const double* g,
+                                  int per_image, void* da, void* db,
+                                  int device, void* stream);
 
 FA_API int fa_cuda_ssim_workspace(int H, int W, int K, int* out_bpp);
 
@@ -189,7 +208,33 @@ FA_API int fa_cuda_ssim_cs_backward(const float* x, const float* y,
                                     float* aux, float* dx, float* dy,
                                     int device, void* stream);
 
+// MS-SSIM, whole pyramid (ABI 2). `pyr` holds the pooled levels and must be
+// *out_pyr_floats floats (it may be null when that is 0); `partial` and
+// `partial_cs` are [C_planes, max_bpp] doubles each; s_all / cs_all are
+// [n_scales, N*C] doubles of per-plane means. weights: n_scales *device*
+// doubles. out_per_image (N) and out_total (1) may each be null.
+FA_API int fa_cuda_ms_ssim_workspace(int H, int W, int K, int C_planes,
+                                     int n_scales, int64_t* out_pyr_floats,
+                                     int* out_max_bpp);
+FA_API int fa_cuda_ms_ssim(const void* x, const void* y, int dtype,
+                           int N, int C, int H, int W,
+                           const float* win, int K,
+                           double shift, double C1, double C2,
+                           int n_scales, const double* weights,
+                           float* pyr, double* partial, double* partial_cs,
+                           int max_bpp, double* s_all, double* cs_all,
+                           double* out_per_image, double* out_total,
+                           int device, void* stream);
+
 FA_API int fa_cuda_gmsd_workspace(int H, int W, int downsample, int* out_bpp);
+
+// d(per-image mean of the GMS map)/d(x, y), float32 input (ABI 2). g: N
+// float64 upstream gradients on the device. dx / dy may each be null (not
+// both); every element of a non-null one is written.
+FA_API int fa_cuda_gms_backward(const float* x, const float* y,
+                                const double* g, int N, int C, int H, int W,
+                                double Tc, double eps, int downsample,
+                                float* dx, float* dy, int device, void* stream);
 
 // psum / psumsq: [N*C, bpp] float64 each.  out_mean / out_std: N each.
 FA_API int fa_cuda_gmsd(const void* x, const void* y, int dtype,

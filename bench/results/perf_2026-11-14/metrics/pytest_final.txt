@@ -1,0 +1,16 @@
+== tests/test_cpu_filters.py
+41 passed, 3 warnings in 2.63s
+== tests/test_lpips.py
+19 passed, 1 skipped, 1 warning in 4.45s
+== tests/test_metrics.py
+47 passed, 1 warning in 9.07s
+== tests/test_new_metric_regressions.py
+85 passed in 4.66s
+== tests/test_new_metrics.py
+89 passed, 5 skipped, 15 warnings in 26.51s
+== tests/test_ssimulacra2.py
+21 passed, 1 warning in 6.24s
+== tests/test_training_metrics.py
+FAILED tests/test_training_metrics.py::test_pixel_losses_zero_on_identity[cpu]
+1 failed, 130 passed, 2 warnings in 6.32s
+== tests/test_vapoursynth.py

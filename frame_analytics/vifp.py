@@ -63,38 +63,56 @@ def _gaussian_1d(n: int, *, device, dtype: torch.dtype) -> torch.Tensor:
     return w
 
 
-def _sep_valid(flat: torch.Tensor, win: torch.Tensor) -> torch.Tensor:
-    """Separable ``'valid'`` Gaussian over ``(B, 1, H, W)``: 1-D h + 1-D v."""
-    wh = win.view(1, 1, 1, -1)
-    wv = win.view(1, 1, -1, 1)
-    with _no_autocast(flat):
-        out = F.conv2d(flat, wh)
-        out = F.conv2d(out, wv)
-    return out
-
-
 def _filter_nchw(x: torch.Tensor, win: torch.Tensor) -> torch.Tensor:
-    """Valid separable filter over ``(N, C, H, W)``, batch-folded to one call."""
+    """Valid separable filter over ``(N, C, H, W)``.
+
+    Shared helper: batch-folded single-plane convolutions (on CUDA, exactly
+    the previous local implementation), channels-last depthwise for large
+    float32 CPU inputs, where oneDNN's single-plane kernels are slow.
+    """
+    return _functional._separable_conv(x, win)
+
+
+def _filter_down2(x: torch.Tensor, win: torch.Tensor) -> torch.Tensor:
+    """``_filter_nchw(x, win)[..., ::2, ::2]`` without the discarded 3/4.
+
+    A stride-2 valid convolution yields exactly the even-indexed outputs
+    (``floor((H-k)/2) + 1 == ceil((H-k+1)/2)`` rows/cols): the horizontal
+    pass strides along W, the vertical pass along H. CPU only: on CUDA,
+    cuDNN's strided single-plane kernels were 1.4-2.3x slower than the
+    full filter and changed results well beyond float32 rounding (a
+    different algorithm class), so CUDA keeps filter-then-subsample.
+    """
+    if x.is_cuda:
+        return _filter_nchw(x, win)[..., ::2, ::2].contiguous()
     n, c, h, w = x.shape
     flat = x.reshape(n * c, 1, h, w)
-    f = _sep_valid(flat, win)
-    return f.reshape(n, c, f.shape[-2], f.shape[-1])
+    with _no_autocast(flat):
+        out = F.conv2d(flat, win.view(1, 1, 1, -1), stride=(1, 2))
+        out = F.conv2d(out, win.view(1, 1, -1, 1), stride=(2, 1))
+    return out.reshape(n, c, out.shape[-2], out.shape[-1])
 
 
 def _epi_chunk(chunk: torch.Tensor, sn: float, e_abs: float, e_rel: float):
-    """Per-image ``(num, den)`` sums for one single-channel plane group.
+    """Per-row ``(num, den)`` sums ``(N, C, H)`` for all channels at once.
 
-    ``chunk`` is ``(N, 5, H, W)`` holding ``E[x], E[y], E[x^2], E[y^2],
-    E[x*y]``. Float64 throughout. LIVE threshold sequence against the
-    per-position floor ``e_abs + e_rel * E[x^2]``.
+    ``chunk`` is ``(N, 5, C, H, W)`` holding ``E[x], E[y], E[x^2], E[y^2],
+    E[x*y]`` per channel. Float64 throughout. LIVE threshold sequence against
+    the per-position floor ``e_abs + e_rel * E[x^2]``.
+
+    The reduction stops at rows; the caller finishes it. A whole-image
+    reduction leaves Inductor one reduction per image, and once the
+    pyramid's second scale turns this region dynamic, the kernel tuned for
+    that size runs every scale (measured 1.3 -> 4.7 ms at 1080p). Row sums
+    parallelise over rows whatever the size hint.
     """
     d = chunk.to(torch.float64)
-    mux = d[:, 0:1]
-    muy = d[:, 1:2]
-    exx = d[:, 2:3]
+    mux = d[:, 0]
+    muy = d[:, 1]
+    exx = d[:, 2]
     sxx = exx - mux * mux
-    syy = d[:, 3:4] - muy * muy
-    sxy = d[:, 4:5] - mux * muy
+    syy = d[:, 3] - muy * muy
+    sxy = d[:, 4] - mux * muy
 
     e_map = e_abs + e_rel * exx
     zero = torch.zeros((), dtype=torch.float64, device=d.device)
@@ -114,9 +132,8 @@ def _epi_chunk(chunk: torch.Tensor, sn: float, e_abs: float, e_rel: float):
 
     num_t = torch.log2(1.0 + g * g * sxx / (sv + sn))
     den_t = torch.log2(1.0 + sxx / sn)
-    dims = (1, 2, 3)
-    return (num_t.sum(dim=dims, dtype=torch.float64),
-            den_t.sum(dim=dims, dtype=torch.float64))
+    return (num_t.sum(dim=-1, dtype=torch.float64),
+            den_t.sum(dim=-1, dtype=torch.float64))
 
 
 def _min_side(num_scales: int) -> int:
@@ -191,8 +208,8 @@ def vifp(
 
     for s in range(num_scales):
         if s:
-            rx = _filter_nchw(rx, wins[s])[..., ::2, ::2].contiguous()
-            ry = _filter_nchw(ry, wins[s])[..., ::2, ::2].contiguous()
+            rx = _filter_down2(rx, wins[s])
+            ry = _filter_down2(ry, wins[s])
             if min(rx.shape[-2], rx.shape[-1]) < 3:
                 raise ValueError(
                     f"pyramid collapsed at scale {s}: shape {tuple(rx.shape[-2:])}"
@@ -212,14 +229,12 @@ def vifp(
         filt = _filter_nchw(pb, wins[s])
         del pb
         terms += cc * filt.shape[-2] * filt.shape[-1]
-        for ch in range(cc):
-            chunk = torch.stack(
-                (filt[:, ch], filt[:, cc + ch], filt[:, 2 * cc + ch],
-                 filt[:, 3 * cc + ch], filt[:, 4 * cc + ch]), dim=1)
-            nsc, dsc = epi(chunk, sn, e, rel)
-            del chunk
-            num = num + nsc
-            den = den + dsc
+        # (N, 5*C, H, W) -> (N, 5, C, H, W): a view, so backward is one
+        # plain gradient for ``filt`` (per-channel slices would each
+        # scatter into a full-size zero buffer).
+        nsc, dsc = epi(filt.unflatten(1, (5, cc)), sn, e, rel)
+        num = num + nsc.sum(dim=(1, 2))
+        den = den + dsc.sum(dim=(1, 2))
         del filt
 
     tiny = 1e-12 * max(terms, 1)

@@ -16,6 +16,7 @@ import torch
 import torch.nn.functional as F
 
 from . import functional as _fn
+from ._metric_utils import depthwise_conv, plane_conv
 
 __all__ = ["haarpsi"]
 
@@ -89,17 +90,22 @@ def _haar_col_bank(scale: int, device, dtype) -> torch.Tensor:
 
 def _conv_haar_scale(y: torch.Tensor, scale: int):
     s = 2 ** scale
+    # plane_conv / depthwise_conv: same convolutions, with a faster backward
+    # on CPU (oneDNN's ran ~2x its forward). CUDA keeps plain cuDNN: these
+    # power-of-two taps are exact, and the native depthwise path measured
+    # 3-10% slower here.
     with _fn._no_autocast(y):
-        rows = F.conv2d(y, _haar_row_bank(scale, y.device, y.dtype),
-                        padding=(0, s // 2))[..., 1:]
-        both = F.conv2d(rows, _haar_col_bank(scale, y.device, y.dtype),
-                        padding=(s // 2, 0), groups=2)[..., 1:, :]
+        rows = plane_conv(y, _haar_row_bank(scale, y.device, y.dtype),
+                          padding=(0, s // 2), cuda_depthwise=False)[..., 1:]
+        both = depthwise_conv(rows, _haar_col_bank(scale, y.device, y.dtype),
+                              padding=(s // 2, 0))[..., 1:, :]
     return both[:, 0:1], both[:, 1:2]
 
 
 def _conv_box_same(t: torch.Tensor) -> torch.Tensor:
     with _fn._no_autocast(t):
-        return F.conv2d(t, _box_same(t.device, t.dtype), padding=1)[..., 1:, 1:]
+        return plane_conv(t, _box_same(t.device, t.dtype), padding=1,
+                          cuda_depthwise=False)[..., 1:, 1:]
 
 
 def _subsample(t: torch.Tensor) -> torch.Tensor:

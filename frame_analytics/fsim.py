@@ -175,6 +175,34 @@ _PC_BATCHED_MAX_STACKED = 2 * 512 * 512
 _PC_CHUNK = 1
 
 
+def _pc_orient_block(vr: torch.Tensor):
+    """One orientation's even/odd responses -> ``(energy, sum_an, a0)``.
+
+    ``vr`` is ``view_as_real`` of the ``(m, NSCALE, h, w)`` complex filter
+    responses. One compiled pointwise region (it was ~15 eager kernels per
+    orientation); scale sums accumulate in scale order, as before.
+    """
+    e = vr[..., 0]
+    od = vr[..., 1]
+    sum_e = e[:, 0] + e[:, 1] + e[:, 2] + e[:, 3]
+    sum_o = od[:, 0] + od[:, 1] + od[:, 2] + od[:, 3]
+    xenergy = torch.sqrt(sum_e * sum_e + sum_o * sum_o) + _PC_EPS
+    mean_e = sum_e / xenergy
+    mean_o = sum_o / xenergy
+    energy_o = None
+    sum_an = None
+    a0 = None
+    for s in range(_NSCALE):
+        es, os = e[:, s], od[:, s]
+        t = es * mean_e + os * mean_o - (es * mean_o - os * mean_e).abs()
+        an_s = torch.sqrt(es * es + os * os)
+        energy_o = t if energy_o is None else energy_o + t
+        sum_an = an_s if sum_an is None else sum_an + an_s
+        if s == 0:
+            a0 = an_s
+    return energy_o, sum_an, a0
+
+
 def _phase_congruency_stacked(gray: torch.Tensor,
                               pc_mode: str = "auto") -> torch.Tensor:
     if pc_mode not in ("auto", "batched", "chunked"):
@@ -185,8 +213,6 @@ def _phase_congruency_stacked(gray: torch.Tensor,
                or (pc_mode == "auto" and m * h * w <= _PC_BATCHED_MAX_STACKED))
     radial, spreads = _planes(h, w, gray.device, gray.dtype)
     em, s2, cc = _noise_scalars(h, w, gray.device, gray.dtype)
-    cxty = (torch.complex64 if gray.dtype != torch.float64
-            else torch.complex128)
     spec = torch.fft.fft2(gray.squeeze(1))
 
     energy_all = torch.zeros((m, h, w), device=gray.device, dtype=gray.dtype)
@@ -195,36 +221,15 @@ def _phase_congruency_stacked(gray: torch.Tensor,
         chunks = [(0, m)]
     else:
         chunks = [(i, min(i + _PC_CHUNK, m)) for i in range(0, m, _PC_CHUNK)]
+    block = _fn._maybe_compile(_pc_orient_block, "fsim:pc_orient")
     for (lo, hi) in chunks:
-        sp = spec[lo:hi]
+        sp = spec[lo:hi].unsqueeze(1)
         for o in range(_NORIENT):
-            bank_o = (radial * spreads[o]).to(cxty)
-            r = torch.fft.ifft2(sp.unsqueeze(1) * bank_o.unsqueeze(0))
-            e, od = r.real, r.imag
-            sum_e = e[:, 0] + e[:, 1] + e[:, 2] + e[:, 3]
-            sum_o = od[:, 0] + od[:, 1] + od[:, 2] + od[:, 3]
-            xenergy = torch.sqrt(sum_e * sum_e + sum_o * sum_o) + _PC_EPS
-            mean_e = sum_e / xenergy
-            mean_o = sum_o / xenergy
-            # Batch scale arithmetic on CUDA to cut kernel launches. The
-            # smaller per-scale temporaries are faster for larger CPU batches.
-            if gray.is_cuda:
-                me, mo = mean_e.unsqueeze(1), mean_o.unsqueeze(1)
-                energy_o = (e * me + od * mo - (e * mo - od * me).abs()).sum(dim=1)
-                amplitudes = torch.sqrt(e * e + od * od)
-                sum_an = amplitudes.sum(dim=1)
-                a0 = amplitudes[:, 0]
-            else:
-                energy_o = torch.zeros_like(sum_e)
-                sum_an = torch.zeros_like(sum_e)
-                for s in range(_NSCALE):
-                    es, os = e[:, s], od[:, s]
-                    energy_o = energy_o + (es * mean_e + os * mean_o
-                                           - (es * mean_o - os * mean_e).abs())
-                    an_s = torch.sqrt(es * es + os * os)
-                    sum_an = sum_an + an_s
-                    if s == 0:
-                        a0 = an_s
+            # complex * real bank: the same values as multiplying by the bank
+            # cast to complex (b*0 terms are exact zeros), minus a cast kernel
+            # and a complex temporary per orientation.
+            r = torch.fft.ifft2(sp * (radial * spreads[o]).unsqueeze(0))
+            energy_o, sum_an, a0 = block(torch.view_as_real(r))
             thresh = _noise_threshold(a0, em, s2, cc, o)
             energy_all[lo:hi] = (energy_all[lo:hi]
                                  + (energy_o - thresh).clamp_min(0.0))

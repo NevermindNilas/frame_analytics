@@ -342,7 +342,7 @@ def _scale_stats(lin1, lin2, mr, mg, mb, taps):
     fv = f.view(f.shape[0], 4, 3, -1)
     flat = x1.shape[0], 3, -1
     return _scale_maps(x1.reshape(*flat), x2.reshape(*flat),
-                       fv[:, 0], fv[:, 1], fv[:, 2], fv[:, 3])
+                       fv[:, 0], fv[:, 1], fv[:, 2], fv[:, 3], x1.shape[-2])
 
 
 def _scale_stats_eager(lin1, lin2, mr, mg, mb, win):
@@ -360,7 +360,7 @@ def _scale_stats_eager(lin1, lin2, mr, mg, mb, win):
     fv = f.view(f.shape[0], 4, 3, -1)
     flat = x1.shape[0], 3, -1
     return _scale_maps(x1.reshape(*flat), x2.reshape(*flat),
-                       fv[:, 0], fv[:, 1], fv[:, 2], fv[:, 3])
+                       fv[:, 0], fv[:, 1], fv[:, 2], fv[:, 3], x1.shape[-2])
 
 
 # --------------------------------------------------------------------------- #
@@ -445,15 +445,28 @@ def _downsample2(lin: torch.Tensor) -> torch.Tensor:
 # --------------------------------------------------------------------------- #
 
 
-def _norms(v: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-    """``(mean, 4-norm)`` per image and channel, both float64 ``(N,3)``."""
-    one = v.mean(dim=-1, dtype=torch.float64)
-    q = v * v
-    four = (q * q).mean(dim=-1, dtype=torch.float64).pow(0.25)
+def _norms(v: torch.Tensor, rows: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    """``(mean, 4-norm)`` per image and channel, both float64 ``(N,3)``.
+
+    Reduced in two stages -- each image row first, then the rows -- rather
+    than as one ``mean`` over the flat ``H*W`` axis. The one-axis form leaves
+    Inductor a reduction with only ``N*3`` outputs, and the float64
+    accumulator is what decides how it gets tiled: on torch 2.15 it is no
+    longer split, so the whole of scale 0 at 1080p ran on a handful of CTAs
+    and this single kernel was 82% of the metric (~12 ms of ~13 ms per call).
+    Row sums give it ``N*3*H`` independent outputs and the second stage is a
+    tiny reduction over ``H``. Same float64 accumulation, summed in a
+    different order.
+    """
+    n = v.shape[-1]
+    vr = v.unflatten(-1, (rows, n // rows))
+    one = vr.sum(dim=-1, dtype=torch.float64).sum(dim=-1) / n
+    q = vr * vr
+    four = ((q * q).sum(dim=-1, dtype=torch.float64).sum(dim=-1) / n).pow(0.25)
     return one, four
 
 
-def _scale_maps(x1, x2, mu1, mu2, sp, sd):
+def _scale_maps(x1, x2, mu1, mu2, sp, sd, rows):
     """The six per-channel norms of one scale, as one ``(N, 3, 6)`` tensor.
 
     Takes its planes **flat**, ``(N, 3, H*W)``. Two reasons, both about the
@@ -507,9 +520,9 @@ def _scale_maps(x1, x2, mu1, mu2, sp, sd):
     art = e.clamp_min(0.0)
     lost = (-e).clamp_min(0.0)
 
-    ssim1, ssim4 = _norms(d)
-    art1, art4 = _norms(art)
-    lost1, lost4 = _norms(lost)
+    ssim1, ssim4 = _norms(d, rows)
+    art1, art4 = _norms(art, rows)
+    lost1, lost4 = _norms(lost, rows)
     return torch.stack([ssim1, ssim4, art1, art4, lost1, lost4], dim=-1)
 
 

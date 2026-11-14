@@ -786,6 +786,7 @@ class StreamingMetrics:
 
         self._graph = None
         self._static_out = None
+        self._static_vec = None
         if use_cuda_graph and self.device.type == "cuda":
             self._try_capture()
 
@@ -895,10 +896,27 @@ class StreamingMetrics:
             g = torch.cuda.CUDAGraph()
             with torch.cuda.graph(g):
                 self._static_out = self._compute()
+                self._static_vec = self._pack(self._static_out)
             self._graph = g
         except Exception:
             self._graph = None
             self._static_out = None
+            self._static_vec = None
+
+    @staticmethod
+    def _pack(out):
+        """Every scalar result in one float64 vector, or ``None``.
+
+        ``update`` hands back python floats, and ``float()`` on a device
+        scalar is a blocking device->host copy -- one per metric. Packed (and,
+        under a CUDA graph, packed *inside* the captured region), the whole
+        frame comes back in a single copy. The widening is exact, so the
+        floats are the same ones ``float(v)`` would give.
+        """
+        vals = list(out.values())
+        if not vals or any(v.numel() != 1 for v in vals):
+            return None
+        return torch.stack([v.reshape(()).to(torch.float64) for v in vals])
 
     def _stage(self, buf: torch.Tensor, src, host_slot: int) -> None:
         if not torch.is_tensor(src):
@@ -927,9 +945,13 @@ class StreamingMetrics:
         if self._graph is not None:
             self._graph.replay()
             out = self._static_out
+            vec = self._static_vec
         else:
             out = self._compute()
+            vec = self._pack(out) if as_float else None
         if as_float:
+            if vec is not None:
+                return dict(zip(out.keys(), vec.tolist()))
             return {k: float(v) for k, v in out.items()}
         return {k: v.clone() for k, v in out.items()}
 

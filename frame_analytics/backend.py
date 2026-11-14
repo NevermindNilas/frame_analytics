@@ -180,8 +180,24 @@ def _dev(t: torch.Tensor) -> int:
     return torch.cuda.current_device() if i is None else int(i)
 
 
-def _stream(t: torch.Tensor):
+def _stream_public(t: torch.Tensor):
     return torch.cuda.current_stream(t.device).cuda_stream
+
+
+try:
+    # The raw handle of the current stream, as an int, without constructing a
+    # torch.cuda.Stream wrapper: 0.05 us against 1.6 us for the public route,
+    # paid on every CUDA call. Private, but it is what Inductor's generated
+    # code calls for the same reason; if a torch build lacks it, fall back.
+    _raw_stream = torch._C._cuda_getCurrentRawStream
+except AttributeError:  # pragma: no cover - depends on the torch build
+    _raw_stream = None
+
+
+def _stream(t: torch.Tensor):
+    if _raw_stream is not None:
+        return _raw_stream(_dev(t))
+    return _stream_public(t)
 
 
 def _check(code: int, ext: _Native) -> None:
@@ -429,6 +445,51 @@ def try_pixel(x: torch.Tensor, y: torch.Tensor, *, op: int, param: float,
     except Exception as exc:
         _warn_once(exc)
         return None
+
+
+_GRAD_DTYPES = (torch.float16, torch.bfloat16, torch.float32, torch.float64)
+
+
+def pixel_autograd_available(x: torch.Tensor, y: torch.Tensor,
+                             wdt: torch.dtype) -> bool:
+    """Can the fused (native forward + native backward) pixel loss take this?
+
+    CUDA only, floating input, both tensors on the same device, and a working
+    precision the kernels actually use: float32 for half/bfloat16/float32
+    input, float64 for float64 input.
+    """
+    ext = load()
+    if ext is None or not ext.has_cuda:
+        return False
+    if not (x.is_cuda and y.is_cuda and x.device == y.device):
+        return False
+    if x.dtype != y.dtype or x.dtype not in _GRAD_DTYPES or x.shape != y.shape:
+        return False
+    want = torch.float64 if x.dtype == torch.float64 else torch.float32
+    return wdt == want and not torch.cuda.is_current_stream_capturing()
+
+
+def pixel_forward(x, y, op: int, param: float, per_image: bool):
+    """The native reduction for the fused pixel loss (inputs contiguous)."""
+    ext = load()
+    n = int(x.shape[0])
+    return _pixel_cuda(ext, x, y, op=op, param=param, n=n,
+                       per_image=per_image, psnr_bias=_PSNR_NONE)
+
+
+def pixel_backward(x, y, g, op: int, param: float, per_image: bool,
+                   need_dx: bool, need_dy: bool):
+    ext = load()
+    n = int(x.shape[0])
+    per = x.numel() // n
+    gd = g.to(torch.float64)
+    gd = gd if gd.is_contiguous() else gd.contiguous()
+    dx = torch.empty_like(x) if need_dx else None
+    dy = torch.empty_like(y) if need_dy else None
+    _check(ext.cuda.fa_cuda_pixel_backward(
+        _ptr(x), _ptr(y), _DTYPE_CODE[x.dtype], n, per, op, float(param),
+        _ptr(gd), int(per_image), _ptr(dx), _ptr(dy), _dev(x), _stream(x)), ext)
+    return dx, dy
 
 
 # --------------------------------------------------------------------------- #
@@ -679,8 +740,139 @@ def try_ssim_cs(x: torch.Tensor, y: torch.Tensor, *, win: torch.Tensor,
 
 
 # --------------------------------------------------------------------------- #
+# MS-SSIM, whole pyramid
+# --------------------------------------------------------------------------- #
+
+
+def _ms_workspace(ext: _Native, h: int, w: int, k: int, planes: int, m: int):
+    key = ("ms", h, w, k, planes, m)
+    hit = _ws_cache.get(key)
+    if hit is None:
+        pf = ctypes.c_int64(0)
+        mb = ctypes.c_int(0)
+        _check(ext.cuda.fa_cuda_ms_ssim_workspace(h, w, k, planes, m,
+                                                  ctypes.byref(pf),
+                                                  ctypes.byref(mb)), ext)
+        hit = (int(pf.value), int(mb.value))
+        _ws_cache[key] = hit
+    return hit
+
+
+def try_ms_ssim(x: torch.Tensor, y: torch.Tensor, *, win: torch.Tensor,
+                shift: float, C1: float, C2: float, weights: tuple,
+                weights_t: torch.Tensor, per_image: bool):
+    """MS-SSIM in one native call -- pyramid, per-scale (ssim, cs) and the
+    weighted product. ``None`` when this call needs the per-scale path.
+
+    ``weights_t`` is the cached float64 device copy of ``weights`` (the CUDA
+    combine reads it on the device); the CPU kernel takes the host tuple.
+    Inference only: a wanted gradient goes through the per-scale autograd
+    path, as before.
+    """
+    ext = load()
+    if ext is None or not _usable(x, y):
+        return None
+    k = int(win.numel())
+    if x.dtype == torch.float64 or k not in (3, 5, 7, 9, 11):
+        return None
+    m = len(weights)
+    if not 1 <= m <= 16:
+        return None
+    n, c = int(x.shape[0]), int(x.shape[1])
+    h, w = int(x.shape[-2]), int(x.shape[-1])
+    try:
+        x, y = _contig(x), _contig(y)
+        winf = _win_f32(win)
+        code = _DTYPE_CODE[x.dtype]
+        if x.is_cuda:
+            if not ext.has_cuda:
+                return None
+            planes = n * c
+            pf, mb = _ms_workspace(ext, h, w, k, planes, m)
+            pyr = (torch.empty((pf,), device=x.device, dtype=torch.float32)
+                   if pf else None)
+            # partial, partial_cs, s_all, cs_all: one float64 allocation,
+            # carved up by pointer arithmetic rather than four tensors
+            nb = planes * mb
+            scratch = _f64(x.device, 2 * nb + 2 * m * planes)
+            base = scratch.data_ptr()
+            out = _f64(x.device, n) if per_image else _f64(x.device)
+            if weights_t.dtype != torch.float64 or not weights_t.is_contiguous():
+                return None
+            _check(ext.cuda.fa_cuda_ms_ssim(
+                _ptr(x), _ptr(y), code, n, c, h, w, _ptr(winf), k,
+                float(shift), float(C1), float(C2), m, _ptr(weights_t),
+                _ptr(pyr), base, base + 8 * nb, mb,
+                base + 16 * nb, base + 16 * nb + 8 * m * planes,
+                _ptr(out) if per_image else None,
+                None if per_image else _ptr(out),
+                _dev(x), _stream(x)), ext)
+            return out
+        out = torch.empty((n,) if per_image else (), dtype=torch.float64)
+        wts = (ctypes.c_double * m)(*weights)
+        _check(ext.cpu.fa_cpu_ms_ssim(
+            _ptr(x), _ptr(y), code, n, c, h, w, _ptr(winf), k,
+            float(shift), float(C1), float(C2), m, ctypes.addressof(wts),
+            _ptr(out) if per_image else None,
+            None if per_image else _ptr(out)), ext)
+        return out
+    except Exception as exc:
+        _warn_once(exc)
+        return None
+
+
+# --------------------------------------------------------------------------- #
 # GMSD
 # --------------------------------------------------------------------------- #
+
+
+def gms_autograd_available(x: torch.Tensor, y: torch.Tensor, eps: float) -> bool:
+    """Can the fused GMS (native forward + native backward) take this call?
+
+    CUDA float32 4-D pairs only, as for SSIM; and ``eps > 0``, without which a
+    flat patch has a zero gradient magnitude and the derivative divides by it.
+    """
+    ext = load()
+    return (
+        ext is not None
+        and ext.has_cuda
+        and x.is_cuda and y.is_cuda and x.device == y.device
+        and x.dtype == torch.float32 and y.dtype == torch.float32
+        and x.shape == y.shape and x.dim() == 4
+        and eps > 0
+        and not torch.cuda.is_current_stream_capturing()
+    )
+
+
+def gms_forward(x, y, T: float, eps: float, downsample: bool):
+    """Per-image GMS mean from the inference kernel (inputs contiguous)."""
+    ext = load()
+    n, c = int(x.shape[0]), int(x.shape[1])
+    h, w = int(x.shape[-2]), int(x.shape[-1])
+    bpp = _gmsd_workspace(ext, h, w, downsample)
+    scratch = _f64(x.device, 2 * n * c * bpp + n)
+    base = scratch.data_ptr()
+    mean = _f64(x.device, n)
+    _check(ext.cuda.fa_cuda_gmsd(
+        _ptr(x), _ptr(y), _DTYPE_CODE[x.dtype], n, c, h, w, float(T),
+        float(eps), int(downsample), base, base + 8 * n * c * bpp, bpp,
+        _ptr(mean), base + 16 * n * c * bpp, _dev(x), _stream(x)), ext)
+    return mean
+
+
+def gms_backward(x, y, g, T: float, eps: float, downsample: bool,
+                 need_dx: bool, need_dy: bool):
+    ext = load()
+    n, c = int(x.shape[0]), int(x.shape[1])
+    h, w = int(x.shape[-2]), int(x.shape[-1])
+    gd = g.to(torch.float64)
+    gd = gd if gd.is_contiguous() else gd.contiguous()
+    dx = torch.empty_like(x) if need_dx else None
+    dy = torch.empty_like(y) if need_dy else None
+    _check(ext.cuda.fa_cuda_gms_backward(
+        _ptr(x), _ptr(y), _ptr(gd), n, c, h, w, float(T), float(eps),
+        int(downsample), _ptr(dx), _ptr(dy), _dev(x), _stream(x)), ext)
+    return dx, dy
 
 
 def try_gmsd(x: torch.Tensor, y: torch.Tensor, *, T: float, eps: float,

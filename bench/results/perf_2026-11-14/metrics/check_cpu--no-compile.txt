@@ -1,0 +1,681 @@
+ok   adm.adm_like (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) float32 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) float32 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) float32 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) float64 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) float64 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) float64 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) uint8 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) uint8 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) uint8 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float32 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float32 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float32 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float64 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float64 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float64 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) uint8 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) uint8 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) uint8 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) float32 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) float32 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) float32 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) uint8 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) uint8 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) uint8 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) float32 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) float32 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) float32 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) float64 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) float64 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) float64 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) uint8 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) uint8 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) uint8 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float32 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float64 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) uint8 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float32 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float64 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) uint8 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) float32 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) uint8 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.72e-06 y=1.28e-06
+ok   dss.dss (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.08e-06 y=1.13e-06
+ok   dss.dss (2, 3, 192, 200) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.40e-06 y=7.14e-07
+ok   dss.dss (2, 3, 192, 200) float32 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.47e-06 y=1.95e-06
+ok   dss.dss (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.26e-15 y=1.60e-15
+ok   dss.dss (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=8.65e-16 y=1.01e-15
+ok   dss.dss (2, 3, 192, 200) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.38e-15 y=5.03e-15
+ok   dss.dss (2, 3, 192, 200) float64 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.12e-15 y=1.91e-15
+ok   dss.dss (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) uint8 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.71e-06 y=2.05e-06
+ok   dss.dss (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.67e-06 y=1.82e-06
+ok   dss.dss (1, 3, 177, 263) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.02e-06 y=1.74e-06
+ok   dss.dss (1, 3, 177, 263) float32 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.66e-06 y=1.99e-06
+ok   dss.dss (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.97e-15 y=3.68e-15
+ok   dss.dss (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.01e-15 y=6.26e-15
+ok   dss.dss (1, 3, 177, 263) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.53e-15 y=3.54e-15
+ok   dss.dss (1, 3, 177, 263) float64 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.49e-15 y=4.20e-15
+ok   dss.dss (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 177, 263) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 177, 263) uint8 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.60e-06 y=5.89e-06
+ok   dss.dss (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.91e-06 y=2.71e-06
+ok   dss.dss (1, 3, 540, 720) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.51e-06 y=4.45e-06
+ok   dss.dss (1, 3, 540, 720) float32 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.66e-06 y=6.56e-06
+ok   dss.dss (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 540, 720) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 540, 720) uint8 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.20e-07 y=2.02e-06
+ok   dss.dss (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.25e-06 y=1.18e-06
+ok   dss.dss (3, 1, 193, 181) torch.float32 {'luma': 'bt709'}: both raise ValueError/ValueError
+ok   dss.dss (3, 1, 193, 181) float32 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.45e-07 y=1.95e-06
+ok   dss.dss (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.86e-15 y=2.27e-15
+ok   dss.dss (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.82e-15 y=3.71e-15
+ok   dss.dss (3, 1, 193, 181) torch.float64 {'luma': 'bt709'}: both raise ValueError/ValueError
+ok   dss.dss (3, 1, 193, 181) float64 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.08e-15 y=4.72e-15
+ok   dss.dss (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (3, 1, 193, 181) torch.uint8 {'luma': 'bt709'}: both raise ValueError/ValueError
+ok   dss.dss (3, 1, 193, 181) uint8 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.85e-07 y=2.48e-07
+ok   flip.flip (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.21e-07 y=1.66e-07
+ok   flip.flip (2, 3, 192, 200) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.55e-07 y=2.59e-07
+ok   flip.flip (2, 3, 192, 200) float32 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.67e-07 y=2.45e-07
+ok   flip.flip (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.40e-16 y=6.01e-16
+ok   flip.flip (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.30e-16 y=4.91e-16
+ok   flip.flip (2, 3, 192, 200) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.49e-16 y=3.41e-16
+ok   flip.flip (2, 3, 192, 200) float64 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.70e-16 y=3.12e-16
+ok   flip.flip (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (2, 3, 192, 200) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (2, 3, 192, 200) uint8 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.76e-07 y=1.41e-07
+ok   flip.flip (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.68e-07 y=2.56e-07
+ok   flip.flip (1, 3, 177, 263) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.04e-07 y=1.09e-07
+ok   flip.flip (1, 3, 177, 263) float32 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.41e-07 y=2.30e-07
+ok   flip.flip (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.85e-16 y=4.58e-16
+ok   flip.flip (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.48e-16 y=4.56e-16
+ok   flip.flip (1, 3, 177, 263) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.08e-16 y=4.16e-16
+ok   flip.flip (1, 3, 177, 263) float64 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.42e-16 y=3.04e-16
+ok   flip.flip (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 177, 263) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 177, 263) uint8 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.38e-07 y=2.33e-07
+ok   flip.flip (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.55e-07 y=2.75e-07
+ok   flip.flip (1, 3, 540, 720) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.97e-07 y=2.87e-07
+ok   flip.flip (1, 3, 540, 720) float32 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.06e-07 y=2.86e-07
+ok   flip.flip (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 540, 720) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 540, 720) uint8 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) float32 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) float64 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) uint8 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) float32 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) float64 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) uint8 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) float32 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) uint8 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) float32 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) float64 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) uint8 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (2, 3, 192, 200) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (2, 3, 192, 200) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (2, 3, 192, 200) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 177, 263) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 177, 263) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 177, 263) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 540, 720) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 540, 720) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.92e-08 y=1.07e-07
+ok   haarpsi.haarpsi (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.04e-07 y=9.05e-08
+ok   haarpsi.haarpsi (2, 3, 192, 200) float32 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.07e-07 y=1.18e-07
+ok   haarpsi.haarpsi (2, 3, 192, 200) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.67e-08 y=9.03e-08
+ok   haarpsi.haarpsi (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.79e-16 y=2.04e-16
+ok   haarpsi.haarpsi (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.40e-16 y=2.53e-16
+ok   haarpsi.haarpsi (2, 3, 192, 200) float64 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.23e-16 y=3.18e-16
+ok   haarpsi.haarpsi (2, 3, 192, 200) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.71e-16 y=2.80e-16
+ok   haarpsi.haarpsi (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) uint8 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.02e-07 y=1.42e-07
+ok   haarpsi.haarpsi (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.03e-07 y=1.01e-07
+ok   haarpsi.haarpsi (1, 3, 177, 263) float32 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.46e-07 y=1.13e-07
+ok   haarpsi.haarpsi (1, 3, 177, 263) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.11e-07 y=1.25e-07
+ok   haarpsi.haarpsi (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.35e-16 y=2.04e-16
+ok   haarpsi.haarpsi (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.59e-16 y=1.79e-16
+ok   haarpsi.haarpsi (1, 3, 177, 263) float64 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.34e-16 y=1.32e-16
+ok   haarpsi.haarpsi (1, 3, 177, 263) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=7.99e-17 y=2.62e-16
+ok   haarpsi.haarpsi (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) uint8 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.37e-07 y=1.71e-07
+ok   haarpsi.haarpsi (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.06e-07 y=9.76e-08
+ok   haarpsi.haarpsi (1, 3, 540, 720) float32 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.30e-07 y=1.58e-07
+ok   haarpsi.haarpsi (1, 3, 540, 720) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.69e-08 y=1.42e-07
+ok   haarpsi.haarpsi (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 540, 720) uint8 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 540, 720) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=8.96e-08 y=6.96e-08
+ok   haarpsi.haarpsi (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.23e-07 y=7.08e-08
+ok   haarpsi.haarpsi (3, 1, 193, 181) float32 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.24e-07 y=1.19e-07
+ok   haarpsi.haarpsi (3, 1, 193, 181) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.20e-07 y=8.39e-08
+ok   haarpsi.haarpsi (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.02e-16 y=1.84e-16
+ok   haarpsi.haarpsi (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.23e-16 y=9.06e-17
+ok   haarpsi.haarpsi (3, 1, 193, 181) float64 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.16e-16 y=2.42e-16
+ok   haarpsi.haarpsi (3, 1, 193, 181) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.70e-16 y=1.40e-16
+ok   haarpsi.haarpsi (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) uint8 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {}: out abs=1.60e-10 rel=1.90e-10 grad rel x=6.81e-04 y=1.96e-06
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=6.50e-10 rel=7.71e-10 grad rel x=1.68e-04 y=2.09e-06
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {'parent': False}: out abs=1.20e-10 rel=1.43e-10 grad rel x=3.38e-04 y=1.49e-06
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {'luma': 'bt601'}: out abs=7.66e-10 rel=8.64e-10 grad rel x=2.59e-04 y=2.44e-06
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=7.06e-13 y=3.72e-15
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.17e-13 y=3.74e-15
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {'parent': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.88e-13 y=3.45e-15
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.23e-12 y=5.39e-15
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {}: out abs=4.65e-10 rel=5.52e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=3.37e-10 rel=3.99e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {'parent': False}: out abs=1.20e-10 rel=1.44e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {'luma': 'bt601'}: out abs=5.78e-10 rel=6.52e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {}: out abs=3.82e-10 rel=4.59e-10 grad rel x=2.46e-04 y=1.78e-06
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {'reduction': 'none'}: out abs=6.25e-10 rel=7.51e-10 grad rel x=6.24e-05 y=1.77e-06
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {'parent': False}: out abs=1.17e-09 rel=1.41e-09 grad rel x=7.02e-04 y=1.86e-06
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {'luma': 'bt601'}: out abs=6.05e-10 rel=6.85e-10 grad rel x=1.43e-04 y=2.63e-06
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.57e-13 y=3.42e-15
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.45e-13 y=3.40e-15
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {'parent': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.60e-13 y=3.19e-15
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {'luma': 'bt601'}: out abs=1.11e-16 rel=1.27e-16 grad rel x=4.39e-13 y=4.65e-15
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {}: out abs=7.40e-10 rel=8.89e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {'reduction': 'none'}: out abs=1.30e-09 rel=1.57e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {'parent': False}: out abs=8.78e-10 rel=1.05e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {'luma': 'bt601'}: out abs=1.04e-10 rel=1.18e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float32 {}: out abs=5.52e-10 rel=6.69e-10 grad rel x=1.97e-04 y=1.60e-06
+ok   iwssim.iw_ssim (1, 1, 256, 256) float32 {'reduction': 'none'}: out abs=2.86e-10 rel=3.45e-10 grad rel x=1.03e-04 y=1.66e-06
+ok   iwssim.iw_ssim (1, 1, 256, 256) float32 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float32 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float32 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float32 {'parent': False}: out abs=1.18e-09 rel=1.42e-09 grad rel x=1.21e-04 y=2.32e-06
+ok   iwssim.iw_ssim (1, 1, 256, 256) torch.float32 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   iwssim.iw_ssim (1, 1, 256, 256) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.62e-13 y=2.87e-15
+ok   iwssim.iw_ssim (1, 1, 256, 256) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.99e-13 y=2.66e-15
+ok   iwssim.iw_ssim (1, 1, 256, 256) float64 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float64 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float64 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float64 {'parent': False}: out abs=1.11e-16 rel=1.34e-16 grad rel x=1.11e-13 y=3.07e-15
+ok   iwssim.iw_ssim (1, 1, 256, 256) torch.float64 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   iwssim.iw_ssim (1, 1, 256, 256) uint8 {}: out abs=1.56e-09 rel=1.88e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) uint8 {'reduction': 'none'}: out abs=1.75e-09 rel=2.12e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) uint8 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) uint8 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) uint8 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) uint8 {'parent': False}: out abs=4.36e-10 rel=5.26e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) torch.uint8 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   mdsi.mdsi (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float32 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float32 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float64 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float64 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) uint8 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) uint8 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float32 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float32 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float64 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float64 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) uint8 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) uint8 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) float32 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) float32 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) uint8 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) uint8 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float32 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float32 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float64 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float64 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) uint8 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) uint8 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float64 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float64 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) torch.float32 {'luma': 'bt709'}: both raise ValueError/ValueError
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) float64 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) torch.float64 {'luma': 'bt709'}: both raise ValueError/ValueError
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) torch.uint8 {'luma': 'bt709'}: both raise ValueError/ValueError
+ok   nlpd.nlpd (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) float32 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) float64 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) uint8 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) float32 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) float64 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) uint8 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 540, 720) float32 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 540, 720) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 540, 720) uint8 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 540, 720) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) float32 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) torch.float32 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   nlpd.nlpd (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) float64 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) torch.float64 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   nlpd.nlpd (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) uint8 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) torch.uint8 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   psnrhvs.psnr_hvs (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.mse_hvs_m (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.mse_hvs_m (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.mse_hvs_m (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.mse_hvs_m (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.mse_hvs_m (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.mse_hvs_m (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.mse_hvs_m (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.mse_hvs_m (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.86e-07 y=2.47e-07
+ok   scielab.scielab (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.91e-07 y=3.26e-07
+ok   scielab.scielab (2, 3, 192, 200) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.10e-07 y=2.19e-07
+ok   scielab.scielab (2, 3, 192, 200) float32 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.89e-07 y=2.69e-07
+ok   scielab.scielab (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.70e-16 y=2.90e-16
+ok   scielab.scielab (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.15e-16 y=4.95e-16
+ok   scielab.scielab (2, 3, 192, 200) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.99e-16 y=5.97e-16
+ok   scielab.scielab (2, 3, 192, 200) float64 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.76e-16 y=6.43e-16
+ok   scielab.scielab (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (2, 3, 192, 200) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (2, 3, 192, 200) uint8 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.62e-07 y=3.11e-07
+ok   scielab.scielab (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.06e-07 y=3.28e-07
+ok   scielab.scielab (1, 3, 177, 263) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.97e-07 y=2.20e-07
+ok   scielab.scielab (1, 3, 177, 263) float32 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.33e-07 y=4.45e-07
+ok   scielab.scielab (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.46e-16 y=5.40e-16
+ok   scielab.scielab (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.08e-16 y=5.67e-16
+ok   scielab.scielab (1, 3, 177, 263) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.56e-16 y=2.95e-16
+ok   scielab.scielab (1, 3, 177, 263) float64 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.35e-16 y=4.50e-16
+ok   scielab.scielab (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 177, 263) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 177, 263) uint8 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.47e-07 y=3.90e-07
+ok   scielab.scielab (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.88e-07 y=3.86e-07
+ok   scielab.scielab (1, 3, 540, 720) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.75e-07 y=2.24e-07
+ok   scielab.scielab (1, 3, 540, 720) float32 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.43e-07 y=3.69e-07
+ok   scielab.scielab (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 540, 720) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 540, 720) uint8 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (2, 3, 192, 200) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (2, 3, 192, 200) float64 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (2, 3, 192, 200) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 177, 263) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 177, 263) float64 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 177, 263) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 540, 720) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 540, 720) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (3, 1, 193, 181) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (3, 1, 193, 181) float64 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (3, 1, 193, 181) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.35e-06 y=1.49e-06
+ok   vifp.vifp (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=5.55e-17 rel=2.14e-16 grad rel x=1.27e-06 y=1.29e-06
+ok   vifp.vifp (2, 3, 192, 200) float32 {'num_scales': 2}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.14e-07 y=3.98e-07
+ok   vifp.vifp (2, 3, 192, 200) float32 {'luma': 'bt601'}: out abs=5.55e-17 rel=1.79e-16 grad rel x=1.84e-06 y=1.64e-06
+ok   vifp.vifp (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.67e-15 y=1.00e-14
+ok   vifp.vifp (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=1.11e-16 rel=4.21e-16 grad rel x=4.29e-15 y=3.45e-15
+ok   vifp.vifp (2, 3, 192, 200) float64 {'num_scales': 2}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.08e-14 y=4.51e-14
+ok   vifp.vifp (2, 3, 192, 200) float64 {'luma': 'bt601'}: out abs=5.55e-17 rel=1.77e-16 grad rel x=1.45e-14 y=1.34e-14
+ok   vifp.vifp (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=5.55e-17 rel=2.13e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (2, 3, 192, 200) uint8 {'num_scales': 2}: out abs=5.55e-17 rel=2.99e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (2, 3, 192, 200) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) float32 {}: out abs=8.33e-17 rel=3.38e-16 grad rel x=1.26e-06 y=1.33e-06
+ok   vifp.vifp (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=8.33e-17 rel=3.36e-16 grad rel x=1.29e-06 y=1.44e-06
+ok   vifp.vifp (1, 3, 177, 263) float32 {'num_scales': 2}: out abs=5.55e-17 rel=3.00e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) float32 {'luma': 'bt601'}: out abs=5.55e-17 rel=1.92e-16 grad rel x=2.08e-06 y=3.09e-06
+ok   vifp.vifp (1, 3, 177, 263) float64 {}: out abs=1.11e-16 rel=4.46e-16 grad rel x=1.16e-14 y=1.28e-14
+ok   vifp.vifp (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=2.78e-17 rel=1.12e-16 grad rel x=5.45e-15 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) float64 {'num_scales': 2}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) float64 {'luma': 'bt601'}: out abs=5.55e-17 rel=1.85e-16 grad rel x=1.23e-14 y=1.30e-14
+ok   vifp.vifp (1, 3, 177, 263) uint8 {}: out abs=2.78e-17 rel=1.12e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=2.78e-17 rel=1.13e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) uint8 {'num_scales': 2}: out abs=2.78e-17 rel=1.52e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.03e-06 y=4.78e-06
+ok   vifp.vifp (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=5.55e-17 rel=2.94e-16 grad rel x=3.24e-06 y=4.39e-06
+ok   vifp.vifp (1, 3, 540, 720) float32 {'num_scales': 2}: out abs=2.78e-17 rel=1.53e-16 grad rel x=7.00e-07 y=4.84e-07
+ok   vifp.vifp (1, 3, 540, 720) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.58e-06 y=3.90e-06
+ok   vifp.vifp (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=5.55e-17 rel=2.94e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 540, 720) uint8 {'num_scales': 2}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 540, 720) uint8 {'luma': 'bt601'}: out abs=1.11e-16 rel=5.04e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.27e-06 y=1.26e-06
+ok   vifp.vifp (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=5.55e-17 rel=2.06e-16 grad rel x=1.12e-06 y=1.09e-06
+ok   vifp.vifp (3, 1, 193, 181) float32 {'num_scales': 2}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (3, 1, 193, 181) torch.float32 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   vifp.vifp (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=7.63e-15 y=1.20e-14
+ok   vifp.vifp (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=5.55e-17 rel=2.05e-16 grad rel x=8.41e-15 y=1.22e-14
+ok   vifp.vifp (3, 1, 193, 181) float64 {'num_scales': 2}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.99e-14 y=2.48e-14
+ok   vifp.vifp (3, 1, 193, 181) torch.float64 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   vifp.vifp (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=5.55e-17 rel=2.07e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (3, 1, 193, 181) uint8 {'num_scales': 2}: out abs=2.78e-17 rel=1.50e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (3, 1, 193, 181) torch.uint8 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   vsi.vsi (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+cases=665 failures=0 worst out rel=2.120e-09 worst grad rel=7.017e-04

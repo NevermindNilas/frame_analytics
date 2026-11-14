@@ -1,0 +1,83 @@
+=== tests/test_metrics.py
+...............................................                          [100%]
+=============================== warnings summary ===============================
+tests/test_metrics.py::test_validate_suite
+  /home/nilas/.venvs/fa_perf/lib/python3.14/site-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.
+    warn_once(FP_FUSION_DEFAULT_WARNING)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+47 passed, 1 warning in 65.01s (0:01:05)
+=== tests/test_cpu_filters.py
+.........................................                                [100%]
+=============================== warnings summary ===============================
+tests/test_cpu_filters.py::test_filter_without_onednn[dtype0]
+tests/test_cpu_filters.py::test_filter_without_onednn[dtype1]
+  /home/nilas/.venvs/fa_perf/lib/python3.14/site-packages/torch/backends/mkldnn/__init__.py:96: UserWarning: TF32 acceleration on top of oneDNN is available for Intel GPUs. The current Torch version does not have Intel GPU Support. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:299.)
+    torch._C._set_onednn_allow_tf32(_allow_tf32)
+
+tests/test_cpu_filters.py::test_filter_first_and_second_derivatives[0]
+  /mnt/e/fa_wt_core/tests/test_cpu_filters.py:71: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+  Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
+    assert float(error) < 2e-4
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+41 passed, 3 warnings in 1.24s
+=== tests/test_training_metrics.py
+E        +    where 0.2499999850988388 = float(tensor(0.2500, dtype=torch.float64))
+E        +      where tensor(0.2500, dtype=torch.float64) = <function charbonnier at 0x7fbcd756e140>(tensor([[[[ 53, 133, 167,  ..., 250, 206, 118],\n          [191, 149,   2,  ..., 102,  70, 235],\n          [134, 115,  ...,\n          [ 38,   9, 234,  ..., 214, 156, 196],\n          [214, 144,  36,  ...,  31, 237,   1]]]], dtype=torch.uint8), tensor([[[[ 53, 133, 167,  ..., 250, 206, 118],\n          [191, 149,   2,  ..., 102,  70, 235],\n          [134, 115,  ...,\n          [ 38,   9, 234,  ..., 214, 156, 196],\n          [214, 144,  36,  ...,  31, 237,   1]]]], dtype=torch.uint8), eps=0.25)
+E        +        where <function charbonnier at 0x7fbcd756e140> = fa.charbonnier
+
+tests/test_training_metrics.py:325: AssertionError
+=============================== warnings summary ===============================
+tests/test_training_metrics.py::test_ms_ssim_matches_reference[dt0-torch-cpu]
+  /home/nilas/.venvs/fa_perf/lib/python3.14/site-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.
+    warn_once(FP_FUSION_DEFAULT_WARNING)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_training_metrics.py::test_pixel_losses_zero_on_identity[cpu]
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed, 74 passed, 1 warning in 24.28s
+=== tests/test_lpips.py
+.......s............                                                     [100%]
+=============================== warnings summary ===============================
+tests/test_lpips.py::test_matches_float64_reference[0.0-cpu]
+  /home/nilas/.venvs/fa_perf/lib/python3.14/site-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.
+    warn_once(FP_FUSION_DEFAULT_WARNING)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+19 passed, 1 skipped, 1 warning in 11.32s
+=== tests/test_ssimulacra2.py
+.....................                                                    [100%]
+=============================== warnings summary ===============================
+tests/test_ssimulacra2.py::test_matches_reference[cpu]
+  /home/nilas/.venvs/fa_perf/lib/python3.14/site-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.
+    warn_once(FP_FUSION_DEFAULT_WARNING)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+21 passed, 1 warning in 21.50s
+=== tests/test_vapoursynth.py
+
+1 skipped in 0.63s
+=== tests/test_new_metrics.py
+tests/test_new_metrics.py::test_reduction_none_shapes[cpu]
+tests/test_new_metrics.py::test_reduction_none_shapes[cuda]
+  /mnt/e/fa_wt_core/tests/test_new_metrics.py:109: RuntimeWarning: nlpd: 64x64 fits 4 level(s) with bands >= 8px; clamping requested scales=6 to 4
+    out = getattr(fa, name)(xb, yb, reduction="none")
+
+tests/test_new_metrics.py::test_module_wrappers_agree
+  /mnt/e/fa_wt_core/frame_analytics/modules.py:456: RuntimeWarning: nlpd: 64x64 fits 4 level(s) with bands >= 8px; clamping requested scales=6 to 4
+    return _nlpd(x, y, data_range=self.data_range,
+
+tests/test_new_metrics.py::test_module_wrappers_agree
+  /mnt/e/fa_wt_core/tests/test_new_metrics.py:123: RuntimeWarning: nlpd: 64x64 fits 4 level(s) with bands >= 8px; clamping requested scales=6 to 4
+    assert abs(float(mod(x, y)) - float(getattr(fa, fn_name)(x, y))) < 1e-9
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+89 passed, 5 skipped, 15 warnings in 12.38s
+=== tests/test_new_metric_regressions.py
+........................................................................ [ 84%]
+.............                                                            [100%]
+85 passed in 5.87s
+DONE
+test_training_metrics full (no -x): 1 failed (test_pixel_losses_zero_on_identity[cpu], pre-existing), 130 passed; vapoursynth: 1 skipped (module not installed)

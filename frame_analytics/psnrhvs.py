@@ -80,7 +80,7 @@ class _Tables:
     """Per-device constants: ``C``/``CT`` DCT basis, ``W = CSF^2`` weight,
     ``MW`` masking energy weight (DC zeroed), ``IW = 1/MASK`` (DC zeroed)."""
 
-    __slots__ = ("C", "CT", "W", "MW", "IW")
+    __slots__ = ("C", "CT", "KT", "W", "MW", "IW")
 
 
 _TBL_CACHE: dict = {}
@@ -99,6 +99,13 @@ def _tables(device) -> _Tables:
         c[0] *= 1.0 / math.sqrt(2.0)
         t.C = c.to(device=device)
         t.CT = t.C.T.contiguous()
+        # 2-D DCT of every block as ONE (B, 64) x (64, 64) GEMM:
+        # vec(C X C^T) = (C kron C) vec(X) for row-major vec. Batched 8x8
+        # bmm is a poor fit for BLAS (half the GPU time of PSNR-HVS-M).
+        # Built in float64 from the same basis, rounded once.
+        c64 = torch.cos(math.pi * (2.0 * n.double() + 1.0) * k.double() / 16.0) * 0.5
+        c64[0] *= 1.0 / math.sqrt(2.0)
+        t.KT = torch.kron(c64, c64).T.contiguous().to(dtype=_COMPUTE, device=device)
         csf = torch.tensor(CSF, dtype=_COMPUTE, device=device)
         msk = torch.tensor(MASK, dtype=_COMPUTE, device=device)
         t.W = csf * csf
@@ -129,16 +136,28 @@ def _prep(x, y, data_range):
 # compiled cores: (B,8,8) float32 blocks in, (B,) float32 per-block MSE out
 # --------------------------------------------------------------------------- #
 
-def _hvs_core(db, C, CT, W):
+def _dct8x8(blocks, C, CT, KT):
+    """Orthonormal 2-D DCT-II of ``(B, 8, 8)`` blocks.
+
+    CUDA: one ``(B, 64) @ (C kron C)^T`` GEMM -- batched 8x8 bmm was half of
+    PSNR-HVS-M's GPU time. CPU keeps ``C @ X @ C^T`` (the GEMM form measured
+    -9%..+10% there, so not worth changing CPU results).
+    """
+    if blocks.is_cuda:
+        return (blocks.reshape(-1, 64) @ KT).view(-1, 8, 8)
+    return C @ blocks @ CT
+
+
+def _hvs_core(db, C, CT, KT, W):
     """CSF-weighted error energy of DCT *difference* blocks (DCT is linear)."""
-    D = C @ db @ CT
+    D = _dct8x8(db, C, CT, KT)
     return ((D * D) * W).sum(dim=(1, 2)) * (1.0 / 64.0)
 
 
-def _hvsm_core(xb, yb, C, CT, W, MW, IW):
+def _hvsm_core(xb, yb, C, CT, KT, W, MW, IW):
     """Masked variant: between-coefficient masking before CSF weighting."""
-    Xd = C @ xb @ CT
-    Yd = C @ yb @ CT
+    Xd = _dct8x8(xb, C, CT, KT)
+    Yd = _dct8x8(yb, C, CT, KT)
     u = (Xd - Yd).abs()
 
     Qx = Xd * Xd
@@ -183,7 +202,7 @@ def _mse_jnd_per_image(x4, y4, masking: bool) -> torch.Tensor:
         Yb = y4.to(_COMPUTE).unfold(2, 8, 8).unfold(3, 8, 8).reshape(-1, 8, 8)
         core = _F._maybe_compile(_hvsm_core, f"psnrhvs:hvsm:{dts}")
         with _F._no_autocast(Xb):
-            pb = core(Xb, Yb, T.C, T.CT, T.W, T.MW, T.IW)
+            pb = core(Xb, Yb, T.C, T.CT, T.KT, T.W, T.MW, T.IW)
     else:
         Xf = x4.to(_COMPUTE)
         Yf = y4.to(_COMPUTE)
@@ -192,7 +211,7 @@ def _mse_jnd_per_image(x4, y4, masking: bool) -> torch.Tensor:
               - Yf.unfold(2, 8, 8).unfold(3, 8, 8)).reshape(-1, 8, 8)
         core = _F._maybe_compile(_hvs_core, f"psnrhvs:hvs:{dts}")
         with _F._no_autocast(Db):
-            pb = core(Db, T.C, T.CT, T.W)
+            pb = core(Db, T.C, T.CT, T.KT, T.W)
     return pb.to(_ACCUM).view(n, -1).mean(dim=1)
 
 

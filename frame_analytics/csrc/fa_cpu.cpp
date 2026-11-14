@@ -530,7 +530,25 @@ static int pixel_sums(const void* a, const void* b, int dtype,
 
 // -------------------------------------------------------------------------
 // SSIM
+//
+// Moment planes: x', y', x'y' and (x'-y')^2, with x' = x - shift -- the same
+// four the CUDA kernel blurs (see the NPLANE note in fa_cuda.cu). SSIM only
+// ever reads sigma_xx and sigma_yy as a sum, and
+//
+//     sigma_xx + sigma_yy = E[(x-y)^2] + 2*sigma_xy - (mu_x - mu_y)^2
+//
+// so four blurred planes carry everything five did: 20% less filtering, and
+// on matched frames -- x - y near zero -- a better-conditioned variance sum
+// than E[x^2] - mu_x^2 + E[y^2] - mu_y^2.
+//
+// Both filter passes are written tap-inner: each output column's KW-tap sum
+// is formed in a register and stored once. The tap-outer form this replaced
+// streamed the whole accumulator row through L1 once per tap (two loads and a
+// store per FMA); this form is one load per FMA. KW is a template parameter so
+// the tap loop unrolls completely and the column loop is what vectorises.
 // -------------------------------------------------------------------------
+
+constexpr int SSIM_PLANES = 4;
 
 struct Task {
   int plane, row0, rows, col0, cols;
@@ -551,122 +569,160 @@ struct Task {
 //
 // Keep the loops here.  Folding this back into the caller as a lambda is a
 // silent 4x regression that no test would catch.
-template <typename T>
+template <typename T, int KW>
 static void ssim_horiz_row(const T* FA_RESTRICT xrow, const T* FA_RESTRICT yrow,
                            float* FA_RESTRICT raw, float* FA_RESTRICT dst,
                            const int span, const int cols,
-                           const float* FA_RESTRICT win, const int K,
-                           const float shift) {
+                           const float* FA_RESTRICT win, const float shift) {
   float* FA_RESTRICT rx = raw;
   float* FA_RESTRICT ry = rx + span;
-  float* FA_RESTRICT rxx = ry + span;
-  float* FA_RESTRICT ryy = rxx + span;
-  float* FA_RESTRICT rxy = ryy + span;
+  float* FA_RESTRICT rxy = ry + span;
+  float* FA_RESTRICT rdd = rxy + span;
   for (int c = 0; c < span; ++c) {
     const float xv = static_cast<float>(xrow[c]) - shift;
     const float yv = static_cast<float>(yrow[c]) - shift;
+    const float dv = xv - yv;
     rx[c] = xv;
     ry[c] = yv;
-    rxx[c] = xv * xv;
-    ryy[c] = yv * yv;
     rxy[c] = xv * yv;
+    rdd[c] = dv * dv;
   }
-  // j == 0 initialises instead of a separate memset pass
-  for (int p = 0; p < 5; ++p) {
+  float w[KW];
+  for (int j = 0; j < KW; ++j) w[j] = win[j];
+  for (int p = 0; p < SSIM_PLANES; ++p) {
     const float* FA_RESTRICT src = raw + static_cast<size_t>(p) * span;
     float* FA_RESTRICT d = dst + static_cast<size_t>(p) * cols;
-    const float w0 = win[0];
-    for (int c = 0; c < cols; ++c) d[c] = w0 * src[c];
-    for (int j = 1; j < K; ++j) {
-      const float w = win[j];
-      const float* FA_RESTRICT s = src + j;
-      for (int c = 0; c < cols; ++c) d[c] += w * s[c];
+    for (int c = 0; c < cols; ++c) {
+      float a = w[0] * src[c];
+      for (int j = 1; j < KW; ++j) a += w[j] * src[c + j];
+      d[c] = a;
     }
   }
 }
 
-template <typename T, bool WANT_CS>
+// The vertical half, fused with the epilogue: the KW ring rows feeding output
+// row o arrive as pointers, oldest first, and the four moments never leave
+// registers. Free function for the same reason as ssim_horiz_row.
+template <int KW, bool WANT_CS>
+static void ssim_vert_row(const float* const* FA_RESTRICT rows, const int cols,
+                          const float* FA_RESTRICT win, const float shift,
+                          const float C1, const float C2,
+                          float* FA_RESTRICT mrow, double* out_sum,
+                          double* out_cs) {
+  float w[KW];
+  for (int j = 0; j < KW; ++j) w[j] = win[j];
+  const float* FA_RESTRICT r[KW];
+  for (int j = 0; j < KW; ++j) r[j] = rows[j];
+  double rowsum = 0.0, rowsum_cs = 0.0;
+  for (int c = 0; c < cols; ++c) {
+    float b0 = w[0] * r[0][c];
+    float b1 = w[0] * r[0][cols + c];
+    float b2 = w[0] * r[0][2 * cols + c];
+    float b3 = w[0] * r[0][3 * cols + c];
+    for (int j = 1; j < KW; ++j) {
+      b0 += w[j] * r[j][c];
+      b1 += w[j] * r[j][cols + c];
+      b2 += w[j] * r[j][2 * cols + c];
+      b3 += w[j] * r[j][3 * cols + c];
+    }
+    const float ux = b0;                  // mean of the shifted data
+    const float uy = b1;
+    const float mx = ux + shift;          // true local mean
+    const float my = uy + shift;
+    const float sxy = b2 - ux * uy;
+    const float du = ux - uy;
+    const float sxx_syy = b3 + 2.0f * sxy - du * du;
+    const float A1 = 2.0f * mx * my + C1;
+    const float A2 = 2.0f * sxy + C2;
+    const float B1 = mx * mx + my * my + C1;
+    const float B2 = sxx_syy + C2;
+    if (WANT_CS) {
+      const float cs = A2 / B2;
+      const float lum = A1 / B1;
+      rowsum += static_cast<double>(lum * cs);
+      rowsum_cs += static_cast<double>(cs);
+    } else {
+      const float v = (A1 * A2) / (B1 * B2);
+      if (mrow) mrow[c] = v;
+      rowsum += static_cast<double>(v);
+    }
+  }
+  *out_sum += rowsum;
+  if (WANT_CS) *out_cs += rowsum_cs;
+}
+
+// Per-thread scratch, reused across tasks and calls instead of three heap
+// allocations per task. Grow-only and bounded by the tile size: at most
+// (4*(COL_TILE+MAX_WIN-1) + MAX_WIN*4*COL_TILE) floats, ~50 KiB per thread.
+static float* ssim_scratch(size_t n) {
+  thread_local std::vector<float> buf;
+  if (buf.size() < n) buf.resize(n);
+  return buf.data();
+}
+
+template <typename T, bool WANT_CS, int KW>
 static void ssim_tile(const T* xp, const T* yp, int H, int W, int Hout, int Wout,
-                      const float* win, int K, float shift, float C1, float C2,
+                      const float* win, float shift, float C1, float C2,
                       const Task& t, float* map_out, double* out_sum,
                       double* out_cs_sum) {
   const int cols = t.cols;
-  const int span = cols + K - 1;   // input columns needed
+  const int span = cols + KW - 1;   // input columns needed
   const int64_t plane_off = static_cast<int64_t>(t.plane) * H * W;
+  const size_t row_floats = static_cast<size_t>(SSIM_PLANES) * cols;
 
-  // per-thread scratch
-  std::vector<float> raw(5 * span);
-  std::vector<float> ring(static_cast<size_t>(K) * 5 * cols);
-  std::vector<float> acc(5 * cols);
+  float* raw = ssim_scratch(SSIM_PLANES * static_cast<size_t>(span) +
+                            static_cast<size_t>(KW) * row_floats);
+  float* ring = raw + SSIM_PLANES * static_cast<size_t>(span);
 
-  auto horiz_row = [&](int in_row, float* FA_RESTRICT dst) {
-    ssim_horiz_row<T>(xp + plane_off + static_cast<int64_t>(in_row) * W + t.col0,
-                      yp + plane_off + static_cast<int64_t>(in_row) * W + t.col0,
-                      raw.data(), dst, span, cols, win, K, shift);
+  auto horiz_row = [&](int in_row) {
+    ssim_horiz_row<T, KW>(xp + plane_off + static_cast<int64_t>(in_row) * W + t.col0,
+                          yp + plane_off + static_cast<int64_t>(in_row) * W + t.col0,
+                          raw, ring + static_cast<size_t>(in_row % KW) * row_floats,
+                          span, cols, win, shift);
   };
 
-  // Prime the ring with the first K-1 input rows of this tile. The slot index
+  // Prime the ring with the first KW-1 input rows of this tile. The slot index
   // must be keyed on the *global* row number, because the read side below is
-  // too -- keying it on the tile-local index only agrees when row0 % K == 0.
-  for (int r = 0; r < K - 1; ++r) {
-    const int row = t.row0 + r;
-    horiz_row(row, ring.data() + static_cast<size_t>(row % K) * 5 * cols);
-  }
+  // too -- keying it on the tile-local index only agrees when row0 % KW == 0.
+  for (int r = 0; r < KW - 1; ++r) horiz_row(t.row0 + r);
 
   double sum = 0.0;
   double sum_cs = 0.0;
+  const float* rows[KW];
   for (int o = 0; o < t.rows; ++o) {
-    const int newest = t.row0 + o + K - 1;
-    horiz_row(newest, ring.data() + static_cast<size_t>(newest % K) * 5 * cols);
-
-    for (int j = 0; j < K; ++j) {
-      const float w = win[j];
-      const float* FA_RESTRICT s =
-          ring.data() + static_cast<size_t>((t.row0 + o + j) % K) * 5 * cols;
-      float* FA_RESTRICT ap = acc.data();
-      const int n5 = 5 * cols;
-      if (j == 0) {
-        for (int c = 0; c < n5; ++c) ap[c] = w * s[c];
-      } else {
-        for (int c = 0; c < n5; ++c) ap[c] += w * s[c];
-      }
-    }
-
-    const float* FA_RESTRICT b0 = acc.data();
-    const float* FA_RESTRICT b1 = b0 + cols;
-    const float* FA_RESTRICT b2 = b1 + cols;
-    const float* FA_RESTRICT b3 = b2 + cols;
-    const float* FA_RESTRICT b4 = b3 + cols;
-    float* FA_RESTRICT mrow = map_out
+    horiz_row(t.row0 + o + KW - 1);
+    for (int j = 0; j < KW; ++j)
+      rows[j] = ring + static_cast<size_t>((t.row0 + o + j) % KW) * row_floats;
+    float* mrow = map_out
         ? map_out + static_cast<int64_t>(t.plane) * Hout * Wout +
               static_cast<int64_t>(t.row0 + o) * Wout + t.col0
         : nullptr;
-    double rowsum = 0.0;
-    double rowsum_cs = 0.0;
-    for (int c = 0; c < cols; ++c) {
-      const float mx = b0[c] + shift;
-      const float my = b1[c] + shift;
-      const float sxx = b2[c] - b0[c] * b0[c];
-      const float syy = b3[c] - b1[c] * b1[c];
-      const float sxy = b4[c] - b0[c] * b1[c];
-      if (WANT_CS) {
-        const float cs = (2.0f * sxy + C2) / (sxx + syy + C2);
-        const float lum = (2.0f * mx * my + C1) / (mx * mx + my * my + C1);
-        rowsum += static_cast<double>(lum * cs);
-        rowsum_cs += static_cast<double>(cs);
-      } else {
-        const float num = (2.0f * mx * my + C1) * (2.0f * sxy + C2);
-        const float den = (mx * mx + my * my + C1) * (sxx + syy + C2);
-        const float v = num / den;
-        if (mrow) mrow[c] = v;
-        rowsum += static_cast<double>(v);
-      }
-    }
-    sum += rowsum;
-    sum_cs += rowsum_cs;
+    ssim_vert_row<KW, WANT_CS>(rows, cols, win, shift, C1, C2, mrow, &sum, &sum_cs);
   }
   *out_sum = sum;
   if (WANT_CS) *out_cs_sum = sum_cs;
+}
+
+// The window size is a template parameter of the tile (so its tap loops
+// unroll); this picks the instantiation. Every width the ABI accepts, 1..11,
+// has one -- Python only sends the odd ones, but the C entry point promises
+// the whole range.
+template <typename T, bool WANT_CS>
+static void ssim_tile_k(int K, const T* xp, const T* yp, int H, int W, int Hout,
+                        int Wout, const float* win, float shift, float C1,
+                        float C2, const Task& t, float* map_out,
+                        double* out_sum, double* out_cs_sum) {
+#define FA_TILE_K(KK)                                                          \
+  case KK:                                                                     \
+    ssim_tile<T, WANT_CS, KK>(xp, yp, H, W, Hout, Wout, win, shift, C1, C2,   \
+                              t, map_out, out_sum, out_cs_sum);                \
+    break;
+  switch (K) {
+    FA_TILE_K(1) FA_TILE_K(2) FA_TILE_K(3) FA_TILE_K(4) FA_TILE_K(5)
+    FA_TILE_K(6) FA_TILE_K(7) FA_TILE_K(8) FA_TILE_K(9) FA_TILE_K(10)
+    default: FA_TILE_K(11)
+  }
+#undef FA_TILE_K
 }
 
 static int ssim_impl(const void* x, const void* y, int dtype, int N, int C,
@@ -679,11 +735,21 @@ static int ssim_impl(const void* x, const void* y, int dtype, int N, int C,
   if (Hout <= 0 || Wout <= 0) return FA_E_SHAPE;
   const int planes = N * C;
 
+  // Taller tiles amortise the KW-1 halo rows each one re-filters, but only
+  // while there are still enough of them to keep the pool busy.
+  const int col_tiles = (Wout + COL_TILE - 1) / COL_TILE;
+  const int64_t want_tasks = 4 * static_cast<int64_t>(pool().size());
+  int row_tile = 2 * ROW_TILE;
+  while (row_tile > 16 &&
+         static_cast<int64_t>(planes) * col_tiles *
+                 ((Hout + row_tile - 1) / row_tile) < want_tasks)
+    row_tile >>= 1;
+
   std::vector<Task> tasks;
   for (int p = 0; p < planes; ++p)
-    for (int r = 0; r < Hout; r += ROW_TILE)
+    for (int r = 0; r < Hout; r += row_tile)
       for (int c = 0; c < Wout; c += COL_TILE)
-        tasks.push_back(Task{p, r, std::min(ROW_TILE, Hout - r), c,
+        tasks.push_back(Task{p, r, std::min(row_tile, Hout - r), c,
                              std::min(COL_TILE, Wout - c)});
 
   std::vector<double> sums(tasks.size(), 0.0);
@@ -695,13 +761,13 @@ static int ssim_impl(const void* x, const void* y, int dtype, int N, int C,
     double* csp = want_cs ? sums_cs.data() : nullptr;
     pool().run(static_cast<int64_t>(tasks.size()), [&](int64_t i) {
       if (csp) {
-        ssim_tile<scalar_t, true>(xp, yp, H, W, Hout, Wout, win, K, (float)shift,
-                                  (float)C1, (float)C2, tasks[i], nullptr,
-                                  &sums[i], &csp[i]);
+        ssim_tile_k<scalar_t, true>(K, xp, yp, H, W, Hout, Wout, win, (float)shift,
+                                    (float)C1, (float)C2, tasks[i], nullptr,
+                                    &sums[i], &csp[i]);
       } else {
-        ssim_tile<scalar_t, false>(xp, yp, H, W, Hout, Wout, win, K, (float)shift,
-                                   (float)C1, (float)C2, tasks[i], map_out,
-                                   &sums[i], nullptr);
+        ssim_tile_k<scalar_t, false>(K, xp, yp, H, W, Hout, Wout, win, (float)shift,
+                                     (float)C1, (float)C2, tasks[i], map_out,
+                                     &sums[i], nullptr);
       }
     });
   })
@@ -721,6 +787,71 @@ static int ssim_impl(const void* x, const void* y, int dtype, int N, int C,
     }
   }
   return FA_OK;
+}
+
+// -------------------------------------------------------------------------
+// MS-SSIM pyramid
+//
+// The whole pyramid in one call. Run from Python, every scale alternated
+// between torch's OpenMP pool (avg_pool2d) and this library's pool (the SSIM
+// tile), and each pool spins for a while after its region ends -- so every
+// handoff had ~2x as many runnable threads as cores, and the small scales
+// woke parked workers for tens of microseconds of work. At 512x512 that
+// interference was well over half of MS-SSIM's wall time. Here the pooling
+// runs on the same pool as the tiles.
+//
+// The pool is avg_pool2d(2) with ATen's summation order, ((a+b)+c)+d then
+// / 4, floor mode, so the pyramid is bit-identical to the Python loop's.
+// -------------------------------------------------------------------------
+
+// -ffast-math licenses the compiler to reassociate ((a+b)+c)+d into
+// (a+b)+(c+d) when it vectorises this loop -- which it does, and which is up
+// to an ulp away from ATen's sum. Exactness against the Python path is the
+// point of this function, so reassociation is switched off for it alone, in
+// each compiler's own dialect. (GCC will not inline it into a caller built
+// with different options; it is called once per row, so that costs nothing.)
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma float_control(precise, on, push)
+#endif
+template <typename T>
+#if defined(__GNUC__) && !defined(__clang__)
+__attribute__((optimize("no-associative-math")))
+#endif
+static void pool2_rows(const T* FA_RESTRICT src, float* FA_RESTRICT dst,
+                       const int W, const int Wo) {
+#if defined(__clang__)
+#pragma clang fp reassociate(off)
+#endif
+  const T* FA_RESTRICT r0 = src;
+  const T* FA_RESTRICT r1 = src + W;
+  for (int ox = 0; ox < Wo; ++ox) {
+    dst[ox] = (((static_cast<float>(r0[2 * ox]) + static_cast<float>(r0[2 * ox + 1])) +
+                static_cast<float>(r1[2 * ox])) +
+               static_cast<float>(r1[2 * ox + 1])) / 4.0f;
+  }
+}
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma float_control(pop)
+#endif
+
+template <typename T>
+static void pool2_planes(const T* src, float* dst, int planes, int H, int W,
+                         int Ho, int Wo) {
+  // tasks of ~64 output rows, across all planes
+  constexpr int ROWS = 64;
+  const int per_plane = (Ho + ROWS - 1) / ROWS;
+  pool().run(static_cast<int64_t>(planes) * per_plane, [&](int64_t t) {
+    const int p = static_cast<int>(t / per_plane);
+    const int r0 = static_cast<int>(t % per_plane) * ROWS;
+    const int r1 = std::min(Ho, r0 + ROWS);
+    for (int oy = r0; oy < r1; ++oy) {
+      pool2_rows<T>(src + static_cast<int64_t>(p) * H * W +
+                        static_cast<int64_t>(2 * oy) * W,
+                    dst + static_cast<int64_t>(p) * Ho * Wo +
+                        static_cast<int64_t>(oy) * Wo,
+                    W, Wo);
+    }
+  });
 }
 
 // -------------------------------------------------------------------------
@@ -924,6 +1055,79 @@ FA_API int fa_cpu_ssim_cs(const void* x, const void* y, int dtype,
   if (!x || !y || !win || !out_ssim || !out_cs) return FA_E_ARG;
   return ssim_impl(x, y, dtype, N, C, H, W, win, K, shift, C1, C2, nullptr,
                    true, out_ssim, out_cs);
+}
+
+// MS-SSIM end to end: the pyramid, the per-scale (ssim, cs) plane means and
+// the weighted product, matching functional.ms_ssim's Python chain operation
+// for operation. Either output may be null.
+FA_API int fa_cpu_ms_ssim(const void* x, const void* y, int dtype,
+                          int N, int C, int H, int W,
+                          const float* win, int K,
+                          double shift, double C1, double C2,
+                          int n_scales, const double* weights,
+                          double* out_per_image, double* out_total) {
+  if (!x || !y || !win || !weights) return FA_E_ARG;
+  if (N <= 0 || C <= 0 || H <= 0 || W <= 0) return FA_E_SHAPE;
+  if (K < 1 || K > MAX_WIN) return FA_E_WINDOW;
+  if (n_scales < 1 || n_scales > 16) return FA_E_ARG;
+  const int planes = N * C;
+  if (dtype < FA_U8 || dtype > FA_F64) return FA_E_DTYPE;
+
+  std::vector<double> s_all(static_cast<size_t>(n_scales) * planes);
+  std::vector<double> cs_all(static_cast<size_t>(n_scales) * planes);
+  std::vector<float> buf[2];   // ping-pong: level i only feeds level i+1
+  const void* cx = x;
+  const void* cy = y;
+  int cdt = dtype;
+  int h = H, w = W;
+  for (int i = 0; i < n_scales; ++i) {
+    if (i) {
+      const int ho = h / 2, wo = w / 2;
+      if (ho <= 0 || wo <= 0) return FA_E_SHAPE;
+      std::vector<float>& b = buf[i % 2];
+      const size_t lvl = static_cast<size_t>(planes) * ho * wo;
+      if (b.size() < 2 * lvl) b.resize(2 * lvl);
+      FA_DISPATCH(cdt, {
+        pool2_planes<scalar_t>(static_cast<const scalar_t*>(cx), b.data(), planes,
+                               h, w, ho, wo);
+        pool2_planes<scalar_t>(static_cast<const scalar_t*>(cy), b.data() + lvl,
+                               planes, h, w, ho, wo);
+      })
+      cx = b.data();
+      cy = b.data() + lvl;
+      cdt = FA_F32;
+      h = ho;
+      w = wo;
+    }
+    const int rc = ssim_impl(cx, cy, cdt, N, C, h, w, win, K, shift, C1, C2,
+                             nullptr, true, s_all.data() + static_cast<size_t>(i) * planes,
+                             cs_all.data() + static_cast<size_t>(i) * planes);
+    if (rc != FA_OK) return rc;
+  }
+
+  // stack -> clamp_min(0) -> pow(weights) -> prod over scales -> mean over
+  // channels -> mean over images. `t < 0 ? 0 : t` keeps a NaN a NaN, as
+  // clamp_min does; the product runs from scale 0 like torch's prod.
+  double run = 0.0;
+  for (int n = 0; n < N; ++n) {
+    double acc = 0.0;
+    for (int c = 0; c < C; ++c) {
+      const size_t p = static_cast<size_t>(n) * C + c;
+      double v = 1.0;
+      for (int i = 0; i < n_scales; ++i) {
+        double t = (i == n_scales - 1) ? s_all[static_cast<size_t>(i) * planes + p]
+                                       : cs_all[static_cast<size_t>(i) * planes + p];
+        t = t < 0.0 ? 0.0 : t;
+        v *= std::pow(t, weights[i]);
+      }
+      acc += v;
+    }
+    const double m = acc / C;
+    if (out_per_image) out_per_image[n] = m;
+    run += m;
+  }
+  if (out_total) *out_total = run / N;
+  return FA_OK;
 }
 
 FA_API int fa_cpu_gmsd(const void* x, const void* y, int dtype,

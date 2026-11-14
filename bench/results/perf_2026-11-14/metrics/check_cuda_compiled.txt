@@ -1,0 +1,854 @@
+ok   adm.adm_like (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) float32 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.21e-08 y=1.30e-08
+ok   adm.adm_like (2, 3, 192, 200) float32 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) float32 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.95e-09 y=7.48e-09
+ok   adm.adm_like (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) float64 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.34e-17 y=9.33e-17
+ok   adm.adm_like (2, 3, 192, 200) float64 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) float64 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.02e-17 y=1.07e-17
+ok   adm.adm_like (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) uint8 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) uint8 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (2, 3, 192, 200) uint8 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float32 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.24e-08 y=4.21e-08
+ok   adm.adm_like (1, 3, 177, 263) float32 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float32 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.23e-09 y=5.19e-08
+ok   adm.adm_like (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float64 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.33e-17 y=1.29e-16
+ok   adm.adm_like (1, 3, 177, 263) float64 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) float64 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.87e-17 y=2.88e-17
+ok   adm.adm_like (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) uint8 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) uint8 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 177, 263) uint8 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) float32 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.55e-08 y=2.14e-08
+ok   adm.adm_like (1, 3, 540, 720) float32 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) float32 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.06e-08 y=1.94e-08
+ok   adm.adm_like (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) uint8 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) uint8 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (1, 3, 540, 720) uint8 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:26:48.487000 3404117 torch/_dynamo/convert_frame.py:2061] [0/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:26:48.487000 3404117 torch/_dynamo/convert_frame.py:2061] [0/8]    function: '_restore_pool' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/adm.py:179)
+W1114 04:26:48.487000 3404117 torch/_dynamo/convert_frame.py:2061] [0/8]    last reason: 0/4: GLOBAL_STATE changed: grad_mode 
+W1114 04:26:48.487000 3404117 torch/_dynamo/convert_frame.py:2061] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:26:48.487000 3404117 torch/_dynamo/convert_frame.py:2061] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:26:48.518000 3404117 torch/_dynamo/convert_frame.py:2061] [1/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:26:48.518000 3404117 torch/_dynamo/convert_frame.py:2061] [1/8]    function: '_restore_pool' (/mnt/e/fa_wt_metrics/frame_analytics/adm.py:180)
+W1114 04:26:48.518000 3404117 torch/_dynamo/convert_frame.py:2061] [1/8]    last reason: 1/4: GLOBAL_STATE changed: grad_mode 
+W1114 04:26:48.518000 3404117 torch/_dynamo/convert_frame.py:2061] [1/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:26:48.518000 3404117 torch/_dynamo/convert_frame.py:2061] [1/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   adm.adm_like (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) float32 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.57e-08 y=3.22e-08
+ok   adm.adm_like (3, 1, 193, 181) float32 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) float32 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.19e-08 y=4.37e-08
+ok   adm.adm_like (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) float64 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=8.30e-17 y=5.09e-17
+ok   adm.adm_like (3, 1, 193, 181) float64 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) float64 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.72e-17 y=2.04e-17
+ok   adm.adm_like (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) uint8 {'wavelet': 'db2_like'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) uint8 {'reduction': 'none', 'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   adm.adm_like (3, 1, 193, 181) uint8 {'wavelet': 'db2_like', 'csf': (1.0, 2.0, 0.5), 'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float32 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) float64 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (2, 3, 192, 200) uint8 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float32 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) float64 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 177, 263) uint8 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) float32 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ciede2000.ciede2000 (1, 3, 540, 720) uint8 {'kL': 2.0, 'kC': 1.5, 'kH': 0.7}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) float32 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) float64 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (2, 3, 192, 200) uint8 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.96e-06 y=2.02e-06
+ok   dss.dss (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.29e-07 y=8.82e-07
+ok   dss.dss (1, 3, 177, 263) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.02e-06 y=1.75e-06
+ok   dss.dss (1, 3, 177, 263) float32 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.64e-06 y=1.92e-06
+ok   dss.dss (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.07e-15 y=3.73e-15
+ok   dss.dss (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.99e-15 y=4.20e-15
+ok   dss.dss (1, 3, 177, 263) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.48e-15 y=3.34e-15
+ok   dss.dss (1, 3, 177, 263) float64 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.71e-15 y=3.97e-15
+ok   dss.dss (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 177, 263) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 177, 263) uint8 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.33e-06 y=3.42e-06
+ok   dss.dss (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.99e-06 y=2.44e-06
+ok   dss.dss (1, 3, 540, 720) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.51e-06 y=2.99e-06
+ok   dss.dss (1, 3, 540, 720) float32 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.69e-07 y=2.21e-06
+ok   dss.dss (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 540, 720) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (1, 3, 540, 720) uint8 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (3, 1, 193, 181) torch.float32 {'luma': 'bt709'}: both raise ValueError/ValueError
+ok   dss.dss (3, 1, 193, 181) float32 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (3, 1, 193, 181) torch.float64 {'luma': 'bt709'}: both raise ValueError/ValueError
+ok   dss.dss (3, 1, 193, 181) float64 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:27:36.033000 3404117 torch/_dynamo/convert_frame.py:2061] [5/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:27:36.033000 3404117 torch/_dynamo/convert_frame.py:2061] [5/8]    function: '_epi_left' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/dss.py:119)
+W1114 04:27:36.033000 3404117 torch/_dynamo/convert_frame.py:2061] [5/8]    last reason: 5/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:27:36.033000 3404117 torch/_dynamo/convert_frame.py:2061] [5/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:27:36.033000 3404117 torch/_dynamo/convert_frame.py:2061] [5/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:27:36.036000 3404117 torch/_dynamo/convert_frame.py:2061] [6/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:27:36.036000 3404117 torch/_dynamo/convert_frame.py:2061] [6/8]    function: '_epi_right' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/dss.py:124)
+W1114 04:27:36.036000 3404117 torch/_dynamo/convert_frame.py:2061] [6/8]    last reason: 6/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:27:36.036000 3404117 torch/_dynamo/convert_frame.py:2061] [6/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:27:36.036000 3404117 torch/_dynamo/convert_frame.py:2061] [6/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:27:36.040000 3404117 torch/_dynamo/convert_frame.py:2061] [7/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:27:36.040000 3404117 torch/_dynamo/convert_frame.py:2061] [7/8]    function: '_epi_left' (/mnt/e/fa_wt_metrics/frame_analytics/dss.py:162)
+W1114 04:27:36.040000 3404117 torch/_dynamo/convert_frame.py:2061] [7/8]    last reason: 7/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:27:36.040000 3404117 torch/_dynamo/convert_frame.py:2061] [7/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:27:36.040000 3404117 torch/_dynamo/convert_frame.py:2061] [7/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:27:36.042000 3404117 torch/_dynamo/convert_frame.py:2061] [8/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:27:36.042000 3404117 torch/_dynamo/convert_frame.py:2061] [8/8]    function: '_epi_right' (/mnt/e/fa_wt_metrics/frame_analytics/dss.py:167)
+W1114 04:27:36.042000 3404117 torch/_dynamo/convert_frame.py:2061] [8/8]    last reason: 8/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:27:36.042000 3404117 torch/_dynamo/convert_frame.py:2061] [8/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:27:36.042000 3404117 torch/_dynamo/convert_frame.py:2061] [8/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   dss.dss (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   dss.dss (3, 1, 193, 181) torch.uint8 {'luma': 'bt709'}: both raise ValueError/ValueError
+ok   dss.dss (3, 1, 193, 181) uint8 {'luma': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.23e-07 y=1.24e-07
+ok   flip.flip (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=8.86e-08 y=9.97e-08
+ok   flip.flip (2, 3, 192, 200) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.77e-07 y=1.04e-07
+ok   flip.flip (2, 3, 192, 200) float32 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.00e-07 y=9.18e-08
+ok   flip.flip (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.09e-16 y=3.01e-16
+ok   flip.flip (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.23e-16 y=3.27e-16
+ok   flip.flip (2, 3, 192, 200) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.55e-16 y=1.71e-16
+ok   flip.flip (2, 3, 192, 200) float64 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.57e-16 y=1.17e-16
+ok   flip.flip (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (2, 3, 192, 200) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (2, 3, 192, 200) uint8 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.16e-04 y=7.92e-05
+ok   flip.flip (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.38e-04 y=1.43e-04
+ok   flip.flip (1, 3, 177, 263) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.74e-05 y=8.02e-05
+ok   flip.flip (1, 3, 177, 263) float32 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.79e-04 y=4.04e-04
+W1114 04:27:40.447000 3404117 torch/_dynamo/convert_frame.py:2061] [9/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:27:40.447000 3404117 torch/_dynamo/convert_frame.py:2061] [9/8]    function: '_fwd_matrix_input' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/flip.py:96)
+W1114 04:27:40.447000 3404117 torch/_dynamo/convert_frame.py:2061] [9/8]    last reason: 9/7: tensor 'mat' dtype mismatch. expected Float, actual Double
+W1114 04:27:40.447000 3404117 torch/_dynamo/convert_frame.py:2061] [9/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:27:40.447000 3404117 torch/_dynamo/convert_frame.py:2061] [9/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:27:40.680000 3404117 torch/_dynamo/convert_frame.py:2061] [13/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:27:40.680000 3404117 torch/_dynamo/convert_frame.py:2061] [13/8]    function: '_fwd_matrix_input' (/mnt/e/fa_wt_metrics/frame_analytics/flip.py:97)
+W1114 04:27:40.680000 3404117 torch/_dynamo/convert_frame.py:2061] [13/8]    last reason: 13/7: tensor 'mat' dtype mismatch. expected Float, actual Double
+W1114 04:27:40.680000 3404117 torch/_dynamo/convert_frame.py:2061] [13/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:27:40.680000 3404117 torch/_dynamo/convert_frame.py:2061] [13/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   flip.flip (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.90e-16 y=3.67e-16
+ok   flip.flip (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.65e-16 y=3.17e-16
+ok   flip.flip (1, 3, 177, 263) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.06e-16 y=3.32e-16
+ok   flip.flip (1, 3, 177, 263) float64 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.28e-16 y=3.04e-16
+ok   flip.flip (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 177, 263) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 177, 263) uint8 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.34e-04 y=1.54e-04
+ok   flip.flip (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.63e-04 y=1.46e-04
+ok   flip.flip (1, 3, 540, 720) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.18e-04 y=1.13e-04
+ok   flip.flip (1, 3, 540, 720) float32 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.77e-04 y=2.38e-04
+ok   flip.flip (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 540, 720) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   flip.flip (1, 3, 540, 720) uint8 {'ppd': 30.0, 'exposure': 0.5}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) float32 {}: out abs=5.07e-10 rel=5.79e-10 grad rel x=2.46e-07 y=2.53e-07
+ok   fsim.fsim (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=3.61e-10 rel=4.12e-10 grad rel x=4.82e-07 y=3.78e-07
+ok   fsim.fsim (2, 3, 192, 200) float32 {'return_map': True}: out abs=2.38e-07 rel=2.38e-07 grad rel x=1.26e-07 y=2.14e-07
+ok   fsim.fsim (2, 3, 192, 200) float32 {'luma': 'bt709'}: out abs=8.42e-10 rel=9.68e-10 grad rel x=5.50e-07 y=2.42e-07
+ok   fsim.fsim (2, 3, 192, 200) float32 {'pc_mode': 'chunked'}: out abs=5.65e-10 rel=6.46e-10 grad rel x=1.26e-07 y=2.50e-07
+ok   fsim.fsim (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.27e-16 y=2.77e-16
+ok   fsim.fsim (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=1.11e-16 rel=1.27e-16 grad rel x=2.03e-15 y=1.50e-15
+ok   fsim.fsim (2, 3, 192, 200) float64 {'return_map': True}: out abs=4.44e-16 rel=4.44e-16 grad rel x=3.82e-16 y=1.79e-16
+ok   fsim.fsim (2, 3, 192, 200) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.52e-16 y=6.93e-16
+ok   fsim.fsim (2, 3, 192, 200) float64 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.54e-15 y=9.47e-16
+ok   fsim.fsim (2, 3, 192, 200) uint8 {}: out abs=6.35e-11 rel=7.26e-11 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=3.43e-10 rel=3.91e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) uint8 {'return_map': True}: out abs=2.38e-07 rel=2.38e-07 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) uint8 {'luma': 'bt709'}: out abs=1.91e-10 rel=2.20e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (2, 3, 192, 200) uint8 {'pc_mode': 'chunked'}: out abs=7.03e-11 rel=8.03e-11 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) float32 {}: out abs=6.10e-10 rel=6.90e-10 grad rel x=5.43e-08 y=6.11e-08
+ok   fsim.fsim (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=2.28e-10 rel=2.59e-10 grad rel x=7.93e-08 y=2.03e-07
+ok   fsim.fsim (1, 3, 177, 263) float32 {'return_map': True}: out abs=2.38e-07 rel=2.38e-07 grad rel x=1.27e-07 y=8.94e-08
+ok   fsim.fsim (1, 3, 177, 263) float32 {'luma': 'bt709'}: out abs=1.74e-10 rel=1.98e-10 grad rel x=1.14e-07 y=3.58e-07
+ok   fsim.fsim (1, 3, 177, 263) float32 {'pc_mode': 'chunked'}: out abs=1.15e-09 rel=1.30e-09 grad rel x=2.67e-06 y=3.85e-06
+W1114 04:27:43.159000 3404117 torch/_dynamo/convert_frame.py:2061] [18/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:27:43.159000 3404117 torch/_dynamo/convert_frame.py:2061] [18/8]    function: '_pc_orient_block' (/mnt/e/fa_wt_metrics/frame_analytics/fsim.py:178)
+W1114 04:27:43.159000 3404117 torch/_dynamo/convert_frame.py:2061] [18/8]    last reason: 18/7: tensor 'vr' dtype mismatch. expected Float, actual Double
+W1114 04:27:43.159000 3404117 torch/_dynamo/convert_frame.py:2061] [18/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:27:43.159000 3404117 torch/_dynamo/convert_frame.py:2061] [18/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   fsim.fsim (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.62e-16 y=3.48e-16
+ok   fsim.fsim (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.10e-16 y=8.41e-17
+ok   fsim.fsim (1, 3, 177, 263) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.79e-16 y=1.32e-16
+ok   fsim.fsim (1, 3, 177, 263) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.87e-16 y=2.47e-16
+ok   fsim.fsim (1, 3, 177, 263) float64 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.02e-16 y=1.69e-16
+ok   fsim.fsim (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 177, 263) uint8 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) float32 {}: out abs=1.11e-10 rel=1.19e-10 grad rel x=2.46e-07 y=2.11e-07
+ok   fsim.fsim (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=5.76e-11 rel=6.20e-11 grad rel x=8.37e-08 y=1.57e-07
+ok   fsim.fsim (1, 3, 540, 720) float32 {'return_map': True}: out abs=2.38e-07 rel=2.38e-07 grad rel x=1.38e-07 y=1.39e-07
+ok   fsim.fsim (1, 3, 540, 720) float32 {'luma': 'bt709'}: out abs=9.40e-11 rel=1.02e-10 grad rel x=1.55e-07 y=1.49e-07
+ok   fsim.fsim (1, 3, 540, 720) float32 {'pc_mode': 'chunked'}: out abs=4.18e-11 rel=4.50e-11 grad rel x=1.24e-07 y=2.76e-07
+ok   fsim.fsim (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (1, 3, 540, 720) uint8 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) float32 {}: out abs=1.13e-10 rel=1.32e-10 grad rel x=1.01e-06 y=7.61e-07
+ok   fsim.fsim (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=7.07e-10 rel=8.27e-10 grad rel x=2.22e-07 y=1.87e-07
+ok   fsim.fsim (3, 1, 193, 181) float32 {'return_map': True}: out abs=2.38e-07 rel=2.38e-07 grad rel x=1.58e-07 y=1.65e-07
+ok   fsim.fsim (3, 1, 193, 181) float32 {'luma': 'bt709'}: out abs=5.92e-11 rel=6.94e-11 grad rel x=1.08e-06 y=1.06e-06
+ok   fsim.fsim (3, 1, 193, 181) float32 {'pc_mode': 'chunked'}: out abs=2.44e-10 rel=2.86e-10 grad rel x=1.02e-06 y=6.51e-07
+ok   fsim.fsim (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.62e-16 y=2.06e-16
+ok   fsim.fsim (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.65e-16 y=1.24e-16
+ok   fsim.fsim (3, 1, 193, 181) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.12e-16 y=1.46e-16
+ok   fsim.fsim (3, 1, 193, 181) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.54e-16 y=2.10e-16
+ok   fsim.fsim (3, 1, 193, 181) float64 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.51e-16 y=2.06e-16
+W1114 04:27:44.471000 3404117 torch/_dynamo/convert_frame.py:2061] [17/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:27:44.471000 3404117 torch/_dynamo/convert_frame.py:2061] [17/8]    function: '_epi_gray' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/fsim.py:249)
+W1114 04:27:44.471000 3404117 torch/_dynamo/convert_frame.py:2061] [17/8]    last reason: 17/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:27:44.471000 3404117 torch/_dynamo/convert_frame.py:2061] [17/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:27:44.471000 3404117 torch/_dynamo/convert_frame.py:2061] [17/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:27:44.475000 3404117 torch/_dynamo/convert_frame.py:2061] [19/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:27:44.475000 3404117 torch/_dynamo/convert_frame.py:2061] [19/8]    function: '_epi_gray' (/mnt/e/fa_wt_metrics/frame_analytics/fsim.py:254)
+W1114 04:27:44.475000 3404117 torch/_dynamo/convert_frame.py:2061] [19/8]    last reason: 19/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:27:44.475000 3404117 torch/_dynamo/convert_frame.py:2061] [19/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:27:44.475000 3404117 torch/_dynamo/convert_frame.py:2061] [19/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   fsim.fsim (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsim (3, 1, 193, 181) uint8 {'pc_mode': 'chunked'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (2, 3, 192, 200) float32 {}: out abs=6.08e-10 rel=7.03e-10 grad rel x=1.08e-06 y=4.50e-07
+ok   fsim.fsimc (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=4.91e-10 rel=5.67e-10 grad rel x=1.28e-07 y=7.51e-08
+ok   fsim.fsimc (2, 3, 192, 200) float32 {'return_map': True}: out abs=2.38e-07 rel=2.38e-07 grad rel x=2.20e-07 y=1.09e-07
+ok   fsim.fsimc (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.19e-17 y=4.44e-18
+ok   fsim.fsimc (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=1.11e-16 rel=1.28e-16 grad rel x=4.82e-16 y=2.47e-16
+ok   fsim.fsimc (2, 3, 192, 200) float64 {'return_map': True}: out abs=4.44e-16 rel=4.44e-16 grad rel x=8.90e-17 y=1.91e-16
+ok   fsim.fsimc (2, 3, 192, 200) uint8 {}: out abs=5.93e-11 rel=6.84e-11 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=3.93e-10 rel=4.53e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (2, 3, 192, 200) uint8 {'return_map': True}: out abs=2.38e-07 rel=2.38e-07 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 177, 263) float32 {}: out abs=4.23e-10 rel=4.83e-10 grad rel x=1.35e-07 y=2.48e-07
+ok   fsim.fsimc (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=7.07e-10 rel=8.09e-10 grad rel x=2.68e-07 y=2.41e-07
+ok   fsim.fsimc (1, 3, 177, 263) float32 {'return_map': True}: out abs=2.38e-07 rel=2.38e-07 grad rel x=3.96e-07 y=2.22e-07
+ok   fsim.fsimc (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.14e-16 y=1.26e-16
+ok   fsim.fsimc (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.07e-16 y=5.62e-17
+ok   fsim.fsimc (1, 3, 177, 263) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.68e-16 y=2.48e-16
+ok   fsim.fsimc (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 177, 263) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 540, 720) float32 {}: out abs=4.08e-11 rel=4.40e-11 grad rel x=1.63e-07 y=6.49e-07
+ok   fsim.fsimc (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=1.31e-10 rel=1.42e-10 grad rel x=2.78e-06 y=3.95e-06
+ok   fsim.fsimc (1, 3, 540, 720) float32 {'return_map': True}: out abs=2.38e-07 rel=2.38e-07 grad rel x=1.85e-07 y=5.93e-07
+ok   fsim.fsimc (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   fsim.fsimc (1, 3, 540, 720) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) float32 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) float64 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) uint8 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (2, 3, 192, 200) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) float32 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) float64 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) uint8 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 177, 263) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 540, 720) float32 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 540, 720) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 540, 720) uint8 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (1, 3, 540, 720) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) float32 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) float64 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:27:55.613000 3404117 torch/_dynamo/convert_frame.py:2061] [24/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:27:55.613000 3404117 torch/_dynamo/convert_frame.py:2061] [24/8]    function: '_epilogue_gray' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/haarpsi.py:118)
+W1114 04:27:55.613000 3404117 torch/_dynamo/convert_frame.py:2061] [24/8]    last reason: 24/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:27:55.613000 3404117 torch/_dynamo/convert_frame.py:2061] [24/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:27:55.613000 3404117 torch/_dynamo/convert_frame.py:2061] [24/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:27:55.617000 3404117 torch/_dynamo/convert_frame.py:2061] [25/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:27:55.617000 3404117 torch/_dynamo/convert_frame.py:2061] [25/8]    function: '_epilogue_gray' (/mnt/e/fa_wt_metrics/frame_analytics/haarpsi.py:124)
+W1114 04:27:55.617000 3404117 torch/_dynamo/convert_frame.py:2061] [25/8]    last reason: 25/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:27:55.617000 3404117 torch/_dynamo/convert_frame.py:2061] [25/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:27:55.617000 3404117 torch/_dynamo/convert_frame.py:2061] [25/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   haarpsi.haarpsi (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) uint8 {'subsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   haarpsi.haarpsi (3, 1, 193, 181) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {}: out abs=3.25e-10 rel=3.87e-10 grad rel x=2.53e-04 y=1.63e-06
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=1.61e-09 rel=1.91e-09 grad rel x=1.71e-04 y=1.79e-06
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {'parent': False}: out abs=1.19e-09 rel=1.42e-09 grad rel x=2.35e-04 y=1.61e-06
+ok   iwssim.iw_ssim (2, 3, 192, 200) float32 {'luma': 'bt601'}: out abs=1.02e-09 rel=1.15e-09 grad rel x=9.96e-05 y=1.95e-06
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.88e-13 y=3.02e-15
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.95e-13 y=2.55e-15
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {'parent': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.77e-13 y=3.47e-15
+ok   iwssim.iw_ssim (2, 3, 192, 200) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.14e-13 y=3.26e-15
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {}: out abs=1.89e-09 rel=2.25e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=2.38e-09 rel=2.81e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:28:06.426000 3404117 torch/_dynamo/convert_frame.py:2061] [30/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:06.426000 3404117 torch/_dynamo/convert_frame.py:2061] [30/8]    function: '_iw_epi_planes' (/mnt/e/fa_wt_metrics/frame_analytics/iwssim.py:136)
+W1114 04:28:06.426000 3404117 torch/_dynamo/convert_frame.py:2061] [30/8]    last reason: 30/7: ___check_obj_id(terms_fn.__code__, 140550422624400), type=<class 'code'>  # for m in terms_fn(t, C, shift, C1, C2, Cw, sigma_nsq))  # nt/e/fa_wt_metrics/frame_analytics/iwssim.py:139 in _iw_epi_planes
+W1114 04:28:06.426000 3404117 torch/_dynamo/convert_frame.py:2061] [30/8] User stack trace:
+W1114 04:28:06.426000 3404117 torch/_dynamo/convert_frame.py:2061] [30/8]   File "/mnt/e/fa_wt_metrics/frame_analytics/iwssim.py", line 139, in _iw_epi_planes
+W1114 04:28:06.426000 3404117 torch/_dynamo/convert_frame.py:2061] [30/8]     for m in terms_fn(t, C, shift, C1, C2, Cw, sigma_nsq))
+W1114 04:28:06.426000 3404117 torch/_dynamo/convert_frame.py:2061] [30/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:06.426000 3404117 torch/_dynamo/convert_frame.py:2061] [30/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {'weight_mode': 'log'}: out abs=1.47e-09 rel=1.59e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {'weight_mode': 'uniform'}: out abs=3.09e-09 rel=3.36e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {'parent': False}: out abs=9.65e-10 rel=1.15e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (2, 3, 192, 200) uint8 {'luma': 'bt601'}: out abs=4.90e-09 rel=5.52e-09 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:28:06.690000 3404117 torch/_dynamo/convert_frame.py:2061] [26/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:06.690000 3404117 torch/_dynamo/convert_frame.py:2061] [26/8]    function: '_pack_planes' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/iwssim.py:69)
+W1114 04:28:06.690000 3404117 torch/_dynamo/convert_frame.py:2061] [26/8]    last reason: 26/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:28:06.690000 3404117 torch/_dynamo/convert_frame.py:2061] [26/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:06.690000 3404117 torch/_dynamo/convert_frame.py:2061] [26/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:28:06.746000 3404117 torch/_dynamo/convert_frame.py:2061] [27/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:06.746000 3404117 torch/_dynamo/convert_frame.py:2061] [27/8]    function: '_pack_planes' (/mnt/e/fa_wt_metrics/frame_analytics/iwssim.py:70)
+W1114 04:28:06.746000 3404117 torch/_dynamo/convert_frame.py:2061] [27/8]    last reason: 27/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:28:06.746000 3404117 torch/_dynamo/convert_frame.py:2061] [27/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:06.746000 3404117 torch/_dynamo/convert_frame.py:2061] [27/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {}: out abs=7.90e-10 rel=9.48e-10 grad rel x=7.25e-05 y=1.82e-06
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {'reduction': 'none'}: out abs=2.59e-09 rel=3.12e-09 grad rel x=9.73e-05 y=1.49e-06
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {'weight_mode': 'ratio'}: out abs=2.77e-09 rel=3.02e-09 grad rel x=2.00e-06 y=2.41e-06
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {'weight_mode': 'log'}: out abs=5.65e-09 rel=6.18e-09 grad rel x=2.13e-06 y=2.47e-06
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {'weight_mode': 'uniform'}: out abs=7.35e-09 rel=8.06e-09 grad rel x=1.92e-06 y=2.60e-06
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {'parent': False}: out abs=1.55e-09 rel=1.87e-09 grad rel x=2.99e-04 y=1.53e-06
+ok   iwssim.iw_ssim (1, 3, 181, 263) float32 {'luma': 'bt601'}: out abs=1.66e-09 rel=1.88e-09 grad rel x=3.01e-04 y=2.07e-06
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.08e-13 y=2.60e-15
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.36e-13 y=2.38e-15
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {'weight_mode': 'ratio'}: out abs=1.11e-16 rel=1.21e-16 grad rel x=5.15e-15 y=4.75e-15
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.36e-15 y=4.48e-15
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.64e-15 y=5.38e-15
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {'parent': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.07e-13 y=3.43e-15
+W1114 04:28:09.898000 3404117 torch/_dynamo/convert_frame.py:2061] [28/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:09.898000 3404117 torch/_dynamo/convert_frame.py:2061] [28/8]    function: '_gsm_iw_epilogue' (/mnt/e/fa_wt_metrics/frame_analytics/iwssim.py:286)
+W1114 04:28:09.898000 3404117 torch/_dynamo/convert_frame.py:2061] [28/8]    last reason: 28/3: tensor 'Yt' size mismatch at index 1. expected 9, actual 10
+W1114 04:28:09.898000 3404117 torch/_dynamo/convert_frame.py:2061] [28/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:09.898000 3404117 torch/_dynamo/convert_frame.py:2061] [28/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   iwssim.iw_ssim (1, 3, 181, 263) float64 {'luma': 'bt601'}: out abs=1.11e-16 rel=1.27e-16 grad rel x=2.16e-13 y=4.70e-15
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {}: out abs=1.27e-09 rel=1.52e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {'reduction': 'none'}: out abs=9.94e-10 rel=1.20e-09 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:28:09.958000 3404117 torch/_dynamo/convert_frame.py:2061] [29/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:09.958000 3404117 torch/_dynamo/convert_frame.py:2061] [29/8]    function: '_iw_epi_ratio' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/iwssim.py:103)
+W1114 04:28:09.958000 3404117 torch/_dynamo/convert_frame.py:2061] [29/8]    last reason: 29/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:28:09.958000 3404117 torch/_dynamo/convert_frame.py:2061] [29/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:09.958000 3404117 torch/_dynamo/convert_frame.py:2061] [29/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:28:10.031000 3404117 torch/_dynamo/convert_frame.py:2061] [31/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:10.031000 3404117 torch/_dynamo/convert_frame.py:2061] [31/8]    function: '_iw_epi_log' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/iwssim.py:126)
+W1114 04:28:10.031000 3404117 torch/_dynamo/convert_frame.py:2061] [31/8]    last reason: 31/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:28:10.031000 3404117 torch/_dynamo/convert_frame.py:2061] [31/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:10.031000 3404117 torch/_dynamo/convert_frame.py:2061] [31/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:28:10.036000 3404117 torch/_dynamo/convert_frame.py:2061] [32/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:10.036000 3404117 torch/_dynamo/convert_frame.py:2061] [32/8]    function: '_iw_epi_plain' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/iwssim.py:149)
+W1114 04:28:10.036000 3404117 torch/_dynamo/convert_frame.py:2061] [32/8]    last reason: 32/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:28:10.036000 3404117 torch/_dynamo/convert_frame.py:2061] [32/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:10.036000 3404117 torch/_dynamo/convert_frame.py:2061] [32/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {'parent': False}: out abs=5.00e-09 rel=6.00e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 3, 181, 263) uint8 {'luma': 'bt601'}: out abs=2.15e-09 rel=2.44e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float32 {}: out abs=1.14e-09 rel=1.38e-09 grad rel x=4.60e-05 y=1.80e-06
+ok   iwssim.iw_ssim (1, 1, 256, 256) float32 {'reduction': 'none'}: out abs=3.59e-10 rel=4.34e-10 grad rel x=4.63e-05 y=1.80e-06
+ok   iwssim.iw_ssim (1, 1, 256, 256) float32 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float32 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float32 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float32 {'parent': False}: out abs=1.29e-09 rel=1.55e-09 grad rel x=4.22e-05 y=1.65e-06
+ok   iwssim.iw_ssim (1, 1, 256, 256) torch.float32 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   iwssim.iw_ssim (1, 1, 256, 256) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.18e-13 y=1.72e-15
+ok   iwssim.iw_ssim (1, 1, 256, 256) float64 {'reduction': 'none'}: out abs=1.11e-16 rel=1.33e-16 grad rel x=9.52e-14 y=2.72e-15
+ok   iwssim.iw_ssim (1, 1, 256, 256) float64 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float64 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float64 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) float64 {'parent': False}: out abs=2.22e-16 rel=2.68e-16 grad rel x=4.14e-14 y=3.23e-15
+ok   iwssim.iw_ssim (1, 1, 256, 256) torch.float64 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   iwssim.iw_ssim (1, 1, 256, 256) uint8 {}: out abs=3.80e-10 rel=4.58e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) uint8 {'reduction': 'none'}: out abs=4.27e-10 rel=5.17e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) uint8 {'weight_mode': 'ratio'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) uint8 {'weight_mode': 'log'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) uint8 {'weight_mode': 'uniform'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) uint8 {'parent': False}: out abs=1.97e-09 rel=2.38e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   iwssim.iw_ssim (1, 1, 256, 256) torch.uint8 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   mdsi.mdsi (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float32 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float32 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float64 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) float64 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) uint8 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (2, 3, 192, 200) uint8 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float32 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float32 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float64 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) float64 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) uint8 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 177, 263) uint8 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) float32 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) float32 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) uint8 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (1, 3, 540, 720) uint8 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float32 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float32 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:28:19.326000 3404117 torch/_dynamo/convert_frame.py:2061] [35/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:19.326000 3404117 torch/_dynamo/convert_frame.py:2061] [35/8]    function: '_gcs_tail' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/mdsi.py:159)
+W1114 04:28:19.326000 3404117 torch/_dynamo/convert_frame.py:2061] [35/8]    last reason: 35/7: tensor 'xl' dtype mismatch. expected Float, actual Double
+W1114 04:28:19.326000 3404117 torch/_dynamo/convert_frame.py:2061] [35/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:19.326000 3404117 torch/_dynamo/convert_frame.py:2061] [35/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:28:19.329000 3404117 torch/_dynamo/convert_frame.py:2061] [36/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:19.329000 3404117 torch/_dynamo/convert_frame.py:2061] [36/8]    function: '_pool_sum' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/mdsi.py:199)
+W1114 04:28:19.329000 3404117 torch/_dynamo/convert_frame.py:2061] [36/8]    last reason: 36/7: tensor 'g' dtype mismatch. expected Float, actual Double
+W1114 04:28:19.329000 3404117 torch/_dynamo/convert_frame.py:2061] [36/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:19.329000 3404117 torch/_dynamo/convert_frame.py:2061] [36/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:28:19.335000 3404117 torch/_dynamo/convert_frame.py:2061] [37/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:19.335000 3404117 torch/_dynamo/convert_frame.py:2061] [37/8]    function: '_gcs_tail' (/mnt/e/fa_wt_metrics/frame_analytics/mdsi.py:159)
+W1114 04:28:19.335000 3404117 torch/_dynamo/convert_frame.py:2061] [37/8]    last reason: 37/7: tensor 'xl' dtype mismatch. expected Float, actual Double
+W1114 04:28:19.335000 3404117 torch/_dynamo/convert_frame.py:2061] [37/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:19.335000 3404117 torch/_dynamo/convert_frame.py:2061] [37/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:28:19.337000 3404117 torch/_dynamo/convert_frame.py:2061] [38/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:19.337000 3404117 torch/_dynamo/convert_frame.py:2061] [38/8]    function: '_pool_sum' (/mnt/e/fa_wt_metrics/frame_analytics/mdsi.py:199)
+W1114 04:28:19.337000 3404117 torch/_dynamo/convert_frame.py:2061] [38/8]    last reason: 38/7: tensor 'g' dtype mismatch. expected Float, actual Double
+W1114 04:28:19.337000 3404117 torch/_dynamo/convert_frame.py:2061] [38/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:19.337000 3404117 torch/_dynamo/convert_frame.py:2061] [38/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   mdsi.mdsi (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float64 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) float64 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) uint8 {'combination': 'mult'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   mdsi.mdsi (3, 1, 193, 181) uint8 {'gradient': 'sobel', 'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float64 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (2, 3, 192, 200) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:28:21.431000 3404117 torch/_dynamo/convert_frame.py:2061] [39/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:21.431000 3404117 torch/_dynamo/convert_frame.py:2061] [39/8]    function: '_gmsd_epilogue' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/ms_gmsd.py:98)
+W1114 04:28:21.431000 3404117 torch/_dynamo/convert_frame.py:2061] [39/8]    last reason: 39/7: (g.size()[0] + (-1)*(g.size()[0] // 2)) != 1  # g2 = torch.sqrt((gb * gb).sum(dim=1) + eps)  # .cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/ms_gmsd.py:108 in _gmsd_epilogue (_subclasses/fake_impls.py:2436 in infer_size)
+W1114 04:28:21.431000 3404117 torch/_dynamo/convert_frame.py:2061] [39/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:21.431000 3404117 torch/_dynamo/convert_frame.py:2061] [39/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:28:21.436000 3404117 torch/_dynamo/convert_frame.py:2061] [40/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:21.436000 3404117 torch/_dynamo/convert_frame.py:2061] [40/8]    function: '_gmsd_epilogue_fused' (/mnt/e/fa_wt_metrics/frame_analytics/ms_gmsd.py:114)
+W1114 04:28:21.436000 3404117 torch/_dynamo/convert_frame.py:2061] [40/8]    last reason: 40/7: (g.size()[0] + (-1)*(g.size()[0] // 2)) != 1  # g2 = torch.sqrt((gb * gb).sum(dim=1) + eps)  # nt/e/fa_wt_metrics/frame_analytics/ms_gmsd.py:109 in _gms_quotient64 (_subclasses/fake_impls.py:2436 in infer_size)
+W1114 04:28:21.436000 3404117 torch/_dynamo/convert_frame.py:2061] [40/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:21.436000 3404117 torch/_dynamo/convert_frame.py:2061] [40/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float64 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) float64 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) uint8 {'downsample': False}: out abs=3.91e-10 rel=4.85e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 177, 263) uint8 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=6.94e-18 rel=1.60e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) float32 {'luma': 'bt709'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) uint8 {}: out abs=1.82e-10 rel=4.23e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=2.79e-10 rel=6.49e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) uint8 {'downsample': False}: out abs=3.35e-10 rel=3.70e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (1, 3, 540, 720) uint8 {'luma': 'bt709'}: out abs=4.47e-10 rel=1.45e-08 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) float32 {}: out abs=9.73e-10 rel=3.08e-08 grad rel x=5.57e-07 y=3.33e-07
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=1.02e-09 rel=3.18e-08 grad rel x=2.83e-07 y=2.78e-07
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) float32 {'downsample': False}: out abs=3.60e-10 rel=4.62e-09 grad rel x=2.46e-07 y=3.37e-07
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) torch.float32 {'luma': 'bt709'}: both raise ValueError/ValueError
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) float64 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) torch.float64 {'luma': 'bt709'}: both raise ValueError/ValueError
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) uint8 {}: out abs=8.26e-11 rel=2.74e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=6.10e-10 rel=1.97e-08 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) uint8 {'downsample': False}: out abs=1.46e-10 rel=1.89e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   ms_gmsd.ms_gmsd (3, 1, 193, 181) torch.uint8 {'luma': 'bt709'}: both raise ValueError/ValueError
+ok   nlpd.nlpd (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=7.46e-08 y=3.47e-08
+ok   nlpd.nlpd (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.50e-08 y=5.20e-08
+ok   nlpd.nlpd (2, 3, 192, 200) float32 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.58e-08 y=3.99e-08
+ok   nlpd.nlpd (2, 3, 192, 200) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.13e-07 y=5.95e-08
+ok   nlpd.nlpd (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.59e-16 y=3.03e-16
+ok   nlpd.nlpd (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.06e-16 y=1.87e-16
+ok   nlpd.nlpd (2, 3, 192, 200) float64 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.33e-17 y=1.13e-16
+ok   nlpd.nlpd (2, 3, 192, 200) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.73e-17 y=8.18e-17
+ok   nlpd.nlpd (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) uint8 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (2, 3, 192, 200) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.72e-08 y=9.31e-08
+ok   nlpd.nlpd (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.83e-07 y=4.48e-08
+ok   nlpd.nlpd (1, 3, 177, 263) float32 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=8.76e-08 y=4.61e-08
+W1114 04:28:25.354000 3404117 torch/_dynamo/convert_frame.py:2061] [44/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:25.354000 3404117 torch/_dynamo/convert_frame.py:2061] [44/8]    function: '_dn_sq_diff' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/nlpd.py:135)
+W1114 04:28:25.354000 3404117 torch/_dynamo/convert_frame.py:2061] [44/8]    last reason: 44/7: 2 <= zx.size()[1]  # d = zx / denx - zy / deny  # .cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/nlpd.py:137 in _dn_sq_diff (user code shown is first use of this value--the guard itself is not due user code but due to 0/1 specialization in the framework; to avoid specialization try torch._dynamo.decorators.mark_unbacked(tensor, dim))
+W1114 04:28:25.354000 3404117 torch/_dynamo/convert_frame.py:2061] [44/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:25.354000 3404117 torch/_dynamo/convert_frame.py:2061] [44/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:28:25.363000 3404117 torch/_dynamo/convert_frame.py:2061] [45/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:25.363000 3404117 torch/_dynamo/convert_frame.py:2061] [45/8]    function: '_dn_sq_diff' (/mnt/e/fa_wt_metrics/frame_analytics/nlpd.py:135)
+W1114 04:28:25.363000 3404117 torch/_dynamo/convert_frame.py:2061] [45/8]    last reason: 45/7: 2 <= zx.size()[1]  # d = zx / denx - zy / deny  # nt/e/fa_wt_metrics/frame_analytics/nlpd.py:137 in _dn_sq_diff (user code shown is first use of this value--the guard itself is not due user code but due to 0/1 specialization in the framework; to avoid specialization try torch._dynamo.decorators.mark_unbacked(tensor, dim))
+W1114 04:28:25.363000 3404117 torch/_dynamo/convert_frame.py:2061] [45/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:25.363000 3404117 torch/_dynamo/convert_frame.py:2061] [45/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   nlpd.nlpd (1, 3, 177, 263) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.41e-08 y=6.98e-08
+ok   nlpd.nlpd (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.23e-16 y=1.18e-16
+ok   nlpd.nlpd (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.34e-16 y=1.35e-16
+ok   nlpd.nlpd (1, 3, 177, 263) float64 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.40e-16 y=1.74e-16
+ok   nlpd.nlpd (1, 3, 177, 263) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.65e-17 y=1.04e-16
+ok   nlpd.nlpd (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) uint8 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 177, 263) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.27e-07 y=1.19e-07
+ok   nlpd.nlpd (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.97e-08 y=1.09e-07
+ok   nlpd.nlpd (1, 3, 540, 720) float32 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=7.22e-08 y=8.68e-08
+ok   nlpd.nlpd (1, 3, 540, 720) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.77e-08 y=1.44e-07
+ok   nlpd.nlpd (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 540, 720) uint8 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (1, 3, 540, 720) uint8 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.61e-08 y=7.46e-08
+ok   nlpd.nlpd (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.24e-08 y=1.08e-07
+ok   nlpd.nlpd (3, 1, 193, 181) float32 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.67e-08 y=6.32e-08
+ok   nlpd.nlpd (3, 1, 193, 181) torch.float32 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   nlpd.nlpd (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.73e-16 y=9.96e-17
+ok   nlpd.nlpd (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.71e-16 y=1.27e-16
+ok   nlpd.nlpd (3, 1, 193, 181) float64 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.22e-17 y=1.06e-16
+ok   nlpd.nlpd (3, 1, 193, 181) torch.float64 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   nlpd.nlpd (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) uint8 {'scales': 3}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   nlpd.nlpd (3, 1, 193, 181) torch.uint8 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   psnrhvs.psnr_hvs (2, 3, 192, 200) float32 {}: out abs=2.91e-08 rel=1.19e-09 grad rel x=5.73e-07 y=5.73e-07
+ok   psnrhvs.psnr_hvs (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=2.94e-08 rel=1.20e-09 grad rel x=5.39e-07 y=5.39e-07
+ok   psnrhvs.psnr_hvs (2, 3, 192, 200) float64 {}: out abs=8.94e-09 rel=3.65e-10 grad rel x=6.72e-07 y=6.72e-07
+ok   psnrhvs.psnr_hvs (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=3.04e-08 rel=1.24e-09 grad rel x=7.50e-07 y=7.50e-07
+ok   psnrhvs.psnr_hvs (2, 3, 192, 200) uint8 {}: out abs=2.57e-08 rel=1.05e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=7.60e-09 rel=3.10e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 177, 263) float32 {}: out abs=1.08e-08 rel=4.39e-10 grad rel x=5.01e-07 y=5.01e-07
+ok   psnrhvs.psnr_hvs (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=1.12e-08 rel=4.58e-10 grad rel x=5.23e-07 y=5.23e-07
+ok   psnrhvs.psnr_hvs (1, 3, 177, 263) float64 {}: out abs=3.24e-08 rel=1.32e-09 grad rel x=4.36e-07 y=4.36e-07
+ok   psnrhvs.psnr_hvs (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=1.42e-08 rel=5.80e-10 grad rel x=4.46e-07 y=4.46e-07
+ok   psnrhvs.psnr_hvs (1, 3, 177, 263) uint8 {}: out abs=1.31e-08 rel=5.35e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=3.45e-08 rel=1.41e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 540, 720) float32 {}: out abs=1.90e-08 rel=7.74e-10 grad rel x=5.55e-07 y=5.55e-07
+ok   psnrhvs.psnr_hvs (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=9.86e-09 rel=4.02e-10 grad rel x=6.62e-07 y=6.62e-07
+ok   psnrhvs.psnr_hvs (1, 3, 540, 720) uint8 {}: out abs=1.57e-08 rel=6.40e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=1.55e-08 rel=6.30e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (3, 1, 193, 181) float32 {}: out abs=1.08e-08 rel=4.40e-10 grad rel x=4.53e-07 y=4.53e-07
+ok   psnrhvs.psnr_hvs (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=2.16e-08 rel=8.78e-10 grad rel x=5.21e-07 y=5.21e-07
+ok   psnrhvs.psnr_hvs (3, 1, 193, 181) float64 {}: out abs=7.34e-09 rel=2.99e-10 grad rel x=5.12e-07 y=5.12e-07
+ok   psnrhvs.psnr_hvs (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=2.28e-08 rel=9.26e-10 grad rel x=6.01e-07 y=6.01e-07
+ok   psnrhvs.psnr_hvs (3, 1, 193, 181) uint8 {}: out abs=1.61e-08 rel=6.55e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=3.79e-08 rel=1.54e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (2, 3, 192, 200) float32 {}: out abs=1.57e-07 rel=5.76e-09 grad rel x=4.69e-06 y=4.78e-06
+FAIL psnrhvs.psnr_hvs_m (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=4.59e-07 rel=1.68e-08 grad rel x=6.05e-02 y=4.19e-02
+ok   psnrhvs.psnr_hvs_m (2, 3, 192, 200) float64 {}: out abs=1.22e-07 rel=4.48e-09 grad rel x=5.65e-06 y=6.01e-06
+ok   psnrhvs.psnr_hvs_m (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=4.29e-07 rel=1.57e-08 grad rel x=4.88e-06 y=5.37e-06
+ok   psnrhvs.psnr_hvs_m (2, 3, 192, 200) uint8 {}: out abs=6.12e-09 rel=2.24e-10 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=3.79e-07 rel=1.39e-08 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 177, 263) float32 {}: out abs=4.38e-07 rel=1.61e-08 grad rel x=5.84e-06 y=6.00e-06
+ok   psnrhvs.psnr_hvs_m (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=2.96e-07 rel=1.09e-08 grad rel x=4.39e-06 y=4.90e-06
+ok   psnrhvs.psnr_hvs_m (1, 3, 177, 263) float64 {}: out abs=2.27e-07 rel=8.34e-09 grad rel x=5.85e-06 y=6.06e-06
+ok   psnrhvs.psnr_hvs_m (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=4.47e-07 rel=1.65e-08 grad rel x=5.96e-06 y=5.60e-06
+ok   psnrhvs.psnr_hvs_m (1, 3, 177, 263) uint8 {}: out abs=2.10e-07 rel=7.72e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=1.16e-07 rel=4.26e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 540, 720) float32 {}: out abs=9.21e-08 rel=3.41e-09 grad rel x=5.08e-06 y=5.55e-06
+ok   psnrhvs.psnr_hvs_m (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=1.22e-07 rel=4.52e-09 grad rel x=6.33e-06 y=7.12e-06
+ok   psnrhvs.psnr_hvs_m (1, 3, 540, 720) uint8 {}: out abs=2.26e-07 rel=8.38e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=1.23e-07 rel=4.54e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (3, 1, 193, 181) float32 {}: out abs=3.27e-07 rel=1.20e-08 grad rel x=3.31e-06 y=3.86e-06
+ok   psnrhvs.psnr_hvs_m (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=5.94e-07 rel=2.16e-08 grad rel x=4.77e-06 y=4.96e-06
+ok   psnrhvs.psnr_hvs_m (3, 1, 193, 181) float64 {}: out abs=4.56e-07 rel=1.67e-08 grad rel x=4.15e-06 y=4.13e-06
+ok   psnrhvs.psnr_hvs_m (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=1.40e-06 rel=5.09e-08 grad rel x=5.06e-06 y=5.27e-06
+ok   psnrhvs.psnr_hvs_m (3, 1, 193, 181) uint8 {}: out abs=3.58e-07 rel=1.31e-08 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.psnr_hvs_m (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=5.90e-07 rel=2.16e-08 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.mse_hvs_m (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=3.37e-10 rel=1.81e-07 grad rel x=5.25e-06 y=5.47e-06
+FAIL psnrhvs.mse_hvs_m (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=1.54e-10 rel=8.14e-08 grad rel x=2.37e-02 y=2.75e-02
+ok   psnrhvs.mse_hvs_m (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=7.21e-06 rel=5.90e-08 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.mse_hvs_m (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=1.55e-10 rel=8.12e-08 grad rel x=4.53e-06 y=4.84e-06
+ok   psnrhvs.mse_hvs_m (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=1.41e-10 rel=7.40e-08 grad rel x=6.04e-06 y=6.71e-06
+ok   psnrhvs.mse_hvs_m (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=9.88e-07 rel=7.91e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   psnrhvs.mse_hvs_m (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=3.31e-11 rel=1.67e-08 grad rel x=4.97e-06 y=5.08e-06
+ok   psnrhvs.mse_hvs_m (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=3.87e-06 rel=2.99e-08 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.28e-08 y=1.24e-07
+ok   scielab.scielab (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.56e-08 y=5.43e-08
+ok   scielab.scielab (2, 3, 192, 200) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.05e-07 y=5.46e-08
+ok   scielab.scielab (2, 3, 192, 200) float32 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.74e-07 y=1.08e-07
+ok   scielab.scielab (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.23e-16 y=1.45e-16
+ok   scielab.scielab (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.58e-16 y=1.10e-16
+ok   scielab.scielab (2, 3, 192, 200) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.50e-16 y=1.19e-16
+ok   scielab.scielab (2, 3, 192, 200) float64 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.38e-16 y=2.68e-16
+ok   scielab.scielab (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (2, 3, 192, 200) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (2, 3, 192, 200) uint8 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.27e-05 y=7.98e-05
+ok   scielab.scielab (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.23e-04 y=8.42e-05
+ok   scielab.scielab (1, 3, 177, 263) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.28e-04 y=1.01e-04
+ok   scielab.scielab (1, 3, 177, 263) float32 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.68e-04 y=1.69e-04
+ok   scielab.scielab (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.59e-16 y=1.80e-16
+ok   scielab.scielab (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.43e-16 y=2.84e-16
+ok   scielab.scielab (1, 3, 177, 263) float64 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.03e-16 y=1.97e-16
+ok   scielab.scielab (1, 3, 177, 263) float64 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.81e-16 y=4.50e-16
+ok   scielab.scielab (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 177, 263) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 177, 263) uint8 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=8.91e-05 y=9.63e-05
+ok   scielab.scielab (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.63e-05 y=1.11e-04
+ok   scielab.scielab (1, 3, 540, 720) float32 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.05e-04 y=1.19e-04
+ok   scielab.scielab (1, 3, 540, 720) float32 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.65e-04 y=1.43e-04
+ok   scielab.scielab (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 540, 720) uint8 {'return_map': True}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   scielab.scielab (1, 3, 540, 720) uint8 {'ppd': 60.0}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.36e-07 y=2.57e-07
+ok   srsim.srsim (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.88e-08 y=4.93e-08
+ok   srsim.srsim (2, 3, 192, 200) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.44e-08 y=3.55e-08
+ok   srsim.srsim (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.15e-16 y=1.32e-16
+ok   srsim.srsim (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.80e-16 y=6.45e-17
+ok   srsim.srsim (2, 3, 192, 200) float64 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.82e-17 y=2.21e-16
+ok   srsim.srsim (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (2, 3, 192, 200) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.40e-08 y=5.90e-08
+ok   srsim.srsim (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.47e-07 y=2.35e-07
+ok   srsim.srsim (1, 3, 177, 263) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.33e-07 y=1.22e-07
+ok   srsim.srsim (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.38e-16 y=3.68e-16
+ok   srsim.srsim (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.37e-16 y=2.93e-16
+ok   srsim.srsim (1, 3, 177, 263) float64 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.84e-16 y=2.20e-16
+ok   srsim.srsim (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 177, 263) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=7.74e-08 y=2.02e-07
+ok   srsim.srsim (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.23e-07 y=3.51e-08
+ok   srsim.srsim (1, 3, 540, 720) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.64e-07 y=6.60e-08
+ok   srsim.srsim (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (1, 3, 540, 720) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.13e-07 y=1.61e-07
+ok   srsim.srsim (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=8.96e-08 y=1.06e-07
+ok   srsim.srsim (3, 1, 193, 181) float32 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.01e-07 y=1.28e-07
+ok   srsim.srsim (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=7.65e-17 y=1.83e-16
+ok   srsim.srsim (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.98e-16 y=2.06e-16
+ok   srsim.srsim (3, 1, 193, 181) float64 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.63e-16 y=3.77e-16
+W1114 04:28:39.284000 3404117 torch/_dynamo/convert_frame.py:2061] [58/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:39.284000 3404117 torch/_dynamo/convert_frame.py:2061] [58/8]    function: '_pool_luma' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/srsim.py:143)
+W1114 04:28:39.284000 3404117 torch/_dynamo/convert_frame.py:2061] [58/8]    last reason: 58/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:28:39.284000 3404117 torch/_dynamo/convert_frame.py:2061] [58/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:39.284000 3404117 torch/_dynamo/convert_frame.py:2061] [58/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:28:39.286000 3404117 torch/_dynamo/convert_frame.py:2061] [59/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:39.286000 3404117 torch/_dynamo/convert_frame.py:2061] [59/8]    function: '_pool_luma' (/mnt/e/fa_wt_metrics/frame_analytics/srsim.py:143)
+W1114 04:28:39.286000 3404117 torch/_dynamo/convert_frame.py:2061] [59/8]    last reason: 59/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:28:39.286000 3404117 torch/_dynamo/convert_frame.py:2061] [59/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:39.286000 3404117 torch/_dynamo/convert_frame.py:2061] [59/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   srsim.srsim (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsim (3, 1, 193, 181) uint8 {'downsample': False}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.07e-07 y=2.16e-07
+ok   srsim.srsimc (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.72e-08 y=6.00e-08
+ok   srsim.srsimc (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.13e-17 y=8.85e-18
+ok   srsim.srsimc (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=6.22e-17 y=5.70e-17
+ok   srsim.srsimc (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.32e-07 y=1.90e-07
+ok   srsim.srsimc (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.51e-08 y=3.71e-08
+ok   srsim.srsimc (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.34e-16 y=1.58e-16
+ok   srsim.srsimc (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.30e-16 y=3.34e-17
+ok   srsim.srsimc (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=8.29e-08 y=7.21e-08
+ok   srsim.srsimc (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.77e-07 y=2.15e-07
+ok   srsim.srsimc (1, 3, 540, 720) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   srsim.srsimc (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (2, 3, 192, 200) float32 {'num_scales': 2}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (2, 3, 192, 200) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=9.06e-15 y=1.00e-14
+ok   vifp.vifp (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=1.11e-16 rel=4.21e-16 grad rel x=9.44e-15 y=8.75e-15
+ok   vifp.vifp (2, 3, 192, 200) float64 {'num_scales': 2}: out abs=2.78e-17 rel=1.50e-16 grad rel x=1.79e-14 y=1.20e-14
+ok   vifp.vifp (2, 3, 192, 200) float64 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.52e-15 y=3.71e-15
+ok   vifp.vifp (2, 3, 192, 200) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (2, 3, 192, 200) uint8 {'num_scales': 2}: out abs=2.78e-17 rel=1.50e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (2, 3, 192, 200) uint8 {'luma': 'bt601'}: out abs=5.55e-17 rel=1.80e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) float32 {}: out abs=2.78e-17 rel=1.13e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=2.78e-17 rel=1.12e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) float32 {'num_scales': 2}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:28:49.155000 3404117 torch/_dynamo/convert_frame.py:2061] [63/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:49.155000 3404117 torch/_dynamo/convert_frame.py:2061] [63/8]    function: '_epi_chunk' (/mnt/e/fa_wt_metrics/frame_analytics/vifp.py:96)
+W1114 04:28:49.155000 3404117 torch/_dynamo/convert_frame.py:2061] [63/8]    last reason: 63/7: 2 <= chunk.size()[2]  # d = chunk.to(torch.float64)  # nt/e/fa_wt_metrics/frame_analytics/vifp.py:109 in _epi_chunk (user code shown is first use of this value--the guard itself is not due user code but due to 0/1 specialization in the framework; to avoid specialization try torch._dynamo.decorators.mark_unbacked(tensor, dim))
+W1114 04:28:49.155000 3404117 torch/_dynamo/convert_frame.py:2061] [63/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:49.155000 3404117 torch/_dynamo/convert_frame.py:2061] [63/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   vifp.vifp (1, 3, 177, 263) float32 {'luma': 'bt601'}: out abs=5.55e-17 rel=1.92e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) float64 {}: out abs=5.55e-17 rel=2.23e-16 grad rel x=1.72e-13 y=2.00e-13
+ok   vifp.vifp (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=1.67e-16 rel=6.71e-16 grad rel x=1.50e-13 y=1.60e-13
+ok   vifp.vifp (1, 3, 177, 263) float64 {'num_scales': 2}: out abs=2.78e-17 rel=1.51e-16 grad rel x=3.50e-13 y=3.38e-13
+ok   vifp.vifp (1, 3, 177, 263) float64 {'luma': 'bt601'}: out abs=6.11e-16 rel=2.04e-15 grad rel x=1.56e-13 y=1.22e-13
+ok   vifp.vifp (1, 3, 177, 263) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=5.55e-17 rel=2.25e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) uint8 {'num_scales': 2}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 177, 263) uint8 {'luma': 'bt601'}: out abs=1.11e-16 rel=3.75e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=2.78e-17 rel=1.47e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 540, 720) float32 {'num_scales': 2}: out abs=8.33e-17 rel=4.60e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 540, 720) float32 {'luma': 'bt601'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 540, 720) uint8 {}: out abs=5.55e-17 rel=2.93e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=2.78e-17 rel=1.47e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 540, 720) uint8 {'num_scales': 2}: out abs=2.78e-17 rel=1.53e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (1, 3, 540, 720) uint8 {'luma': 'bt601'}: out abs=8.33e-17 rel=3.78e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (3, 1, 193, 181) float32 {}: out abs=5.55e-17 rel=2.08e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=5.55e-17 rel=2.06e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (3, 1, 193, 181) float32 {'num_scales': 2}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:28:50.002000 3404117 torch/_dynamo/convert_frame.py:2061] [62/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:50.002000 3404117 torch/_dynamo/convert_frame.py:2061] [62/8]    function: '_epi_chunk' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/vifp.py:84)
+W1114 04:28:50.002000 3404117 torch/_dynamo/convert_frame.py:2061] [62/8]    last reason: 62/7: tensor 'chunk' dtype mismatch. expected Float, actual Double
+W1114 04:28:50.002000 3404117 torch/_dynamo/convert_frame.py:2061] [62/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:50.002000 3404117 torch/_dynamo/convert_frame.py:2061] [62/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   vifp.vifp (3, 1, 193, 181) torch.float32 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   vifp.vifp (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.28e-15 y=0.00e+00
+ok   vifp.vifp (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=1.11e-16 rel=4.10e-16 grad rel x=7.81e-15 y=9.96e-15
+ok   vifp.vifp (3, 1, 193, 181) float64 {'num_scales': 2}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.33e-14 y=1.90e-14
+ok   vifp.vifp (3, 1, 193, 181) torch.float64 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   vifp.vifp (3, 1, 193, 181) uint8 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (3, 1, 193, 181) uint8 {'num_scales': 2}: out abs=8.33e-17 rel=4.49e-16 grad rel x=0.00e+00 y=0.00e+00
+ok   vifp.vifp (3, 1, 193, 181) torch.uint8 {'luma': 'bt601'}: both raise ValueError/ValueError
+ok   vsi.vsi (2, 3, 192, 200) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.91e-10 y=9.21e-10
+ok   vsi.vsi (2, 3, 192, 200) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.16e-09 y=2.69e-09
+ok   vsi.vsi (2, 3, 192, 200) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.03e-17 y=2.19e-18
+ok   vsi.vsi (2, 3, 192, 200) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.10e-17 y=1.69e-18
+ok   vsi.vsi (2, 3, 192, 200) uint8 {}: out abs=1.53e-09 rel=1.60e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (2, 3, 192, 200) uint8 {'reduction': 'none'}: out abs=5.14e-09 rel=5.38e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 177, 263) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.76e-08 y=6.35e-09
+ok   vsi.vsi (1, 3, 177, 263) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.70e-11 y=9.27e-12
+ok   vsi.vsi (1, 3, 177, 263) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.58e-18 y=1.33e-18
+ok   vsi.vsi (1, 3, 177, 263) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=7.72e-18 y=1.25e-17
+ok   vsi.vsi (1, 3, 177, 263) uint8 {}: out abs=4.51e-09 rel=4.73e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 177, 263) uint8 {'reduction': 'none'}: out abs=3.04e-09 rel=3.18e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 540, 720) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=3.27e-08 y=3.93e-08
+ok   vsi.vsi (1, 3, 540, 720) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=2.26e-07 y=6.78e-08
+ok   vsi.vsi (1, 3, 540, 720) uint8 {}: out abs=2.63e-09 rel=2.68e-09 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (1, 3, 540, 720) uint8 {'reduction': 'none'}: out abs=4.07e-09 rel=4.15e-09 grad rel x=0.00e+00 y=0.00e+00
+W1114 04:28:52.123000 3404117 torch/_dynamo/convert_frame.py:2061] [64/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:52.123000 3404117 torch/_dynamo/convert_frame.py:2061] [64/8]    function: '_vsi_epilogue' (/home/nilas/.cache/claude-tmp/claude-1000/-mnt-e-frame-analytics/2d203f9a-57ed-4d0b-a698-109bd56e1000/scratchpad/pristine/vsi.py:180)
+W1114 04:28:52.123000 3404117 torch/_dynamo/convert_frame.py:2061] [64/8]    last reason: 64/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:28:52.123000 3404117 torch/_dynamo/convert_frame.py:2061] [64/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:52.123000 3404117 torch/_dynamo/convert_frame.py:2061] [64/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1114 04:28:52.128000 3404117 torch/_dynamo/convert_frame.py:2061] [65/8] torch._dynamo hit config.recompile_limit (8)
+W1114 04:28:52.128000 3404117 torch/_dynamo/convert_frame.py:2061] [65/8]    function: '_vsi_epilogue' (/mnt/e/fa_wt_metrics/frame_analytics/vsi.py:206)
+W1114 04:28:52.128000 3404117 torch/_dynamo/convert_frame.py:2061] [65/8]    last reason: 65/7: GLOBAL_STATE changed: grad_mode 
+W1114 04:28:52.128000 3404117 torch/_dynamo/convert_frame.py:2061] [65/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1114 04:28:52.128000 3404117 torch/_dynamo/convert_frame.py:2061] [65/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+ok   vsi.vsi (3, 1, 193, 181) float32 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=5.78e-08 y=2.72e-06
+ok   vsi.vsi (3, 1, 193, 181) float32 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=1.15e-07 y=4.03e-07
+ok   vsi.vsi (3, 1, 193, 181) float64 {}: out abs=0.00e+00 rel=0.00e+00 grad rel x=4.04e-19 y=1.77e-17
+ok   vsi.vsi (3, 1, 193, 181) float64 {'reduction': 'none'}: out abs=0.00e+00 rel=0.00e+00 grad rel x=7.29e-17 y=1.11e-17
+ok   vsi.vsi (3, 1, 193, 181) uint8 {}: out abs=4.21e-07 rel=4.43e-07 grad rel x=0.00e+00 y=0.00e+00
+ok   vsi.vsi (3, 1, 193, 181) uint8 {'reduction': 'none'}: out abs=9.92e-07 rel=1.04e-06 grad rel x=0.00e+00 y=0.00e+00
+cases=665 failures=2 worst out rel=1.044e-06 worst grad rel=6.051e-02

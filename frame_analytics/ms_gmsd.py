@@ -21,6 +21,7 @@ import torch
 import torch.nn.functional as F
 
 from . import functional as _functional
+from ._metric_utils import starved_reduction
 from .functional import (
     _apply_luma,
     _maybe_compile,
@@ -95,20 +96,40 @@ def _gms_grads(xf: torch.Tensor, yf: torch.Tensor) -> torch.Tensor:
         return F.conv2d(both, k)
 
 
-def _gmsd_epilogue(g: torch.Tensor, n: int, T: float, eps: float) -> torch.Tensor:
-    """Per-image GMS variance from stacked grads ``g`` (``(2*N*C, 2, h, w)``).
+def _gms_quotient64(g: torch.Tensor, T: float, eps: float) -> torch.Tensor:
+    """GMS quotient map from stacked grads ``g`` (``(2*N*C, 2, h, w)``), float64.
 
-    Gradient-magnitude roots, GMS quotient and float64 variance reduction
-    in one compiled unit. Map widened *before* the variance (``var`` runs
-    Welford, no cancelling subtraction).
+    Gradient-magnitude roots and the GMS quotient in one compiled pointwise
+    unit, written straight out as float64 (the map is widened *before* the
+    variance, so ``var`` runs Welford with no cancelling subtraction).
     """
     nc = g.shape[0] // 2
     ga, gb = g[:nc], g[nc:]
     g1 = torch.sqrt((ga * ga).sum(dim=1) + eps)
     g2 = torch.sqrt((gb * gb).sum(dim=1) + eps)
     q = (2.0 * g1 * g2 + T) / (g1 * g1 + g2 * g2 + T)
-    f = q.reshape(n, -1).double()
-    return f.var(dim=1, correction=0).clamp_min(0.0)
+    return q.double()
+
+
+def _gmsd_epilogue_fused(g: torch.Tensor, n: int, T: float, eps: float) -> torch.Tensor:
+    """Per-image GMS variance from stacked grads ``g``, as one compiled unit."""
+    q = _gms_quotient64(g, T, eps)
+    return q.reshape(n, -1).var(dim=1, correction=0).clamp_min(0.0)
+
+
+# See _metric_utils.starved_reduction: on CUDA, with few large images, the
+# fused whole-image Welford reduction is starved of parallelism (3.2 ms per
+# scale at 1080p, n=1, RTX 3090), so the variance is left to ATen, whose
+# reduction splits across blocks. Otherwise the fused unit wins on launches.
+
+
+def _gmsd_epilogue(g: torch.Tensor, n: int, T: float, eps: float) -> torch.Tensor:
+    """Per-image GMS variance from stacked grads ``g`` (``(2*N*C, 2, h, w)``)."""
+    per_image = (g.shape[0] // 2 // n) * g.shape[-2] * g.shape[-1]
+    if starved_reduction(g, n, per_image):
+        q = _maybe_compile(_gms_quotient64, "ms_gmsd:quotient64")(g, T, eps)
+        return q.reshape(n, -1).var(dim=1, correction=0).clamp_min(0.0)
+    return _maybe_compile(_gmsd_epilogue_fused, "ms_gmsd:epi")(g, n, T, eps)
 
 
 # --------------------------------------------------------------------------- #
@@ -169,7 +190,7 @@ def ms_gmsd(
             f"(downsample={downsample}); needs at least {3 * div}px on a side")
 
     pool = _maybe_compile(_cast_pool2, "ms_gmsd:cast_pool2")
-    epi = _maybe_compile(_gmsd_epilogue, "ms_gmsd:epi")
+    epi = _gmsd_epilogue
 
     if downsample:
         if x4.dtype != wdt:

@@ -1,0 +1,8 @@
+{"tag": "base", "device": "cpu", "shape": "512", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "value": 77.09028424188367, "ms": 12.153100873547373, "iters": 16}
+{"tag": "new", "device": "cpu", "shape": "512", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "value": 77.09028424188367, "ms": 10.1465066851999, "iters": 19}
+{"tag": "base", "device": "cpu", "shape": "512", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "value": 77.09028424188367, "ms": 11.824242941870848, "iters": 17}
+{"tag": "new", "device": "cpu", "shape": "512", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "value": 77.09028424188367, "ms": 10.031642367769228, "iters": 19}
+{"tag": "base", "device": "cpu", "shape": "1080p", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "value": 76.41926636374963, "ms": 73.6308064952027, "iters": 2}
+{"tag": "new", "device": "cpu", "shape": "1080p", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "value": 76.41926636374963, "ms": 62.10962599531437, "iters": 3}
+{"tag": "base", "device": "cpu", "shape": "1080p", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "value": 76.41926636374963, "ms": 73.97808748646639, "iters": 2}
+{"tag": "new", "device": "cpu", "shape": "1080p", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "value": 76.41926636374963, "ms": 62.18276167055592, "iters": 3}

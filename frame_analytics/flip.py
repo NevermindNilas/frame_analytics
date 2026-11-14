@@ -21,6 +21,7 @@ import torch
 import torch.nn.functional as F
 
 from . import functional as _F
+from ._metric_utils import plane_conv
 from .functional import set_compile_enabled
 
 __all__ = ["flip", "set_compile_enabled"]
@@ -188,18 +189,21 @@ def _csf_1d(ppd: float, channel: str, device, dtype):
     return out
 
 
+# Single-plane filtering goes through ``plane_conv``: on CUDA it avoids
+# cuDNN, whose heuristics picked TF32 tensor-core dgrad kernels for these
+# (2N, 1, H, W) batches -- ~1e-4 gradient error and 8-13x slower backward.
 def _conv_rows(p: torch.Tensor, k: torch.Tensor) -> torch.Tensor:
     r = k.numel() // 2
     with _F._no_autocast(p):
         p = F.pad(p, (r, r, 0, 0), mode="replicate")
-        return F.conv2d(p, k.view(1, 1, 1, -1))
+        return plane_conv(p, k.view(1, 1, 1, -1))
 
 
 def _conv_cols(p: torch.Tensor, k: torch.Tensor) -> torch.Tensor:
     r = k.numel() // 2
     with _F._no_autocast(p):
         p = F.pad(p, (0, 0, r, r), mode="replicate")
-        return F.conv2d(p, k.view(1, 1, -1, 1))
+        return plane_conv(p, k.view(1, 1, -1, 1))
 
 
 def _sep2(p: torch.Tensor, k: torch.Tensor) -> torch.Tensor:
@@ -210,7 +214,7 @@ def _sep2(p: torch.Tensor, k: torch.Tensor) -> torch.Tensor:
     k2 = (k[:, None] * k[None, :]).unsqueeze(0).unsqueeze(0)
     with _F._no_autocast(p):
         p = F.pad(p, (r, r, r, r), mode="replicate")
-        return F.conv2d(p, k2)
+        return plane_conv(p, k2)
 
 
 def _filter_channel(p: torch.Tensor, ppd: float, channel: str) -> torch.Tensor:
@@ -261,8 +265,8 @@ def _feature_mag(yy: torch.Tensor, ppd: float, kind: str) -> torch.Tensor:
         k2 = (d[:, None] * g[None, :]).unsqueeze(0).unsqueeze(0)
         with _F._no_autocast(yy):
             yp = F.pad(yy, (r, r, r, r), mode="replicate")
-            fx = F.conv2d(yp, k2)
-            fy = F.conv2d(yp, k2.transpose(-1, -2))
+            fx = plane_conv(yp, k2)
+            fy = plane_conv(yp, k2.transpose(-1, -2))
     return _F._safe_sqrt(fx * fx + fy * fy)
 
 

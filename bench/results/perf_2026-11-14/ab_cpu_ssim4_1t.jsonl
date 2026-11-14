@@ -1,0 +1,8 @@
+{"tag": "base", "device": "cpu1", "shape": "512", "dtype": "u8", "mode": "fwd", "metric": "ssim", "value": 0.9718033171765277, "ms": 3.6472575629886705, "iters": 16}
+{"tag": "base", "device": "cpu1", "shape": "1080p", "dtype": "u8", "mode": "fwd", "metric": "ssim", "value": 0.9717482357752445, "ms": 27.48180650814902, "iters": 2}
+{"tag": "new", "device": "cpu1", "shape": "512", "dtype": "u8", "mode": "fwd", "metric": "ssim", "value": 0.9718033310569361, "ms": 1.9617975520869269, "iters": 29}
+{"tag": "new", "device": "cpu1", "shape": "1080p", "dtype": "u8", "mode": "fwd", "metric": "ssim", "value": 0.9717482495701456, "ms": 16.459192663508777, "iters": 3}
+{"tag": "base", "device": "cpu1", "shape": "512", "dtype": "u8", "mode": "fwd", "metric": "ssim", "value": 0.9718033171765277, "ms": 3.89349993201904, "iters": 15}
+{"tag": "base", "device": "cpu1", "shape": "1080p", "dtype": "u8", "mode": "fwd", "metric": "ssim", "value": 0.9717482357752445, "ms": 27.9161599901272, "iters": 2}
+{"tag": "new", "device": "cpu1", "shape": "512", "dtype": "u8", "mode": "fwd", "metric": "ssim", "value": 0.9718033310569361, "ms": 1.949685833339269, "iters": 30}
+{"tag": "new", "device": "cpu1", "shape": "1080p", "dtype": "u8", "mode": "fwd", "metric": "ssim", "value": 0.9717482495701456, "ms": 16.52826900438716, "iters": 3}

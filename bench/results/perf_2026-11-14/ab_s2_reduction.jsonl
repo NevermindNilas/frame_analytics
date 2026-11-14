@@ -1,0 +1,6 @@
+{"tag": "base", "device": "cuda", "shape": "512", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "peak_mib": 42.23486328125, "value": 77.09028321792096, "ms": 2.1001035221042517, "iters": 23}
+{"tag": "new", "device": "cuda", "shape": "512", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "peak_mib": 42.3046875, "value": 77.09028321792096, "ms": 0.8092571929759848, "iters": 26}
+{"tag": "base", "device": "cuda", "shape": "1080p", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "peak_mib": 333.84423828125, "value": 76.41926976747315, "ms": 13.0801870036521, "iters": 4}
+{"tag": "new", "device": "cuda", "shape": "1080p", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "peak_mib": 333.9931640625, "value": 76.41926976747315, "ms": 3.329912937260815, "iters": 16}
+{"tag": "base", "device": "cuda", "shape": "4k", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "peak_mib": 1331.84423828125, "value": 76.23100047083321, "ms": 50.28364999452606, "iters": 1}
+{"tag": "new", "device": "cuda", "shape": "4k", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "peak_mib": 1332.142578125, "value": 76.23100047083321, "ms": 12.00991049699951, "iters": 4}

@@ -55,6 +55,7 @@ import torch
 import torch.nn.functional as F
 
 from . import functional as _F
+from ._metric_utils import starved_reduction
 from .functional import set_compile_enabled
 
 __all__ = [
@@ -195,6 +196,35 @@ def _restore_pool(det_o: torch.Tensor, det_d: torch.Tensor,
     return ratio.reshape(ratio.shape[0], -1).mean(dim=1, dtype=torch.float64)
 
 
+def _restore_rows(det_o: torch.Tensor, det_d: torch.Tensor,
+                  T: float, eps: float) -> torch.Tensor:
+    """:func:`_restore_pool`'s ratio map, reduced along rows only: ``(B, C, H)``.
+
+    For few large images (see ``_metric_utils.starved_reduction``); the
+    caller finishes the float64 mean.
+    """
+    ao = det_o.abs()
+    ad = det_d.abs()
+    denom = ao.clamp_min(eps)
+    ratio = torch.where(ao > T, torch.minimum(ad, ao) / denom,
+                        torch.ones_like(denom))
+    return ratio.sum(dim=-1, dtype=torch.float64)
+
+
+def _pool_ratio(det_o: torch.Tensor, det_d: torch.Tensor,
+                T: float, eps: float) -> torch.Tensor:
+    """Per-image restoration mean ``(B,)``: fused, or row-split when starved."""
+    b, c, h, w = det_o.shape
+    # Light per-element work: splitting only pays from ~256K elements
+    # (measured +5% at 256x256, -41% at 512x512, -70% at 1080p, fwd).
+    if starved_reduction(det_o, b, c * h * w, min_elems=1 << 18):
+        rows = _F._maybe_compile(_restore_rows, "adm_like:restore_rows")(
+            det_o, det_d, T, eps)
+        return rows.sum(dim=(1, 2)) / (c * h * w)
+    return _F._maybe_compile(_restore_pool, "adm_like:restore_pool")(
+        det_o, det_d, T, eps)
+
+
 def adm_like(
     x: torch.Tensor,
     y: torch.Tensor,
@@ -233,7 +263,7 @@ def adm_like(
     Ts = _resolve_thresholds(thresholds, scales, L)
     w = _resolve_weights(weights, scales, x4.device)
     eps = 1e-12 * L
-    epi = _F._maybe_compile(_restore_pool, "adm_like:restore_pool")
+    epi = _pool_ratio
 
     n = x4.shape[0]
     acc = torch.zeros(n, dtype=torch.float64, device=x4.device)

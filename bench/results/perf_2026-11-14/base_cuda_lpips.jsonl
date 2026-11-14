@@ -1,0 +1,8 @@
+{"tag": "base", "device": "cuda", "shape": "256", "dtype": "f32", "mode": "fwd", "metric": "lpips", "peak_mib": 15.541015625, "value": 0.01246170699596405, "ms": 0.9511024275395487, "iters": 14}
+{"tag": "base", "device": "cuda", "shape": "256", "dtype": "f32", "mode": "bwd", "metric": "lpips", "peak_mib": 17.48974609375, "value": 0.01246170699596405, "grad_abs_sum": 14.732861532255527, "ms": 1.3693496664266356, "iters": 33}
+{"tag": "base", "device": "cuda", "shape": "512", "dtype": "f32", "mode": "fwd", "metric": "lpips", "peak_mib": 42.58544921875, "value": 0.012250980362296104, "ms": 1.5761410539051064, "iters": 37}
+{"tag": "base", "device": "cuda", "shape": "512", "dtype": "f32", "mode": "bwd", "metric": "lpips", "peak_mib": 46.28955078125, "value": 0.012250980362296104, "grad_abs_sum": 13.366256430050237, "ms": 2.2870498460878688, "iters": 26}
+{"tag": "base", "device": "cuda", "shape": "1080p", "dtype": "f32", "mode": "fwd", "metric": "lpips", "peak_mib": 341.14599609375, "value": 0.011505880393087864, "ms": 8.339369428410594, "iters": 7}
+{"tag": "base", "device": "cuda", "shape": "1080p", "dtype": "f32", "mode": "bwd", "metric": "lpips", "peak_mib": 362.8076171875, "value": 0.011505880393087864, "grad_abs_sum": 12.80988274197809, "ms": 12.167585751740262, "iters": 4}
+{"tag": "base", "device": "cuda", "shape": "1080px8", "dtype": "f32", "mode": "fwd", "metric": "lpips", "peak_mib": 2696.8203125, "value": 0.011624974198639393, "ms": 57.84034699900076, "iters": 1}
+{"tag": "base", "device": "cuda", "shape": "1080px8", "dtype": "f32", "mode": "bwd", "metric": "lpips", "peak_mib": 3647.91845703125, "value": 0.011624974198639393, "grad_abs_sum": 13.009318499174125, "ms": 106.48815700551495, "iters": 1}

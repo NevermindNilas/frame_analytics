@@ -100,18 +100,13 @@ def _centre_bias(device, dtype) -> torch.Tensor:
     return sd
 
 
-def _sdsp_batch(t255: torch.Tensor) -> torch.Tensor:
-    M, _, H, W = t255.shape
-    wdt = t255.dtype
-    S = _SALIENCY_SIZE
-    ds = F.interpolate(t255, size=(S, S), mode="bilinear", align_corners=False)
+def _lab_and_chroma(ds: torch.Tensor):
+    """256x256 sRGB (0..255) -> ``(Lab, chroma saliency)``.
+
+    Compiled for inference (it was ~30 small eager kernels at a fixed 256x256
+    size, i.e. pure launch overhead). Same expressions, same order.
+    """
     lab = _srgb_to_lab(ds / 255.0)
-
-    spec = torch.fft.fft2(lab.reshape(M * 3, S, S))
-    resp = torch.fft.ifft2(spec * _log_gabor(t255.device, wdt)).real
-    resp = resp.reshape(M, 3, S, S)
-    sf = (resp * resp).sum(dim=1, keepdim=True).sqrt()
-
     A, B = lab[:, 1:2], lab[:, 2:3]
     nA = (A - A.amin(dim=(1, 2, 3), keepdim=True)) / (
         (A.amax(dim=(1, 2, 3), keepdim=True) - A.amin(dim=(1, 2, 3), keepdim=True))
@@ -122,9 +117,40 @@ def _sdsp_batch(t255: torch.Tensor) -> torch.Tensor:
         .clamp_min(1e-12)
     )
     sc = 1.0 - torch.exp(-(nA * nA + nB * nB) / (_SIGMA_C ** 2))
+    return lab, sc
 
-    vs = F.interpolate(sf * _centre_bias(t255.device, wdt) * sc,
-                       size=(H, W), mode="bilinear", align_corners=False)
+
+def _freq_saliency(resp: torch.Tensor, centre: torch.Tensor,
+                   sc: torch.Tensor) -> torch.Tensor:
+    """Log-Gabor energy x centre bias x chroma saliency (compiled region)."""
+    sf = (resp * resp).sum(dim=1, keepdim=True).sqrt()
+    return sf * centre * sc
+
+
+def _sdsp_batch(t255: torch.Tensor) -> torch.Tensor:
+    M, _, H, W = t255.shape
+    wdt = t255.dtype
+    S = _SALIENCY_SIZE
+    ds = F.interpolate(t255, size=(S, S), mode="bilinear", align_corners=False)
+    # The saliency maps are min/max-normalised, and the gradient of amin/amax
+    # lands on the extreme pixel(s). Compiled rounding can move an extremum
+    # or create a tie, which moves that gradient (measured: 3 pixels, 34% of
+    # the max |grad| on a grey 193x181 input). Scores stay at rounding level,
+    # so inference uses the compiled regions; autograd keeps the eager ops.
+    grad = t255.requires_grad and torch.is_grad_enabled()
+    if grad:
+        lab, sc = _lab_and_chroma(ds)
+    else:
+        lab, sc = _fn._maybe_compile(_lab_and_chroma, "vsi:lab_chroma")(ds)
+
+    spec = torch.fft.fft2(lab.reshape(M * 3, S, S))
+    resp = torch.fft.ifft2(spec * _log_gabor(t255.device, wdt)).real
+    resp = resp.reshape(M, 3, S, S)
+    fs = _freq_saliency if grad else _fn._maybe_compile(
+        _freq_saliency, "vsi:freq_saliency")
+    sal = fs(resp, _centre_bias(t255.device, wdt), sc)
+
+    vs = F.interpolate(sal, size=(H, W), mode="bilinear", align_corners=False)
     eps = torch.finfo(wdt).eps
     vs = (vs - vs.amin(dim=(1, 2, 3), keepdim=True)) / (
         (vs.amax(dim=(1, 2, 3), keepdim=True) - vs.amin(dim=(1, 2, 3), keepdim=True)) + eps
@@ -238,8 +264,14 @@ def vsi(
     vs1, vs2 = vs.split(n)
     x255, y255 = both.split(n)
 
-    L1, M1, N1 = _lmn(x255)
-    L2, M2, N2 = _lmn(y255)
+    # Inference only, as in _sdsp_batch: the chroma term's x**0.02 has an
+    # unbounded derivative near 0, so reordered rounding in M/N moves
+    # individual input gradients far more than the scores (measured up to
+    # 7.7e-2 of the max |grad|; both sides equally far from float64).
+    lmn = (_lmn if (both.requires_grad and torch.is_grad_enabled())
+           else _fn._maybe_compile(_lmn, "vsi:lmn"))
+    L1, M1, N1 = lmn(x255)
+    L2, M2, N2 = lmn(y255)
 
     f = max(1, int(round(min(h, w) / 256.0)))
     L1, L2 = _box_decimate(L1, f), _box_decimate(L2, f)

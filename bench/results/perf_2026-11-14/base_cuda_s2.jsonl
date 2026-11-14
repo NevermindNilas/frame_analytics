@@ -1,0 +1,3 @@
+{"tag": "base", "device": "cuda", "shape": "512", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "peak_mib": 42.23486328125, "value": 77.09028321792096, "ms": 2.445210498990491, "iters": 6}
+{"tag": "base", "device": "cuda", "shape": "1080p", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "peak_mib": 333.84423828125, "value": 76.41926976747315, "ms": 13.527235496439971, "iters": 4}
+{"tag": "base", "device": "cuda", "shape": "4k", "dtype": "u8", "mode": "fwd", "metric": "ssimulacra2", "peak_mib": 1331.84423828125, "value": 76.23100047083321, "ms": 51.00488700554706, "iters": 1}
